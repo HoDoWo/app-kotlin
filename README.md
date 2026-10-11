@@ -1,6 +1,19 @@
 # Howdowo
 How does it work? A utility to guide when using home appliances
 
+## Running the Android app
+
+The app calls the deployed FastAPI backend. Add the backend base URL to
+`App-HoDoWo/local.properties`:
+
+```properties
+backend.url=https://backend-how-do-wo.vercel.app
+```
+
+Do not add `/api/chat` to this value; the app appends that path when sending
+a message. The `local.properties` file is ignored by Git and should not be
+committed.
+
 # Just notes
 1. Favs page
 2. STT 
