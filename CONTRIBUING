@@ -1,0 +1,27 @@
+# Contributing
+
+## Branches
+
+- `main` is protected. Never push to it directly.
+- Create one branch per task from an up-to-date `main`.
+- Name it after the backlog ID: `feature/PB-01-F-01`, `fix/PB-04-F-02`.
+
+## Commits
+
+- Short, imperative messages: `Add CameraX capture screen`.
+- Reference the issue when relevant: `Closes #4`.
+
+## Pull Requests
+
+1. Push your branch and open a PR against `main`.
+2. Fill in the PR template.
+3. Wait for the CI checks (Sonar, Detekt) to pass.
+4. At least one team member other than the author must approve.
+5. Resolve all review conversations, then merge (squash merge recommended).
+6. Delete the branch after merging.
+
+## Code quality
+
+- Code is analyzed with SonarQube and Detekt on every PR.
+- Do not commit secrets: `google-services.json`, API keys or keystores.
+- Follow the Kotlin coding conventions and keep Compose screens small and previewable.
