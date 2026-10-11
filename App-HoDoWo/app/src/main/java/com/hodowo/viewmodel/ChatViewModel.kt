@@ -141,7 +141,7 @@ class DemoHoDoWoAiService : HoDoWoAiService {
         delay(900)
 
         val applianceName =
-            appliance?.name ?: "the appliance"
+            appliance?.name ?: "appliance"
 
         // Canned answers based on simple keyword matching (English UI text).
         return when {

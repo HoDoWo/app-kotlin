@@ -4,7 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hodowo.ui.HoDoWoApp
 import com.hodowo.ui.theme.HoDoWoTheme
 
 class MainActivity : ComponentActivity() {
@@ -13,8 +13,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             HoDoWoTheme {
-                val skeletonViewModel: SkeletonViewModel = viewModel()
-                SkeletonScreen(skeletonViewModel)
+                // Chat + camera flow (#38, #64).
+                // SkeletonScreen (#49) stays in the code base but is no longer
+                // the start screen: its backend client will be plugged into
+                // ChatViewModel in a follow-up PR.
+                HoDoWoApp()
             }
         }
     }
