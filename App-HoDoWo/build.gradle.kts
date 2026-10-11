@@ -7,8 +7,8 @@ plugins {
 
 sonar {
     properties {
-        property("sonar.projectKey", "CLAVE_DE_TU_PROYECTO")
-        property("sonar.organization", "CLAVE_DE_TU_ORGANIZACION")
+        property("sonar.projectKey", "HoDoWo_app-kotlin")
+        property("sonar.organization", "hodowo")
         property("sonar.host.url", "https://sonarcloud.io")
     }
 }
