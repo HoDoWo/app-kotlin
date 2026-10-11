@@ -1,25 +1,98 @@
-# Howdowo
-How does it work? A utility to guide when using home appliances
+# HoDoWo
 
-# Just notes
-1. Favs page
-2. STT 
-3. Reinforcement learning 
-4. forum, also used to fine tune prediction
-5. Multiple step agent (langchain)
-	- product identification 
-	- information retrieval 
-	- image generation 
-6. "Broken" appliance detection 
-	1. Parts replacement 
-	2. New device recommendations (based on enterprise partners)
-7. Off-peak electricity tariff optimization
-8. Acoustic thing
-# Tecnologies
-1. Android Studio (Using Kotlin)
-2. LangChain for the AI agent, 3 step
-3. AI Image Identification
-4. Digital Twin of the user's home
-# Additional Features
-1- Recommendation products secction (For old or broken user machines) (Companies can partner us to recommend their products on this place)
-2- Second Hand Market secction inside the app
+**How does it work?** A utility to guide you when using home appliances.
+
+Take a photo of the appliance or its control panel, ask a question in natural
+language and get model-specific help with a step-by-step visual guide.
+
+> University project · Sprint 1 delivery: October 27, 2026
+
+## Main flow
+
+Take a photo → Identify the appliance → Ask the AI → Model-specific answer → Visual guide → Fix it
+
+## Features
+
+### Sprint 1 · Core AI engine (in progress)
+- Appliance identification and control panel recognition
+- Natural-language Q&A grounded in technical manuals (RAG)
+- Error code translation
+- Step-by-step visual guides with image overlays
+- Favorites page for saved appliances and guides
+- AI response rating
+- Off-peak electricity tariff tips
+
+### Sprint 2 · Marketplace and community
+- Spare parts replacement catalog, linked to the AI diagnosis
+- Second-hand marketplace inside the app
+- Official sellers directory, with partner companies recommending their products
+- Model-specific discussion forums
+
+### Sprint 3 · Advanced features
+- ARCore real-time repair overlays
+- Speech-to-text voice queries
+- Energy consumption calculator
+- Web application
+
+## Ideas under consideration
+
+These are not committed to the current sprints and depend on feasibility and time:
+
+- Detection of "broken" appliances, with replacement parts and new device
+  recommendations based on partner companies
+- Learning from user feedback and forum content to improve the AI answers
+- Predictive maintenance and digital appliance profile
+- Recycling assistant and sustainability score
+- Digital twin of the user's home
+- Acoustic analysis of appliance noises
+
+## Tech stack
+
+| Layer | Technology |
+|-------|------------|
+| Mobile client | Android · Kotlin · Jetpack Compose · CameraX |
+| Backend | Python · FastAPI (serverless on Vercel) |
+| AI | LangChain multi-step agent (product identification, information retrieval, image generation) · OpenRouter · RAG over appliance manuals |
+| Data | Firebase (Auth, Firestore, Storage) |
+
+This repository contains the **Android client** only. The backend and the
+project documentation live in a separate repository: [LINK-TO-BACKEND-REPO](#).
+
+## Repository structure
+
+| Path | Content |
+|------|---------|
+| `App-HoDoWo/` | Android app (Kotlin + Jetpack Compose) |
+| `burndown/` | Burndown chart data |
+| `.github/` | CI workflows (Sonar, Detekt, burndown) and PR template |
+
+## Getting started
+
+### Requirements
+
+- Android Studio (latest stable)
+- JDK 17
+- An Android device or emulator
+
+### Setup
+
+1. Clone the repository:
+```bash
+   git clone https://github.com/Anna-Marin/Howdowo.git
+```
+2. Open the `App-HoDoWo/` folder in Android Studio.
+3. Add your own `google-services.json` to `App-HoDoWo/app/` (not tracked by Git).
+4. Set the backend URL in `local.properties` (see the backend repository).
+5. Sync Gradle and run the app.
+
+## Contributing
+
+- `main` is protected: direct pushes are not allowed.
+- One branch per task, named after the backlog ID, e.g. `feature/PB-01-F-01`.
+- Every change goes through a Pull Request with at least one approval and passing checks.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+
+## Team
+
+Anna Marín Nuño · Oriol Ferrer López · Davide Pignataro · Francesc Xavier Sierra Raja
