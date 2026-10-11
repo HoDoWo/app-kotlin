@@ -12,7 +12,7 @@ class OpenRouterChatClient(
 ) : ChatClient {
     override suspend fun send(message: String): String {
         if (backendUrl.isBlank()) {
-            return "Error: configura backend.url en local.properties"
+            return "Error: configure backend.url in local.properties"
         }
 
         val body = JSONObject()

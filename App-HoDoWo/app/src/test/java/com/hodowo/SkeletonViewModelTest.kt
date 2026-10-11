@@ -17,7 +17,7 @@ class SkeletonViewModelTest {
 
         viewModel.send("   ")
 
-        assertEquals("Escribe un mensaje.", viewModel.reply)
+        assertEquals("Enter a message.", viewModel.reply)
     }
 
     @Test

@@ -21,7 +21,7 @@ class SkeletonViewModel(
 
     fun send(message: String) {
         if (message.isBlank()) {
-            reply = "Escribe un mensaje."
+            reply = "Enter a message."
             return
         }
 
@@ -29,7 +29,7 @@ class SkeletonViewModel(
             reply = try {
                 chatClient.send(message)
             } catch (exception: Exception) {
-                "Error: ${exception.message ?: "No se pudo enviar el mensaje"}"
+                "Error: ${exception.message ?: "The message could not be sent"}"
             }
         }
     }

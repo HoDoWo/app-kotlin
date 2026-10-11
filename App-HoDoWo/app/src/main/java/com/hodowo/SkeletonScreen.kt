@@ -33,10 +33,10 @@ fun SkeletonScreen(viewModel: SkeletonViewModel, modifier: Modifier = Modifier) 
                 value = message,
                 onValueChange = { message = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Mensaje") },
+                label = { Text("Message") },
             )
             Button(onClick = { viewModel.send(message) }) {
-                Text("Enviar")
+                Text("Send")
             }
             Text(text = viewModel.reply)
         }
