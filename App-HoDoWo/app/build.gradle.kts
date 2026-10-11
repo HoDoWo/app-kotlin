@@ -11,12 +11,36 @@ val backendUrl = localProperties.getProperty("backend.url", "")
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    jacoco
 }
 
 android {
     namespace = "com.hodowo"
     compileSdk {
         version = release(37)
+    }
+
+    tasks.register<JacocoReport>("jacocoDebugUnitTestReport") {
+        dependsOn("testDebugUnitTest")
+        reports {
+            xml.required.set(true)
+            html.required.set(true)
+        }
+        val kotlinClasses = fileTree(layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes")) {
+            exclude("**/*MainActivity*.class")
+            exclude("**/*SkeletonScreen*.class")
+            exclude("**/*OpenRouterChatClient*.class")
+            exclude("**/BuildConfig.class")
+        }
+        val javaClasses = fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
+            exclude("**/MainActivity.class")
+        }
+        classDirectories.setFrom(files(kotlinClasses, javaClasses))
+        sourceDirectories.setFrom(files("src/main/java"))
+        executionData.setFrom(fileTree(layout.buildDirectory) {
+            include("jacoco/testDebugUnitTest.exec")
+            include("outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec")
+        })
     }
 
     defaultConfig {
@@ -46,6 +70,9 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {
@@ -60,6 +87,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)

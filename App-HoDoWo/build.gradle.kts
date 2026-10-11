@@ -11,6 +11,8 @@ sonar {
         property("sonar.projectKey", "HoDoWo_app-kotlin")
         property("sonar.organization", "hodowo")
         property("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.coverage.jacoco.xmlReportPaths", "app/build/reports/jacoco/jacocoDebugUnitTestReport/jacocoDebugUnitTestReport.xml")
+        property("sonar.coverage.exclusions", "**/MainActivity.kt,**/SkeletonScreen.kt,**/OpenRouterChatClient.kt")
     }
 }
 

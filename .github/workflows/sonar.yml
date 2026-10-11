@@ -39,4 +39,4 @@ jobs:
       - name: Tests y Sonar
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: ./gradlew testDebugUnitTest lintDebug sonar --info
+        run: ./gradlew testDebugUnitTest jacocoDebugUnitTestReport lintDebug sonar --info
