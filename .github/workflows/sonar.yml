@@ -27,10 +27,6 @@ jobs:
           distribution: temurin
           java-version: 25
 
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          build-root-directory: App-HoDoWo
-
       - name: Cache de Sonar
         uses: actions/cache@v4
         with:
