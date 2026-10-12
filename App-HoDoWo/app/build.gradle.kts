@@ -30,6 +30,9 @@ android {
             exclude("**/*MainActivity*.class")
             exclude("**/*SkeletonScreen*.class")
             exclude("**/*OpenRouterChatClient*.class")
+            exclude("**/*CameraScreen*.class")
+            exclude("**/*ChatScreen*.class")
+            exclude("**/*HoDoWoApp*.class")
             exclude("**/BuildConfig.class")
         }
         val javaClasses = fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
@@ -76,6 +79,12 @@ android {
 }
 
 dependencies {
+    // CameraX: camera preview and photo capture (#38).
+    val cameraxVersion = "1.3.1"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -88,6 +97,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation("io.mockk:mockk:1.13.12")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
