@@ -1,0 +1,33 @@
+timestamp,issue,title,type,delta_hours
+2026-10-06T00:00:00+00:00,40,Reinforcement AI learning,inicial,8.0
+2026-10-06T00:00:00+00:00,46,"Repo structure, README and branch protection",inicial,1.0
+2026-10-06T00:00:00+00:00,47,CI with GitHub Actions,inicial,1.0
+2026-10-07T16:28:45+00:00,47,CI with GitHub Actions,completado,-1.0
+2026-10-06T00:00:00+00:00,36,Set up SonarQube,inicial,1.0
+2026-10-11T14:14:16+00:00,36,Set up SonarQube,completado,-1.0
+2026-10-06T00:00:00+00:00,49,Walking skeleton: Android → FastAPI → LLM → response,inicial,1.0
+2026-10-11T17:43:25+00:00,49,Walking skeleton: Android → FastAPI → LLM → response,completado,-1.0
+2026-10-06T00:00:00+00:00,4,Appliance Identification,inicial,20.0
+2026-10-06T00:00:00+00:00,51,Auth and profile,inicial,12.0
+2026-10-06T00:00:00+00:00,38,Camera capture with CameraX,inicial,5.0
+2026-10-06T00:00:00+00:00,5,Manual retrieval,inicial,7.0
+2026-10-06T00:00:00+00:00,48,"FastAPI on Vercel: CORS, rate limiting, env keys",inicial,4.0
+2026-10-06T00:00:00+00:00,53,Firebase project + Auth SDK,inicial,2.0
+2026-10-06T00:00:00+00:00,55,JWT interceptor + token check in backend,inicial,2.0
+2026-10-06T00:00:00+00:00,54,"Login, register and Google sign-in screens",inicial,3.0
+2026-10-06T00:00:00+00:00,56,Profile and saved appliances: Firestore schema + UI,inicial,2.0
+2026-10-06T00:00:00+00:00,15,Implement guide rating,inicial,4.0
+2026-10-06T00:00:00+00:00,39,Upload image to Firebase Storage,inicial,3.0
+2026-10-06T00:00:00+00:00,41,"Vision LLM pipeline: detect brand, category and model",inicial,8.0
+2026-10-06T00:00:00+00:00,42,Identification result card with confirmation and manual selection,inicial,4.0
+2026-10-06T00:00:00+00:00,12,Create Project Documentation - Sprint 1,inicial,2.0
+2026-10-06T00:00:00+00:00,64,Chat UI (text and images),inicial,6.0
+2026-10-06T00:00:00+00:00,58,Control Panel,inicial,12.0
+2026-10-06T00:00:00+00:00,61,Button and dial detection,inicial,4.0
+2026-10-06T00:00:00+00:00,63,Chat and Q&A,inicial,8.0
+2026-10-06T00:00:00+00:00,66,"Conversational route: history, context, streaming",inicial,6.0
+2026-10-06T00:00:00+00:00,67,LangChain agent wiring,inicial,2.0
+2026-10-06T00:00:00+00:00,62,Compose Canvas overlay,inicial,5.0
+2026-10-06T00:00:00+00:00,59,Control panel cropping,inicial,3.0
+2026-10-06T00:00:00+00:00,71,Plan Sprint 2,inicial,4.0
+2026-10-06T00:00:00+00:00,72,Fix SonarQube issues,inicial,4.0

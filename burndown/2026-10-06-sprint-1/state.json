@@ -1,0 +1,212 @@
+{
+ "PVTI_lADOFCkyKM4Bl88jzg-79JQ": {
+  "c": 8.0,
+  "done": false,
+  "issue": 40,
+  "title": "Reinforcement AI learning"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8DHw": {
+  "c": 1.0,
+  "done": false,
+  "issue": 46,
+  "title": "Repo structure, README and branch protection"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8CqM": {
+  "c": 0.0,
+  "done": false,
+  "issue": 45,
+  "title": "Setup and proxy"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8Dk0": {
+  "c": 0.0,
+  "done": true,
+  "issue": 47,
+  "title": "CI with GitHub Actions"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7zrM": {
+  "c": 0.0,
+  "done": true,
+  "issue": 36,
+  "title": "Set up SonarQube"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8Fh4": {
+  "c": 0.0,
+  "done": true,
+  "issue": 49,
+  "title": "Walking skeleton: Android \u2192 FastAPI \u2192 LLM \u2192 response"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7rMI": {
+  "c": 20.0,
+  "done": false,
+  "issue": 4,
+  "title": "Appliance Identification"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8Gzg": {
+  "c": 12.0,
+  "done": false,
+  "issue": 51,
+  "title": "Auth and profile"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-77-4": {
+  "c": 5.0,
+  "done": false,
+  "issue": 38,
+  "title": "Camera capture with CameraX"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7rMY": {
+  "c": 7.0,
+  "done": false,
+  "issue": 5,
+  "title": "Manual retrieval"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7rMw": {
+  "c": 0.0,
+  "done": false,
+  "issue": 10,
+  "title": "Image Overlay Guide generation"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8EKE": {
+  "c": 4.0,
+  "done": false,
+  "issue": 48,
+  "title": "FastAPI on Vercel: CORS, rate limiting, env keys"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8HOs": {
+  "c": 2.0,
+  "done": false,
+  "issue": 53,
+  "title": "Firebase project + Auth SDK"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8IGw": {
+  "c": 2.0,
+  "done": false,
+  "issue": 55,
+  "title": "JWT interceptor + token check in backend"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-70zc": {
+  "c": 0.0,
+  "done": false,
+  "issue": 37,
+  "title": "Implement Favourites and Recent scanned Page"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8Hl0": {
+  "c": 3.0,
+  "done": false,
+  "issue": 54,
+  "title": "Login, register and Google sign-in screens"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8Ihk": {
+  "c": 2.0,
+  "done": false,
+  "issue": 56,
+  "title": "Profile and saved appliances: Firestore schema + UI"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7q-A": {
+  "c": 4.0,
+  "done": false,
+  "issue": 15,
+  "title": "Implement guide rating"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-78vE": {
+  "c": 3.0,
+  "done": false,
+  "issue": 39,
+  "title": "Upload image to Firebase Storage"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-79KE": {
+  "c": 8.0,
+  "done": false,
+  "issue": 41,
+  "title": "Vision LLM pipeline: detect brand, category and model"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-79ZE": {
+  "c": 4.0,
+  "done": false,
+  "issue": 42,
+  "title": "Identification result card with confirmation and manual selection"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7-CQ": {
+  "c": 0.0,
+  "done": false,
+  "issue": 43,
+  "title": "Set up LangChain Agent"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7rNU": {
+  "c": 2.0,
+  "done": false,
+  "issue": 12,
+  "title": "Create Project Documentation - Sprint 1"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8L94": {
+  "c": 6.0,
+  "done": false,
+  "issue": 64,
+  "title": "Chat UI (text and images)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7_xI": {
+  "c": 0.0,
+  "done": false,
+  "issue": 44,
+  "title": "Configure OWASP ZAP"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8JYo": {
+  "c": 12.0,
+  "done": false,
+  "issue": 58,
+  "title": "Control Panel"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8KLY": {
+  "c": 4.0,
+  "done": false,
+  "issue": 61,
+  "title": "Button and dial detection"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8LkU": {
+  "c": 8.0,
+  "done": false,
+  "issue": 63,
+  "title": "Chat and Q&A"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8MRo": {
+  "c": 6.0,
+  "done": false,
+  "issue": 66,
+  "title": "Conversational route: history, context, streaming"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8MOE": {
+  "c": 0.0,
+  "done": false,
+  "issue": 65,
+  "title": "Error codes"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8MpU": {
+  "c": 2.0,
+  "done": false,
+  "issue": 67,
+  "title": "LangChain agent wiring"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8Kl0": {
+  "c": 5.0,
+  "done": false,
+  "issue": 62,
+  "title": "Compose Canvas overlay"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8Jx0": {
+  "c": 3.0,
+  "done": false,
+  "issue": 59,
+  "title": "Control panel cropping"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg_M0PY": {
+  "c": 4.0,
+  "done": false,
+  "issue": 71,
+  "title": "Plan Sprint 2"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg__2CM": {
+  "c": 4.0,
+  "done": false,
+  "issue": 72,
+  "title": "Fix SonarQube issues"
+ }
+}
