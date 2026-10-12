@@ -14,6 +14,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hodowo.data.AiServiceProvider
 import com.hodowo.viewmodel.ChatViewModel
 
 /**
@@ -27,7 +28,12 @@ import com.hodowo.viewmodel.ChatViewModel
  */
 @Composable
 fun HoDoWoApp(
-    chatViewModel: ChatViewModel = viewModel()
+    // The service (real backend or demo) is chosen by AiServiceProvider.
+    chatViewModel: ChatViewModel = viewModel(
+        factory = AiServiceProvider.chatViewModelFactory(
+            LocalContext.current.applicationContext
+        )
+    )
 ) {
 
     val context = LocalContext.current
