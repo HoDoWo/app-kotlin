@@ -33,6 +33,8 @@ android {
             exclude("**/*CameraScreen*.class")
             exclude("**/*ChatScreen*.class")
             exclude("**/*HoDoWoApp*.class")
+            exclude("**/*ImageCompressor*.class")
+            exclude("**/*AiServiceProvider*.class")
             exclude("**/BuildConfig.class")
         }
         val javaClasses = fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
@@ -98,6 +100,9 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation("io.mockk:mockk:1.13.12")
+    // Fake HTTP server and a real org.json for RemoteHoDoWoAiService tests.
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation("org.json:json:20240303")
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
