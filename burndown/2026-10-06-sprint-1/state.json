@@ -1,27 +1,33 @@
 {
- "PVTI_lADOFCkyKM4Bl88jzg-79ZE": {
-  "c": 4.0,
+ "PVTI_lADOFCkyKM4Bl88jzg-7rMw": {
+  "c": 0.0,
   "done": false,
-  "issue": 42,
-  "title": "Identification result card with confirmation and manual selection"
+  "issue": 10,
+  "title": "Image Overlay Guide generation"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-79KE": {
-  "c": 8.0,
+ "PVTI_lADOFCkyKM4Bl88jzg-8HOs": {
+  "c": 2.0,
   "done": false,
-  "issue": 41,
-  "title": "Vision LLM pipeline: detect brand, category and model"
+  "issue": 53,
+  "title": "Firebase project + Auth SDK"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8DHw": {
+  "c": 0.0,
+  "done": true,
+  "issue": 46,
+  "title": "Repo structure, README and branch protection"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7rMY": {
+  "c": 0.0,
+  "done": true,
+  "issue": 5,
+  "title": "Manual retrieval"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-79JQ": {
   "c": 8.0,
   "done": false,
   "issue": 40,
   "title": "Reinforcement AI learning"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8DHw": {
-  "c": 1.0,
-  "done": false,
-  "issue": 46,
-  "title": "Repo structure, README and branch protection"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8CqM": {
   "c": 0.0,
@@ -58,36 +64,6 @@
   "done": false,
   "issue": 51,
   "title": "Auth and profile"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-77-4": {
-  "c": 5.0,
-  "done": false,
-  "issue": 38,
-  "title": "Camera capture with CameraX"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-7rMY": {
-  "c": 7.0,
-  "done": false,
-  "issue": 5,
-  "title": "Manual retrieval"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-7rMw": {
-  "c": 0.0,
-  "done": false,
-  "issue": 10,
-  "title": "Image Overlay Guide generation"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8EKE": {
-  "c": 4.0,
-  "done": false,
-  "issue": 48,
-  "title": "FastAPI on Vercel: CORS, rate limiting, env keys"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8HOs": {
-  "c": 2.0,
-  "done": false,
-  "issue": 53,
-  "title": "Firebase project + Auth SDK"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8IGw": {
   "c": 2.0,
@@ -131,17 +107,23 @@
   "issue": 43,
   "title": "Set up LangChain Agent"
  },
+ "PVTI_lADOFCkyKM4Bl88jzg-79KE": {
+  "c": 0.0,
+  "done": true,
+  "issue": 41,
+  "title": "Vision LLM pipeline: detect brand, category and model"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-79ZE": {
+  "c": 0.0,
+  "done": true,
+  "issue": 42,
+  "title": "Identification result card with confirmation and manual selection"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-7rNU": {
   "c": 2.0,
   "done": false,
   "issue": 12,
   "title": "Create Project Documentation - Sprint 1"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8L94": {
-  "c": 6.0,
-  "done": false,
-  "issue": 64,
-  "title": "Chat UI (text and images)"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-7_xI": {
   "c": 0.0,
@@ -204,9 +186,33 @@
   "title": "Plan Sprint 2"
  },
  "PVTI_lADOFCkyKM4Bl88jzg__2CM": {
-  "c": 4.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 72,
   "title": "Fix SonarQube issues"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-77-4": {
+  "c": 0.0,
+  "done": true,
+  "issue": 38,
+  "title": "Camera capture with CameraX"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8L94": {
+  "c": 0.0,
+  "done": true,
+  "issue": 64,
+  "title": "Chat UI (text and images)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhAf37I": {
+  "c": 4.0,
+  "done": false,
+  "issue": 87,
+  "title": "Working on fixing issues on Pull Requests"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8EKE": {
+  "c": 4.0,
+  "done": false,
+  "issue": 48,
+  "title": "FastAPI on Vercel: CORS, rate limiting, env keys"
  }
 }

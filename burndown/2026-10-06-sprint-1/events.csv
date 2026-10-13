@@ -31,3 +31,11 @@ timestamp,issue,title,type,delta_hours
 2026-10-06T00:00:00+00:00,59,Control panel cropping,inicial,3.0
 2026-10-06T00:00:00+00:00,71,Plan Sprint 2,inicial,4.0
 2026-10-06T00:00:00+00:00,72,Fix SonarQube issues,inicial,4.0
+2026-10-13T17:03:33+00:00,46,"Repo structure, README and branch protection",completado,-1.0
+2026-10-13T18:18:08+00:00,5,Manual retrieval,completado,-7.0
+2026-10-13T11:48:52+00:00,41,"Vision LLM pipeline: detect brand, category and model",completado,-8.0
+2026-10-13T11:48:55+00:00,42,Identification result card with confirmation and manual selection,completado,-4.0
+2026-10-13T17:37:45+00:00,72,Fix SonarQube issues,completado,-4.0
+2026-10-13T18:20:42+00:00,38,Camera capture with CameraX,completado,-5.0
+2026-10-13T18:20:49+00:00,64,Chat UI (text and images),completado,-6.0
+2026-10-13T17:23:34+00:00,87,Working on fixing issues on Pull Requests,anadido,4.0
