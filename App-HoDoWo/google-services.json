@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "804247891417",
+    "project_id": "howdowo",
+    "storage_bucket": "howdowo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:804247891417:android:d7f590d424d7ed16d8fdc8",
+        "android_client_info": {
+          "package_name": "com.hodowo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADIKRNV-8bLYxpBHMkQR4BPP0BgLo0HQE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
