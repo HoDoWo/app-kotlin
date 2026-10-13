@@ -1,7 +1,7 @@
 name: Burndown
 on:
   schedule:
-    - cron: "0 * * * *"    # cada hora
+    - cron: "0 */3 * * *"   # cada 3 horas
   workflow_dispatch:
 
 permissions:
@@ -20,6 +20,8 @@ jobs:
       PROJECT_NUMBER: 1
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: burndown-data
 
       - name: Calcular burndown
         run: |
@@ -37,7 +39,7 @@ jobs:
           QUERY = """
           query($owner:String!, $num:Int!, $cursor:String) {
             organization(login:$owner) { projectV2(number:$num) {
-            items(first:100, after:$cursor) {
+              items(first:100, after:$cursor) {
                 pageInfo { hasNextPage endCursor }
                 nodes {
                   id
@@ -145,7 +147,6 @@ jobs:
               c = 0.0 if it['done'] else it['hours']
               old = state.get(it['id'])
               if first:
-                  # Primera ejecucion: todo lo que hay cuenta como alcance inicial
                   add(start, it, 'inicial', it['hours'])
                   if it['done']:
                       add(it['t_status'], it, 'completado', -it['hours'])
@@ -208,7 +209,6 @@ jobs:
           o.append('<rect width="100%" height="100%" fill="white"/>')
           o.append('<text x="%d" y="26" font-size="17" font-weight="bold">Burndown - %s</text>' % (L, escape(title)))
           o.append('<text x="%d" y="46" fill="#555">Pendiente ahora: %g h  |  Alcance inicial: %g h</text>' % (L, v, v0))
-          # ejes y cuadricula
           for i in range(6):
               val = ymax * i / 5
               y = Y(val)
@@ -223,21 +223,16 @@ jobs:
               o.append('<text x="%.1f" y="%d" text-anchor="middle">%s</text>' % (x, H - B + 18, t.strftime('%d/%m')))
           o.append('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="#888"/>' % (L, H - B, W - R, H - B))
           o.append('<line x1="%d" y1="%d" x2="%d" y2="%d" stroke="#888"/>' % (L, T, L, H - B))
-          # linea de "ahora"
           if start < now < end:
               o.append('<line x1="%.1f" y1="%d" x2="%.1f" y2="%d" stroke="#bbb" stroke-dasharray="2 3"/>' % (X(now), T, X(now), H - B))
-          # ideal
           o.append('<polyline points="%.1f,%.1f %.1f,%.1f" fill="none" stroke="#999" stroke-dasharray="6 4" stroke-width="2"/>' % (X(start), Y(v0), X(end), Y(0)))
-          # real (escalera)
           real = ' '.join('%.1f,%.1f' % (X(t), Y(val)) for t, val in pts)
           o.append('<polyline points="%s" fill="none" stroke="#2da44e" stroke-width="3"/>' % real)
-          # marcas de cada evento
           for t, val, e in marks:
               color = '#d1242f' if e[4] > 0 else '#2da44e'
               tip = '%s | #%s %s | %s %+g h' % (t.strftime('%d/%m %H:%M'), e[1], e[2], e[3], e[4])
               o.append('<circle cx="%.1f" cy="%.1f" r="5" fill="%s"><title>%s</title></circle>' % (X(t), Y(val), color, escape(tip)))
           o.append('<circle cx="%.1f" cy="%.1f" r="5" fill="#2da44e"/>' % (X(start), Y(v0)))
-          # leyenda
           lx = W - 330
           o.append('<text x="%d" y="26" fill="#999">--- Ideal</text>' % lx)
           o.append('<text x="%d" y="26" fill="#2da44e">— Real</text>' % (lx + 70))
@@ -262,7 +257,7 @@ jobs:
           git diff --cached --quiet && exit 0
           git commit -m "Burndown $(date -u +%F' '%H:%M)"
           for i in 1 2 3; do
-            if git pull --rebase -X theirs origin main && git push; then
+            if git pull --rebase -X theirs origin burndown-data && git push origin burndown-data; then
               exit 0
             fi
             git rebase --abort 2>/dev/null || true
