@@ -1,4 +1,16 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzg-79ZE": {
+  "c": 4.0,
+  "done": false,
+  "issue": 42,
+  "title": "Identification result card with confirmation and manual selection"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-79KE": {
+  "c": 8.0,
+  "done": false,
+  "issue": 41,
+  "title": "Vision LLM pipeline: detect brand, category and model"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-79JQ": {
   "c": 8.0,
   "done": false,
@@ -113,21 +125,9 @@
   "issue": 39,
   "title": "Upload image to Firebase Storage"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-79KE": {
-  "c": 8.0,
-  "done": false,
-  "issue": 41,
-  "title": "Vision LLM pipeline: detect brand, category and model"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-79ZE": {
-  "c": 4.0,
-  "done": false,
-  "issue": 42,
-  "title": "Identification result card with confirmation and manual selection"
- },
  "PVTI_lADOFCkyKM4Bl88jzg-7-CQ": {
   "c": 0.0,
-  "done": false,
+  "done": true,
   "issue": 43,
   "title": "Set up LangChain Agent"
  },
