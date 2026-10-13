@@ -36,6 +36,7 @@ android {
             exclude("**/*HoDoWoApp*.class")
             exclude("**/*ImageCompressor*.class")
             exclude("**/*AiServiceProvider*.class")
+            exclude("**/*FirebaseTokenProvider*.class")
             exclude("**/BuildConfig.class")
         }
         val javaClasses = fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {

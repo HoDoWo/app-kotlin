@@ -28,10 +28,13 @@ import java.util.concurrent.TimeUnit
  *
  * @param backendUrl base URL of the backend (from `backend.url` in local.properties).
  * @param loadImage reads and compresses the photo at the given [Uri] into JPEG bytes.
+ * @param tokenProvider returns the Firebase ID token of the signed-in user, or null.
+ *   The backend rejects requests without a valid token (HTTP 401).
  */
 class RemoteHoDoWoAiService(
     private val backendUrl: String,
     private val loadImage: suspend (Uri) -> ByteArray,
+    private val tokenProvider: suspend () -> String? = { null },
     private val httpClient: OkHttpClient = defaultClient(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : HoDoWoAiService {
@@ -67,14 +70,36 @@ class RemoteHoDoWoAiService(
     }
 
     /** Sends [body] to /api/chat and returns the "reply" field of the answer. */
-    private suspend fun post(body: RequestBody): String = withContext(ioDispatcher) {
-        val request = Request.Builder()
+    private suspend fun post(body: RequestBody): String {
+        // Read the token before switching thread: it may need a network call.
+        val token = tokenProvider()
+
+        return withContext(ioDispatcher) {
+            execute(buildRequest(body, token))
+        }
+    }
+
+    private fun buildRequest(body: RequestBody, token: String?): Request {
+        val builder = Request.Builder()
             .url("${backendUrl.trimEnd('/')}/api/chat")
             .post(body)
-            .build()
 
+        // The backend expects "Authorization: Bearer <Firebase ID token>".
+        if (!token.isNullOrBlank()) {
+            builder.header("Authorization", "Bearer $token")
+        }
+
+        return builder.build()
+    }
+
+    /** Runs the request and returns the "reply" field of the JSON answer. */
+    private fun execute(request: Request): String =
         httpClient.newCall(request).execute().use { response ->
             val text = response.body?.string().orEmpty()
+
+            if (response.code == HTTP_UNAUTHORIZED) {
+                throw IOException("Not authorized: please sign in again")
+            }
 
             if (!response.isSuccessful) {
                 throw IOException("Server error ${response.code}")
@@ -86,10 +111,10 @@ class RemoteHoDoWoAiService(
                 throw IOException("Invalid server response", e)
             }
         }
-    }
 
     companion object {
         private const val TAG = "RemoteHoDoWoAiService"
+        private const val HTTP_UNAUTHORIZED = 401
         private const val CONNECT_TIMEOUT_SECONDS = 15L
 
         // The LangChain agent can take a while, so reads get a longer timeout.
