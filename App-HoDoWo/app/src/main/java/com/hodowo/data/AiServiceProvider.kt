@@ -25,10 +25,12 @@ object AiServiceProvider {
         }
 
         val compressor = ImageCompressor(context.applicationContext)
+        val tokens = FirebaseTokenProvider()
 
         return RemoteHoDoWoAiService(
             backendUrl = backendUrl,
-            loadImage = { uri -> compressor.compress(uri) }
+            loadImage = { uri -> compressor.compress(uri) },
+            tokenProvider = { tokens.token() }
         )
     }
 

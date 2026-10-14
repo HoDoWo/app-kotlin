@@ -95,6 +95,42 @@ class RemoteHoDoWoAiServiceTest {
         assertEquals("Invalid server response", error?.message)
     }
 
+    // ---------- authentication ----------
+
+    @Test
+    fun tokenIsSentAsBearerHeader() = runTest {
+        server.enqueue(reply("ok"))
+        val authenticated = RemoteHoDoWoAiService(
+            backendUrl = server.url("/").toString(),
+            loadImage = { byteArrayOf(1) },
+            tokenProvider = { "abc.def.ghi" },
+            ioDispatcher = Dispatchers.Unconfined
+        )
+
+        authenticated.askQuestion("Hello", null)
+
+        assertEquals("Bearer abc.def.ghi", server.takeRequest().getHeader("Authorization"))
+    }
+
+    @Test
+    fun noAuthorizationHeaderWithoutToken() = runTest {
+        server.enqueue(reply("ok"))
+
+        service.askQuestion("Hello", null)
+
+        assertNull(server.takeRequest().getHeader("Authorization"))
+    }
+
+    @Test
+    fun unauthorizedAnswerAsksToSignInAgain() = runTest {
+        server.enqueue(MockResponse().setResponseCode(401).setBody("missing bearer token"))
+
+        val error = runCatching { service.askQuestion("Hello", null) }.exceptionOrNull()
+
+        assertTrue(error is IOException)
+        assertEquals("Not authorized: please sign in again", error?.message)
+    }
+
     // ---------- identifyAppliance ----------
 
     @Test
