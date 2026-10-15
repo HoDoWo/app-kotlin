@@ -66,6 +66,11 @@ fun ChatScreen(
 
     val state by viewModel.uiState.collectAsState()
 
+    // A streamed answer is shown only once its first piece has arrived.
+    val visibleMessages = state.messages.filterNot { message ->
+        message.isStreaming && message.text.isNullOrBlank()
+    }
+
     // Text currently typed in the input field.
     var text by remember {
         mutableStateOf("")
@@ -88,13 +93,16 @@ fun ChatScreen(
 
     /*
      * Automatically scroll to the last message
-     * whenever a new one is added.
+     * whenever a new one is added or a streamed answer grows.
      */
-    LaunchedEffect(state.messages.size) {
+    LaunchedEffect(
+        visibleMessages.size,
+        visibleMessages.lastOrNull()?.text?.length
+    ) {
 
-        if (state.messages.isNotEmpty()) {
+        if (visibleMessages.isNotEmpty()) {
             listState.animateScrollToItem(
-                state.messages.lastIndex
+                visibleMessages.lastIndex
             )
         }
     }
@@ -151,7 +159,7 @@ fun ChatScreen(
         ) {
 
             items(
-                items = state.messages,
+                items = visibleMessages,
                 key = { message ->
                     message.id
                 }
@@ -201,7 +209,7 @@ fun ChatScreen(
              * AI ANSWER
              * Loading indicator while waiting for the answer.
              */
-            if (state.isSending) {
+            if (state.isWaitingForAnswer) {
 
                 item {
 
@@ -534,8 +542,14 @@ private fun MessageItem(
                         )
                     }
 
+                    // A cursor shows that the answer is still arriving.
                     Text(
-                        text = message.text!!
+                        text =
+                            if (message.isStreaming) {
+                                message.text + " ▍"
+                            } else {
+                                message.text!!
+                            }
                     )
                 }
             }
@@ -547,6 +561,7 @@ private fun MessageItem(
          * Only on AI answers to a question (they carry a linked question).
          */
         if (!message.isUser &&
+            !message.isStreaming &&
             !message.text.isNullOrBlank() &&
             message.question != null
         ) {

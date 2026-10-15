@@ -4,9 +4,15 @@ import android.net.Uri
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -286,6 +292,85 @@ class ChatViewModelTest {
         assertEquals(-1, Feedback.DISLIKE.score)
     }
 
+    // ---------- streaming (#83) ----------
+
+    @Test
+    fun streamedPiecesAreJoinedInOneAnswer() = runTest(dispatcher) {
+        service.stream = flow {
+            emit("Check ")
+            emit("the ")
+            emit("filter.")
+        }
+
+        viewModel.sendTextMessage("Why does it leak?")
+        advanceUntilIdle()
+
+        val answer = viewModel.uiState.value.messages.last()
+        assertEquals("Check the filter.", answer.text)
+        assertFalse(answer.isStreaming)
+        assertEquals("Why does it leak?", answer.question)
+        assertFalse(viewModel.uiState.value.isSending)
+    }
+
+    @Test
+    fun partialAnswerIsShownWhileStreaming() = runTest(dispatcher) {
+        service.stream = flow {
+            emit("Hel")
+            delay(1_000)
+            emit("lo")
+        }
+
+        viewModel.sendTextMessage("Hi")
+
+        // Before the first piece: only "thinking".
+        assertTrue(viewModel.uiState.value.isWaitingForAnswer)
+
+        runCurrent()
+
+        val partial = viewModel.uiState.value.messages.last()
+        assertEquals("Hel", partial.text)
+        assertTrue(partial.isStreaming)
+        assertFalse(viewModel.uiState.value.isWaitingForAnswer)
+
+        // A message that is still streaming cannot be rated.
+        viewModel.setFeedback(partial.id, Feedback.LIKE)
+        assertNull(viewModel.uiState.value.messages.last().feedback)
+
+        advanceTimeBy(1_001)
+        runCurrent()
+
+        assertEquals("Hello", viewModel.uiState.value.messages.last().text)
+        assertFalse(viewModel.uiState.value.messages.last().isStreaming)
+    }
+
+    @Test
+    fun errorInTheMiddleKeepsThePartialAnswer() = runTest(dispatcher) {
+        service.stream = flow {
+            emit("Part of")
+            throw IllegalStateException("connection lost")
+        }
+
+        viewModel.sendTextMessage("Hi")
+        advanceUntilIdle()
+
+        val answer = viewModel.uiState.value.messages.last()
+        assertEquals("Part of", answer.text)
+        assertFalse(answer.isStreaming)
+        assertEquals("connection lost", viewModel.uiState.value.error)
+        assertFalse(viewModel.uiState.value.isSending)
+    }
+
+    @Test
+    fun demoServiceStreamsTheAnswerWordByWord() = runTest {
+        val demo = DemoHoDoWoAiService()
+        val machine = Appliance("Washing machine", "Bosch", null, 0.9f)
+
+        val pieces = demo.streamAnswer("Water everywhere", machine).toList()
+
+        assertTrue(pieces.size > 1)
+        assertEquals(demo.askQuestion("Water everywhere", machine), pieces.joinToString(""))
+    }
+
     // ---------- DemoHoDoWoAiService ----------
 
     @Test
@@ -399,6 +484,9 @@ class ChatViewModelTest {
         var failFeedback = false
 
         var lastAppliance: Appliance? = null
+
+        /** When set, the answer arrives as these pieces instead of one block. */
+        var stream: Flow<String>? = null
         val sentFeedback = mutableListOf<FeedbackReport>()
 
         override suspend fun identifyAppliance(uri: Uri): Appliance {
@@ -425,5 +513,8 @@ class ChatViewModelTest {
             if (failFeedback) throw IllegalStateException("network down")
             sentFeedback += report
         }
+
+        override fun streamAnswer(question: String, appliance: Appliance?): Flow<String> =
+            stream ?: super.streamAnswer(question, appliance)
     }
 }
