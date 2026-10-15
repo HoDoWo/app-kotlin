@@ -107,6 +107,13 @@ interface HoDoWoAiService {
     ): String
 
     /**
+     * Detects the buttons, dials and other controls in the cropped panel photo
+     * at [uri], using the identified [appliance] as context.
+     * Returns an empty list when the backend finds no controls.
+     */
+    suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl>
+
+    /**
      * Sends the user's rating of an answer to the backend.
      * Must throw an exception if the request fails, so that the ViewModel
      * can retry later.
@@ -157,6 +164,29 @@ class DemoHoDoWoAiService : HoDoWoAiService {
             else ->
                 "I looked at your question about the $applianceName. Tell me the specific problem you are having."
         }
+    }
+
+    override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> {
+        // Simulate the network and model latency.
+        delay(900)
+
+        // Always returns the same fake controls.
+        return listOf(
+            PanelControl(
+                id = "c1",
+                label = "Start/Pause",
+                type = ControlType.BUTTON,
+                description = "Starts or pauses the selected program",
+                box = ControlBox(x = 0.62f, y = 0.40f, w = 0.10f, h = 0.12f)
+            ),
+            PanelControl(
+                id = "c2",
+                label = "Temperature dial",
+                type = ControlType.DIAL,
+                description = "Selects the wash temperature",
+                box = ControlBox(x = 0.10f, y = 0.20f, w = 0.12f, h = 0.12f)
+            )
+        )
     }
 
     override suspend fun sendFeedback(report: FeedbackReport) {

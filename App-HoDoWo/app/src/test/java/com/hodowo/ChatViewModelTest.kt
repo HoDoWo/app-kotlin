@@ -328,6 +328,20 @@ class ChatViewModelTest {
         )
     }
 
+    @Test
+    fun demoServiceReturnsPanelControls() = runTest {
+        val controls = DemoHoDoWoAiService().analyzePanel(mockk<Uri>(), null)
+
+        assertTrue(controls.isNotEmpty())
+        assertEquals("c1", controls.first().id)
+        assertEquals(ControlType.BUTTON, controls.first().type)
+        controls.forEach { control ->
+            val box = control.box
+            assertTrue(box.x in 0f..1f && box.y in 0f..1f)
+            assertTrue(box.w in 0f..1f && box.h in 0f..1f)
+        }
+    }
+
     // ---------- helpers ----------
 
     /** Sends a question and returns the id of the AI answer. */
@@ -343,8 +357,10 @@ class ChatViewModelTest {
     private class FakeAiService : HoDoWoAiService {
 
         var appliance = Appliance("Dishwasher", "Bosch", "X1", 0.5f)
+        var controls = emptyList<PanelControl>()
         var askError: Exception? = null
         var identifyError: Exception? = null
+        var analyzeError: Exception? = null
         var failFeedback = false
 
         var lastAppliance: Appliance? = null
@@ -362,6 +378,12 @@ class ChatViewModelTest {
             askError?.let { throw it }
             lastAppliance = appliance
             return "fake answer"
+        }
+
+        override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> {
+            analyzeError?.let { throw it }
+            lastAppliance = appliance
+            return controls
         }
 
         override suspend fun sendFeedback(report: FeedbackReport) {
