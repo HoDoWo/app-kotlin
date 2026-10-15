@@ -209,6 +209,9 @@ class ChatViewModel(
     // Last message id handed out (ids are unique and increasing).
     private var messageId = 0L
 
+    // Last photo the user analyzed; used by the debug panel detection (S1-14).
+    private var lastImageUri: Uri? = null
+
     /**
      * Ratings not yet delivered to the backend (at most one per message).
      * If the user changes their mind, the new rating replaces the queued one.
@@ -283,6 +286,8 @@ class ChatViewModel(
      */
     fun analyzeImage(uri: Uri) {
 
+        lastImageUri = uri
+
         addMessage(
             Message(
                 id = nextMessageId(),
@@ -342,6 +347,86 @@ class ChatViewModel(
 
                 _uiState.value = _uiState.value.copy(
                     isAnalyzing = false
+                )
+            }
+        }
+    }
+
+    /**
+     * Debug-only helper for S1-14 (button and dial detection): runs the panel
+     * analysis on the last photo and shows the detected controls as a chat
+     * message. The interactive overlay in S1-15 will replace this.
+     */
+    fun debugAnalyzePanel() {
+
+        val uri = lastImageUri
+
+        if (uri == null) {
+
+            _uiState.value = _uiState.value.copy(
+                error = "Take a photo first, then tap the detect button."
+            )
+
+            return
+        }
+
+        _uiState.value = _uiState.value.copy(
+            isAnalyzing = true,
+            error = null
+        )
+
+        viewModelScope.launch {
+
+            try {
+
+                val controls = aiService.analyzePanel(
+                    uri = uri,
+                    appliance = _uiState.value.appliance
+                )
+
+                addMessage(
+                    Message(
+                        id = nextMessageId(),
+                        text = buildControlsText(controls),
+                        isUser = false
+                    )
+                )
+
+            } catch (e: Exception) {
+
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Error while detecting the controls."
+                )
+
+            } finally {
+
+                _uiState.value = _uiState.value.copy(
+                    isAnalyzing = false
+                )
+            }
+        }
+    }
+
+    /** Readable summary of a panel analysis, shown by the debug button. */
+    private fun buildControlsText(controls: List<PanelControl>): String {
+
+        if (controls.isEmpty()) {
+            return "No controls detected in the photo."
+        }
+
+        return buildString {
+
+            append("Detected ${controls.size} control(s):")
+
+            controls.forEach { control ->
+
+                append("\n• ${control.label} (${control.type.name.lowercase()})")
+
+                append(
+                    " — x=${"%.2f".format(control.box.x)}" +
+                        ", y=${"%.2f".format(control.box.y)}" +
+                        ", w=${"%.2f".format(control.box.w)}" +
+                        ", h=${"%.2f".format(control.box.h)}"
                 )
             }
         }

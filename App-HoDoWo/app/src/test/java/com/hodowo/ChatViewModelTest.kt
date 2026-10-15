@@ -342,6 +342,41 @@ class ChatViewModelTest {
         }
     }
 
+    // ---------- debug panel detection (S1-14) ----------
+
+    @Test
+    fun debugAnalyzePanelShowsTheDetectedControls() = runTest(dispatcher) {
+        service.controls = listOf(
+            PanelControl(
+                id = "c1",
+                label = "Start/Pause",
+                type = ControlType.BUTTON,
+                description = "Starts the program",
+                box = ControlBox(0.62f, 0.40f, 0.10f, 0.12f)
+            )
+        )
+
+        // The debug button works on the last analyzed photo.
+        viewModel.analyzeImage(mockk<Uri>())
+        advanceUntilIdle()
+
+        viewModel.debugAnalyzePanel()
+        advanceUntilIdle()
+
+        val text = viewModel.uiState.value.messages.last().text
+        assertNotNull(text)
+        assertTrue(text!!.contains("Start/Pause"))
+        assertTrue(text.contains("button"))
+    }
+
+    @Test
+    fun debugAnalyzePanelWithoutAPhotoShowsAnError() = runTest(dispatcher) {
+        viewModel.debugAnalyzePanel()
+        advanceUntilIdle()
+
+        assertNotNull(viewModel.uiState.value.error)
+    }
+
     // ---------- helpers ----------
 
     /** Sends a question and returns the id of the AI answer. */
