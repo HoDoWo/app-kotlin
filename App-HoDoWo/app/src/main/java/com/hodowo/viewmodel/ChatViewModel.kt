@@ -522,9 +522,9 @@ class ChatViewModel(
 
                 append(
                     " — x=${"%.2f".format(control.box.x)}" +
-                        ", y=${"%.2f".format(control.box.y)}" +
-                        ", w=${"%.2f".format(control.box.w)}" +
-                        ", h=${"%.2f".format(control.box.h)}"
+                            ", y=${"%.2f".format(control.box.y)}" +
+                            ", w=${"%.2f".format(control.box.w)}" +
+                            ", h=${"%.2f".format(control.box.h)}"
                 )
             }
         }
