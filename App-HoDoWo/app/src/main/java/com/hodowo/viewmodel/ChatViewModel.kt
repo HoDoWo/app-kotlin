@@ -5,9 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -44,7 +46,13 @@ data class Message(
     val feedback: Feedback? = null,
 
     /** Optional free-text reason attached to the rating. */
-    val feedbackComment: String? = null
+    val feedbackComment: String? = null,
+
+    /**
+     * True while the AI answer is still arriving piece by piece (#83).
+     * A message that is still streaming cannot be rated.
+     */
+    val isStreaming: Boolean = false
 )
 
 /**
@@ -72,7 +80,15 @@ data class ChatUiState(
     val isSending: Boolean = false,
 
     val error: String? = null
-)
+) {
+
+    /**
+     * True while the answer has been requested but no text has arrived yet:
+     * the screen shows "HoDoWo is thinking..." only in this phase.
+     */
+    val isWaitingForAnswer: Boolean
+        get() = isSending && messages.none { it.isStreaming && !it.text.isNullOrBlank() }
+}
 
 /**
  * Data sent to the backend for each rating
@@ -112,6 +128,19 @@ interface HoDoWoAiService {
      * can retry later.
      */
     suspend fun sendFeedback(report: FeedbackReport)
+
+    /**
+     * Streams the answer to [question] piece by piece (#83).
+     *
+     * Default: the whole answer as a single piece, so a service without
+     * streaming support (e.g. the current backend, see #84) keeps working.
+     */
+    fun streamAnswer(
+        question: String,
+        appliance: Appliance?
+    ): Flow<String> = flow {
+        emit(askQuestion(question, appliance))
+    }
 }
 
 /**
@@ -163,6 +192,25 @@ class DemoHoDoWoAiService : HoDoWoAiService {
         // Simulates the network call: the real backend will expose POST /feedback.
         delay(300)
     }
+
+    /** Sends the canned answer word by word, like a real stream would. */
+    override fun streamAnswer(
+        question: String,
+        appliance: Appliance?
+    ): Flow<String> = flow {
+
+        val words = askQuestion(question, appliance).split(" ")
+
+        words.forEachIndexed { index, word ->
+            delay(STREAM_DELAY_MS)
+            emit(if (index == 0) word else " $word")
+        }
+    }
+
+    private companion object {
+        // Pause between two words of the demo stream.
+        const val STREAM_DELAY_MS = 60L
+    }
 }
 
 /**
@@ -208,6 +256,20 @@ class ChatViewModel(
             )
         )
 
+        // Empty AI answer, filled while the pieces of the answer arrive.
+        // It keeps the question so it can be rated once complete.
+        val answerId = nextMessageId()
+
+        addMessage(
+            Message(
+                id = answerId,
+                text = "",
+                isUser = false,
+                question = cleanText,
+                isStreaming = true
+            )
+        )
+
         _uiState.value = _uiState.value.copy(
             isSending = true,
             error = null
@@ -217,34 +279,70 @@ class ChatViewModel(
 
             try {
 
-                val answer = aiService.askQuestion(
+                aiService.streamAnswer(
                     question = cleanText,
                     appliance = _uiState.value.appliance
-                )
+                ).collect { piece ->
+                    appendToMessage(answerId, piece)
+                }
 
-                // Keep the question on the answer so it can be rated later.
-                addMessage(
-                    Message(
-                        id = nextMessageId(),
-                        text = answer,
-                        isUser = false,
-                        question = cleanText
-                    )
-                )
+            } catch (e: CancellationException) {
+
+                // Never swallow coroutine cancellation.
+                throw e
 
             } catch (e: Exception) {
 
+                // Any text received before the error stays visible.
                 _uiState.value = _uiState.value.copy(
                     error = e.message ?: "Error while sending the message."
                 )
 
             } finally {
 
+                finishStreaming(answerId)
+
                 _uiState.value = _uiState.value.copy(
                     isSending = false
                 )
             }
         }
+    }
+
+    /** Adds a piece of the streamed answer to the message [id]. */
+    private fun appendToMessage(id: Long, piece: String) {
+
+        _uiState.value = _uiState.value.copy(
+            messages = _uiState.value.messages.map { current ->
+                if (current.id == id) {
+                    current.copy(text = current.text.orEmpty() + piece)
+                } else {
+                    current
+                }
+            }
+        )
+    }
+
+    /**
+     * Marks the streamed answer [id] as complete.
+     * An answer that received no text at all (e.g. error before the first
+     * piece) is removed, so no empty bubble is left in the chat.
+     */
+    private fun finishStreaming(id: Long) {
+
+        val messages = _uiState.value.messages
+        val message = messages.firstOrNull { it.id == id } ?: return
+
+        _uiState.value = _uiState.value.copy(
+            messages =
+                if (message.text.isNullOrBlank()) {
+                    messages.filterNot { it.id == id }
+                } else {
+                    messages.map { current ->
+                        if (current.id == id) current.copy(isStreaming = false) else current
+                    }
+                }
+        )
     }
 
     /**
@@ -334,6 +432,11 @@ class ChatViewModel(
         val message = _uiState.value.messages
             .firstOrNull { it.id == messageId }
             ?: return
+
+        // An answer that is still arriving cannot be rated yet.
+        if (message.isStreaming) {
+            return
+        }
 
         // Only Q&A answers can be rated (they are the ones with a linked question).
         val question = message.question ?: return
