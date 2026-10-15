@@ -39,3 +39,7 @@ timestamp,issue,title,type,delta_hours
 2026-10-13T18:20:42+00:00,38,Camera capture with CameraX,completado,-5.0
 2026-10-13T18:20:49+00:00,64,Chat UI (text and images),completado,-6.0
 2026-10-13T17:23:34+00:00,87,Working on fixing issues on Pull Requests,anadido,4.0
+2026-10-15T18:02:26+00:00,48,"FastAPI on Vercel: CORS, rate limiting, env keys",completado,-4.0
+2026-10-15T18:10:17+00:00,83,Prepare UI to receive SSE,anadido,5.0
+2026-10-15T19:23:30+00:00,83,Prepare UI to receive SSE,completado,-5.0
+2026-10-15T17:33:41+00:00,61,Button and dial detection,completado,-4.0
