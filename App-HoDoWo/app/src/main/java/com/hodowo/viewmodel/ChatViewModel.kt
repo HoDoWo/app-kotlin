@@ -123,6 +123,13 @@ interface HoDoWoAiService {
     ): String
 
     /**
+     * Detects the buttons, dials and other controls in the cropped panel photo
+     * at [uri], using the identified [appliance] as context.
+     * Returns an empty list when the backend finds no controls.
+     */
+    suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl>
+
+    /**
      * Sends the user's rating of an answer to the backend.
      * Must throw an exception if the request fails, so that the ViewModel
      * can retry later.
@@ -188,6 +195,29 @@ class DemoHoDoWoAiService : HoDoWoAiService {
         }
     }
 
+    override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> {
+        // Simulate the network and model latency.
+        delay(900)
+
+        // Always returns the same fake controls.
+        return listOf(
+            PanelControl(
+                id = "c1",
+                label = "Start/Pause",
+                type = ControlType.BUTTON,
+                description = "Starts or pauses the selected program",
+                box = ControlBox(x = 0.62f, y = 0.40f, w = 0.10f, h = 0.12f)
+            ),
+            PanelControl(
+                id = "c2",
+                label = "Temperature dial",
+                type = ControlType.DIAL,
+                description = "Selects the wash temperature",
+                box = ControlBox(x = 0.10f, y = 0.20f, w = 0.12f, h = 0.12f)
+            )
+        )
+    }
+
     override suspend fun sendFeedback(report: FeedbackReport) {
         // Simulates the network call: the real backend will expose POST /feedback.
         delay(300)
@@ -226,6 +256,9 @@ class ChatViewModel(
 
     // Last message id handed out (ids are unique and increasing).
     private var messageId = 0L
+
+    // Last photo the user analyzed; used by the debug panel detection (S1-14).
+    private var lastImageUri: Uri? = null
 
     /**
      * Ratings not yet delivered to the backend (at most one per message).
@@ -351,6 +384,8 @@ class ChatViewModel(
      */
     fun analyzeImage(uri: Uri) {
 
+        lastImageUri = uri
+
         addMessage(
             Message(
                 id = nextMessageId(),
@@ -410,6 +445,86 @@ class ChatViewModel(
 
                 _uiState.value = _uiState.value.copy(
                     isAnalyzing = false
+                )
+            }
+        }
+    }
+
+    /**
+     * Debug-only helper for S1-14 (button and dial detection): runs the panel
+     * analysis on the last photo and shows the detected controls as a chat
+     * message. The interactive overlay in S1-15 will replace this.
+     */
+    fun debugAnalyzePanel() {
+
+        val uri = lastImageUri
+
+        if (uri == null) {
+
+            _uiState.value = _uiState.value.copy(
+                error = "Take a photo first, then tap the detect button."
+            )
+
+            return
+        }
+
+        _uiState.value = _uiState.value.copy(
+            isAnalyzing = true,
+            error = null
+        )
+
+        viewModelScope.launch {
+
+            try {
+
+                val controls = aiService.analyzePanel(
+                    uri = uri,
+                    appliance = _uiState.value.appliance
+                )
+
+                addMessage(
+                    Message(
+                        id = nextMessageId(),
+                        text = buildControlsText(controls),
+                        isUser = false
+                    )
+                )
+
+            } catch (e: Exception) {
+
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Error while detecting the controls."
+                )
+
+            } finally {
+
+                _uiState.value = _uiState.value.copy(
+                    isAnalyzing = false
+                )
+            }
+        }
+    }
+
+    /** Readable summary of a panel analysis, shown by the debug button. */
+    private fun buildControlsText(controls: List<PanelControl>): String {
+
+        if (controls.isEmpty()) {
+            return "No controls detected in the photo."
+        }
+
+        return buildString {
+
+            append("Detected ${controls.size} control(s):")
+
+            controls.forEach { control ->
+
+                append("\n• ${control.label} (${control.type.name.lowercase()})")
+
+                append(
+                    " — x=${"%.2f".format(control.box.x)}" +
+                        ", y=${"%.2f".format(control.box.y)}" +
+                        ", w=${"%.2f".format(control.box.w)}" +
+                        ", h=${"%.2f".format(control.box.h)}"
                 )
             }
         }

@@ -2,6 +2,7 @@ package com.hodowo.data
 
 import android.net.Uri
 import com.hodowo.viewmodel.Appliance
+import com.hodowo.viewmodel.ControlType
 import com.hodowo.viewmodel.Feedback
 import com.hodowo.viewmodel.FeedbackReport
 import io.mockk.mockk
@@ -154,6 +155,91 @@ class RemoteHoDoWoAiServiceTest {
         assertTrue(body.contains("Identify the household appliance"))
     }
 
+    // ---------- analyzePanel ----------
+
+    @Test
+    fun panelIsSentAsMultipartAndControlsAreParsed() = runTest {
+        server.enqueue(
+            panel(
+                """[{"id": "c1", "label": "Start/Pause", "type": "button",
+                     "description": "Starts the program",
+                     "box": {"x": 0.62, "y": 0.40, "w": 0.10, "h": 0.12}}]"""
+            )
+        )
+        val machine = Appliance("Washing machine", "Bosch", "HW-100", 0.9f)
+
+        val controls = service.analyzePanel(mockk<Uri>(), machine)
+
+        assertEquals(1, controls.size)
+        assertEquals("c1", controls[0].id)
+        assertEquals("Start/Pause", controls[0].label)
+        assertEquals(ControlType.BUTTON, controls[0].type)
+        assertEquals("Starts the program", controls[0].description)
+        assertEquals(0.62f, controls[0].box.x, 0.001f)
+        assertEquals(0.12f, controls[0].box.h, 0.001f)
+
+        val request = server.takeRequest()
+        assertEquals("/api/panel/analyze", request.path)
+        assertTrue(request.getHeader("Content-Type").orEmpty().startsWith("multipart/form-data"))
+
+        val body = request.body.readUtf8()
+        assertTrue(body.contains("name=\"image\"; filename=\"panel.jpg\""))
+        assertTrue(body.contains("name=\"brand\""))
+        assertTrue(body.contains("Bosch"))
+        assertTrue(body.contains("name=\"model\""))
+        assertTrue(body.contains("name=\"language\""))
+    }
+
+    @Test
+    fun panelWithoutControlsReturnsEmptyList() = runTest {
+        server.enqueue(panel("[]"))
+
+        assertTrue(service.analyzePanel(mockk<Uri>(), null).isEmpty())
+    }
+
+    @Test
+    fun panelWithoutJsonThrowsIoException() = runTest {
+        server.enqueue(MockResponse().setBody("not json"))
+
+        val error = runCatching { service.analyzePanel(mockk<Uri>(), null) }.exceptionOrNull()
+
+        assertTrue(error is IOException)
+        assertEquals("Invalid server response", error?.message)
+    }
+
+    // ---------- parseControls ----------
+
+    @Test
+    fun panelCoordinatesAreClampedAndBadEntriesSkipped() {
+        val json = JSONObject(
+            """{"controls": [
+                {"label": "Temperature dial", "type": "dial",
+                 "box": {"x": -1, "y": 2, "w": 0.5, "h": 0.5}},
+                {"label": "No box", "type": "button"},
+                {"label": "   ", "type": "button",
+                 "box": {"x": 0.0, "y": 0.0, "w": 0.1, "h": 0.1}}]}"""
+        )
+
+        val controls = RemoteHoDoWoAiService.parseControls(json)
+
+        assertEquals(1, controls.size)
+        assertEquals("c1", controls[0].id)
+        assertEquals("Temperature dial", controls[0].label)
+        assertEquals(ControlType.DIAL, controls[0].type)
+        assertEquals(0f, controls[0].box.x, 0.001f)
+        assertEquals(1f, controls[0].box.y, 0.001f)
+    }
+
+    @Test
+    fun unknownPanelTypeBecomesOther() {
+        val json = JSONObject(
+            """{"controls": [{"label": "Knob", "type": "knob",
+                 "box": {"x": 0.1, "y": 0.1, "w": 0.1, "h": 0.1}}]}"""
+        )
+
+        assertEquals(ControlType.OTHER, RemoteHoDoWoAiService.parseControls(json).single().type)
+    }
+
     // ---------- parseAppliance ----------
 
     @Test
@@ -217,4 +303,10 @@ class RemoteHoDoWoAiServiceTest {
         MockResponse()
             .setHeader("Content-Type", "application/json")
             .setBody(JSONObject().put("reply", text).toString())
+
+    /** Builds a /api/panel/analyze answer: {"controls": [...]}. */
+    private fun panel(controlsJson: String) =
+        MockResponse()
+            .setHeader("Content-Type", "application/json")
+            .setBody("""{"controls": $controlsJson}""")
 }

@@ -413,6 +413,55 @@ class ChatViewModelTest {
         )
     }
 
+    @Test
+    fun demoServiceReturnsPanelControls() = runTest {
+        val controls = DemoHoDoWoAiService().analyzePanel(mockk<Uri>(), null)
+
+        assertTrue(controls.isNotEmpty())
+        assertEquals("c1", controls.first().id)
+        assertEquals(ControlType.BUTTON, controls.first().type)
+        controls.forEach { control ->
+            val box = control.box
+            assertTrue(box.x in 0f..1f && box.y in 0f..1f)
+            assertTrue(box.w in 0f..1f && box.h in 0f..1f)
+        }
+    }
+
+    // ---------- debug panel detection (S1-14) ----------
+
+    @Test
+    fun debugAnalyzePanelShowsTheDetectedControls() = runTest(dispatcher) {
+        service.controls = listOf(
+            PanelControl(
+                id = "c1",
+                label = "Start/Pause",
+                type = ControlType.BUTTON,
+                description = "Starts the program",
+                box = ControlBox(0.62f, 0.40f, 0.10f, 0.12f)
+            )
+        )
+
+        // The debug button works on the last analyzed photo.
+        viewModel.analyzeImage(mockk<Uri>())
+        advanceUntilIdle()
+
+        viewModel.debugAnalyzePanel()
+        advanceUntilIdle()
+
+        val text = viewModel.uiState.value.messages.last().text
+        assertNotNull(text)
+        assertTrue(text!!.contains("Start/Pause"))
+        assertTrue(text.contains("button"))
+    }
+
+    @Test
+    fun debugAnalyzePanelWithoutAPhotoShowsAnError() = runTest(dispatcher) {
+        viewModel.debugAnalyzePanel()
+        advanceUntilIdle()
+
+        assertNotNull(viewModel.uiState.value.error)
+    }
+
     // ---------- helpers ----------
 
     /** Sends a question and returns the id of the AI answer. */
@@ -428,8 +477,10 @@ class ChatViewModelTest {
     private class FakeAiService : HoDoWoAiService {
 
         var appliance = Appliance("Dishwasher", "Bosch", "X1", 0.5f)
+        var controls = emptyList<PanelControl>()
         var askError: Exception? = null
         var identifyError: Exception? = null
+        var analyzeError: Exception? = null
         var failFeedback = false
 
         var lastAppliance: Appliance? = null
@@ -450,6 +501,12 @@ class ChatViewModelTest {
             askError?.let { throw it }
             lastAppliance = appliance
             return "fake answer"
+        }
+
+        override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> {
+            analyzeError?.let { throw it }
+            lastAppliance = appliance
+            return controls
         }
 
         override suspend fun sendFeedback(report: FeedbackReport) {

@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.hodowo.BuildConfig
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.Feedback
 import com.hodowo.viewmodel.Message
@@ -264,6 +265,28 @@ fun ChatScreen(
             ) {
 
                 Text("📷")
+            }
+
+
+            /*
+             * DEBUG (S1-14)
+             * Runs button and dial detection on the last photo and shows the
+             * result in the chat. Debug builds only; S1-15 adds the overlay.
+             */
+            if (BuildConfig.DEBUG) {
+
+                Spacer(
+                    modifier = Modifier.width(8.dp)
+                )
+
+                Button(
+                    onClick = {
+                        viewModel.debugAnalyzePanel()
+                    }
+                ) {
+
+                    Text("🔎")
+                }
             }
 
 

@@ -3,8 +3,11 @@ package com.hodowo.data
 import android.net.Uri
 import android.util.Log
 import com.hodowo.viewmodel.Appliance
+import com.hodowo.viewmodel.ControlBox
+import com.hodowo.viewmodel.ControlType
 import com.hodowo.viewmodel.FeedbackReport
 import com.hodowo.viewmodel.HoDoWoAiService
+import com.hodowo.viewmodel.PanelControl
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -17,26 +20,30 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
  * [HoDoWoAiService] backed by the HoDoWo backend (FastAPI on Vercel).
  *
- * Every call goes to `POST {backendUrl}/api/chat`, which answers `{"reply": "..."}`:
- * - questions are sent as JSON: `{"message": "..."}`;
- * - photos are sent as multipart/form-data with the fields `message` and `image`.
+ * Every call goes to the backend:
+ * - questions and photos go to `POST {backendUrl}/api/chat`, which answers `{"reply": "..."}`;
+ * - `POST {backendUrl}/api/panel/analyze` receives a panel photo as multipart/form-data
+ *   and answers `{"controls": [...]}` (button and dial detection, S1-14).
  *
  * @param backendUrl base URL of the backend (from `backend.url` in local.properties).
  * @param loadImage reads and compresses the photo at the given [Uri] into JPEG bytes.
  * @param tokenProvider returns the Firebase ID token of the signed-in user, or null.
  *   The backend rejects requests without a valid token (HTTP 401).
+ * @param language BCP-47 code of the app language, used for the control labels.
  */
 class RemoteHoDoWoAiService(
     private val backendUrl: String,
     private val loadImage: suspend (Uri) -> ByteArray,
     private val tokenProvider: suspend () -> String? = { null },
     private val httpClient: OkHttpClient = defaultClient(),
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val language: String = Locale.getDefault().language
 ) : HoDoWoAiService {
 
     override suspend fun identifyAppliance(uri: Uri): Appliance {
@@ -48,7 +55,7 @@ class RemoteHoDoWoAiService(
             .addFormDataPart("image", "appliance.jpg", image.toRequestBody(JPEG))
             .build()
 
-        return parseAppliance(post(body))
+        return parseAppliance(replyOf(post(CHAT_PATH, body)))
     }
 
     override suspend fun askQuestion(
@@ -60,7 +67,22 @@ class RemoteHoDoWoAiService(
             .toString()
             .toRequestBody(JSON)
 
-        return post(body)
+        return replyOf(post(CHAT_PATH, body))
+    }
+
+    override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> {
+        val image = loadImage(uri)
+
+        val builder = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("image", "panel.jpg", image.toRequestBody(JPEG))
+            .addFormDataPart("language", language)
+
+        // The identified appliance is sent as context for the vision model.
+        appliance?.brand?.let { builder.addFormDataPart("brand", it) }
+        appliance?.model?.let { builder.addFormDataPart("model", it) }
+
+        return parseControls(jsonOf(post(PANEL_PATH, builder.build())))
     }
 
     override suspend fun sendFeedback(report: FeedbackReport) {
@@ -69,19 +91,19 @@ class RemoteHoDoWoAiService(
         Log.d(TAG, "Rating of message ${report.messageId} not stored: no backend endpoint yet")
     }
 
-    /** Sends [body] to /api/chat and returns the "reply" field of the answer. */
-    private suspend fun post(body: RequestBody): String {
+    /** Sends [body] to [path] and returns the raw response body. */
+    private suspend fun post(path: String, body: RequestBody): String {
         // Read the token before switching thread: it may need a network call.
         val token = tokenProvider()
 
         return withContext(ioDispatcher) {
-            execute(buildRequest(body, token))
+            execute(buildRequest(path, body, token))
         }
     }
 
-    private fun buildRequest(body: RequestBody, token: String?): Request {
+    private fun buildRequest(path: String, body: RequestBody, token: String?): Request {
         val builder = Request.Builder()
-            .url("${backendUrl.trimEnd('/')}/api/chat")
+            .url("${backendUrl.trimEnd('/')}$path")
             .post(body)
 
         // The backend expects "Authorization: Bearer <Firebase ID token>".
@@ -92,7 +114,7 @@ class RemoteHoDoWoAiService(
         return builder.build()
     }
 
-    /** Runs the request and returns the "reply" field of the JSON answer. */
+    /** Runs the request and returns the raw response body, mapping HTTP errors to IOException. */
     private fun execute(request: Request): String =
         httpClient.newCall(request).execute().use { response ->
             val text = response.body?.string().orEmpty()
@@ -105,12 +127,22 @@ class RemoteHoDoWoAiService(
                 throw IOException("Server error ${response.code}")
             }
 
-            try {
-                JSONObject(text).getString("reply")
-            } catch (e: JSONException) {
-                throw IOException("Invalid server response", e)
-            }
+            text
         }
+
+    /** Reads the "reply" field of a /api/chat answer. */
+    private fun replyOf(text: String): String = try {
+        JSONObject(text).getString("reply")
+    } catch (e: JSONException) {
+        throw IOException("Invalid server response", e)
+    }
+
+    /** Parses a JSON object answer, such as the one from /api/panel/analyze. */
+    private fun jsonOf(text: String): JSONObject = try {
+        JSONObject(text)
+    } catch (e: JSONException) {
+        throw IOException("Invalid server response", e)
+    }
 
     companion object {
         private const val TAG = "RemoteHoDoWoAiService"
@@ -122,6 +154,9 @@ class RemoteHoDoWoAiService(
 
         private val JSON = "application/json".toMediaType()
         private val JPEG = "image/jpeg".toMediaType()
+
+        internal const val CHAT_PATH = "/api/chat"
+        internal const val PANEL_PATH = "/api/panel/analyze"
 
         internal const val UNKNOWN_APPLIANCE = "Unknown appliance"
 
@@ -192,5 +227,46 @@ class RemoteHoDoWoAiService(
         /** Returns the field as text, or null when it is missing, null or blank. */
         private fun JSONObject.textOrNull(key: String): String? =
             if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
+
+        /**
+         * Turns the /api/panel/analyze answer into the list of controls (S1-14).
+         *
+         * Entries without a label or a box are dropped, and every coordinate is
+         * clamped to 0..1 so the overlay (S1-15) always gets usable boxes.
+         */
+        internal fun parseControls(payload: JSONObject): List<PanelControl> {
+            val array = payload.optJSONArray("controls") ?: return emptyList()
+            val controls = ArrayList<PanelControl>(array.length())
+
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                val label = item.optString("label").trim()
+                val box = item.optJSONObject("box") ?: continue
+                if (label.isEmpty()) continue
+
+                controls.add(
+                    PanelControl(
+                        id = item.optString("id").ifBlank { "c${index + 1}" },
+                        label = label,
+                        type = ControlType.fromApi(item.optString("type")),
+                        description = item.optString("description").trim(),
+                        box = ControlBox(
+                            x = box.unitValue("x"),
+                            y = box.unitValue("y"),
+                            w = box.unitValue("w"),
+                            h = box.unitValue("h")
+                        )
+                    )
+                )
+            }
+
+            return controls
+        }
+
+        /** Reads a coordinate and clamps it to 0..1 (NaN becomes 0). */
+        private fun JSONObject.unitValue(key: String): Float {
+            val value = optDouble(key, 0.0).toFloat()
+            return if (value.isNaN()) 0f else value.coerceIn(0f, 1f)
+        }
     }
 }
