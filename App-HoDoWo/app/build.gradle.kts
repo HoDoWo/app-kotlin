@@ -33,6 +33,7 @@ android {
             exclude("**/*OpenRouterChatClient*.class")
             exclude("**/*CameraScreen*.class")
             exclude("**/*ChatScreen*.class")
+            exclude("**/*PanelOverlayKt*.class")
             exclude("**/*HoDoWoApp*.class")
             exclude("**/*ImageCompressor*.class")
             exclude("**/*AiServiceProvider*.class")

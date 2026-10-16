@@ -57,11 +57,14 @@ import com.hodowo.viewmodel.Message
  *
  * @param viewModel source of the UI state and target of the user actions.
  * @param onOpenCamera called when the user taps the camera button.
+ * @param onDetectPanel called when the user taps the debug detect button
+ *   (S1-14/S1-15): runs the panel analysis and opens the overlay.
  */
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel,
-    onOpenCamera: () -> Unit
+    onOpenCamera: () -> Unit,
+    onDetectPanel: () -> Unit
 ) {
 
     val state by viewModel.uiState.collectAsState()
@@ -269,9 +272,9 @@ fun ChatScreen(
 
 
             /*
-             * DEBUG (S1-14)
-             * Runs button and dial detection on the last photo and shows the
-             * result in the chat. Debug builds only; S1-15 adds the overlay.
+             * DEBUG (S1-14 / S1-15)
+             * Runs button and dial detection on the last photo and opens the
+             * interactive overlay. Debug builds only.
              */
             if (BuildConfig.DEBUG) {
 
@@ -280,9 +283,7 @@ fun ChatScreen(
                 )
 
                 Button(
-                    onClick = {
-                        viewModel.debugAnalyzePanel()
-                    }
+                    onClick = onDetectPanel
                 ) {
 
                     Text("🔎")

@@ -7,6 +7,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,8 +39,15 @@ fun HoDoWoApp(
 
     val context = LocalContext.current
 
+    val state by chatViewModel.uiState.collectAsState()
+
     // True while the camera is shown instead of the chat.
     var showCamera by remember {
+        mutableStateOf(false)
+    }
+
+    // True while the control panel overlay (S1-15) is shown.
+    var showOverlay by remember {
         mutableStateOf(false)
     }
 
@@ -83,7 +91,24 @@ fun HoDoWoApp(
         }
     }
 
-    if (showCamera) {
+    if (showOverlay) {
+
+        // The system back button closes the overlay instead of the app.
+        BackHandler {
+            showOverlay = false
+        }
+
+        PanelOverlayScreen(
+            imageUri = state.panelImageUri,
+            controls = state.panelControls,
+            isLoading = state.isAnalyzing,
+            errorMessage = state.error,
+            onClose = {
+                showOverlay = false
+            }
+        )
+
+    } else if (showCamera) {
 
         // The system back button closes the camera instead of the app.
         BackHandler {
@@ -107,7 +132,14 @@ fun HoDoWoApp(
 
         ChatScreen(
             viewModel = chatViewModel,
-            onOpenCamera = ::openCamera
+            onOpenCamera = ::openCamera,
+            onDetectPanel = {
+
+                // Detect the controls and show the overlay only if a photo exists.
+                if (chatViewModel.analyzePanel()) {
+                    showOverlay = true
+                }
+            }
         )
     }
 }
