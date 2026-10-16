@@ -1,4 +1,10 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzg-8Kl0": {
+  "c": 5.0,
+  "done": false,
+  "issue": 62,
+  "title": "Sprint 1 clickable prototype"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-8MRo": {
   "c": 6.0,
   "done": false,
@@ -161,18 +167,6 @@
   "issue": 67,
   "title": "LangChain agent wiring"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-8Kl0": {
-  "c": 5.0,
-  "done": false,
-  "issue": 62,
-  "title": "Compose Canvas overlay"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8Jx0": {
-  "c": 3.0,
-  "done": false,
-  "issue": 59,
-  "title": "Control panel cropping"
- },
  "PVTI_lADOFCkyKM4Bl88jzg_M0PY": {
   "c": 4.0,
   "done": false,
@@ -215,10 +209,34 @@
   "issue": 58,
   "title": "Control Panel"
  },
+ "PVTI_lADOFCkyKM4Bl88jzg-8Jx0": {
+  "c": 3.0,
+  "done": false,
+  "issue": 59,
+  "title": "Control panel cropping"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-8KLY": {
   "c": 0.0,
   "done": true,
   "issue": 61,
   "title": "Button and dial detection"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhBM_mM": {
+  "c": 0.0,
+  "done": false,
+  "issue": 92,
+  "title": "Interactive control panel overlay (Compose)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhBM_qY": {
+  "c": 0.0,
+  "done": false,
+  "issue": 93,
+  "title": "Interactive control panel overlay (Compose) (#92)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhBM_uA": {
+  "c": 0.0,
+  "done": false,
+  "issue": 94,
+  "title": "Crop the photo to the detected panel (#59)"
  }
 }
