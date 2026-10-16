@@ -36,6 +36,7 @@ android {
             exclude("**/*PanelOverlayKt*.class")
             exclude("**/*HoDoWoApp*.class")
             exclude("**/*ImageCompressor*.class")
+            exclude("**/*BitmapPanelCropper*.class")
             exclude("**/*AiServiceProvider*.class")
             exclude("**/*FirebaseTokenProvider*.class")
             exclude("**/BuildConfig.class")

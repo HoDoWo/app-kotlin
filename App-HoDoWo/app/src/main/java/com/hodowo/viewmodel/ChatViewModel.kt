@@ -132,6 +132,12 @@ interface HoDoWoAiService {
     ): String
 
     /**
+     * Locates the control panel inside the full photo at [uri] (S1-16).
+     * Returns null when the photo shows no panel.
+     */
+    suspend fun locatePanel(uri: Uri): PanelBox?
+
+    /**
      * Detects the buttons, dials and other controls in the cropped panel photo
      * at [uri], using the identified [appliance] as context.
      * Returns an empty list when the backend finds no controls.
@@ -204,6 +210,12 @@ class DemoHoDoWoAiService : HoDoWoAiService {
         }
     }
 
+    /**
+     * The demo has no vision model, so it never finds a panel and the overlay
+     * shows the whole photo.
+     */
+    override suspend fun locatePanel(uri: Uri): PanelBox? = null
+
     override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> {
         // Simulate the network and model latency.
         delay(900)
@@ -257,7 +269,8 @@ class DemoHoDoWoAiService : HoDoWoAiService {
  * (send a question, analyze a photo, rate an answer).
  */
 class ChatViewModel(
-    private val aiService: HoDoWoAiService = DemoHoDoWoAiService()
+    private val aiService: HoDoWoAiService = DemoHoDoWoAiService(),
+    private val panelCropper: PanelCropper = PanelCropper.None
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -460,9 +473,13 @@ class ChatViewModel(
     }
 
     /**
-     * Runs the button and dial detection (S1-14) on the last analyzed photo and
-     * stores the result in the state, where the interactive overlay (S1-15)
-     * reads it from.
+     * Runs the panel analysis on the last analyzed photo and stores the result
+     * in the state, where the interactive overlay (S1-15) reads it from.
+     *
+     * The photo is first cropped to the control panel using the box located by
+     * the backend (S1-16); the buttons and dials are then detected on that crop
+     * (S1-14). Cropping is best effort: when no panel can be located, the whole
+     * photo is used.
      *
      * @return true when the analysis was started; false when there is no photo
      *   yet (an error is stored in the state in that case).
@@ -492,8 +509,17 @@ class ChatViewModel(
 
             try {
 
+                // 1. Locate the panel and crop the photo to it (S1-16).
+                val panelUri = panelPhotoOf(uri)
+
+                // The overlay (S1-15) shows the very image the detection runs on.
+                _uiState.value = _uiState.value.copy(
+                    panelImageUri = panelUri
+                )
+
+                // 2. Detect the controls on that image (S1-14).
                 val controls = aiService.analyzePanel(
-                    uri = uri,
+                    uri = panelUri,
                     appliance = _uiState.value.appliance
                 )
 
@@ -516,6 +542,26 @@ class ChatViewModel(
         }
 
         return true
+    }
+
+    /**
+     * Returns the image the detection should run on (S1-16): the photo cropped
+     * to the located panel, or the original photo when the panel cannot be
+     * found. Cropping is an optimisation, so a failure never blocks the flow.
+     */
+    private suspend fun panelPhotoOf(uri: Uri): Uri = try {
+
+        val box = aiService.locatePanel(uri)
+
+        if (box == null) uri else panelCropper.crop(uri, box) ?: uri
+
+    } catch (cancellation: CancellationException) {
+
+        throw cancellation
+
+    } catch (_: Exception) {
+
+        uri
     }
 
     /**
