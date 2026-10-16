@@ -427,10 +427,10 @@ class ChatViewModelTest {
         }
     }
 
-    // ---------- debug panel detection (S1-14) ----------
+    // ---------- panel detection (S1-14) + overlay state (S1-15) ----------
 
     @Test
-    fun debugAnalyzePanelShowsTheDetectedControls() = runTest(dispatcher) {
+    fun analyzePanelStoresTheDetectedControls() = runTest(dispatcher) {
         service.controls = listOf(
             PanelControl(
                 id = "c1",
@@ -441,25 +441,68 @@ class ChatViewModelTest {
             )
         )
 
-        // The debug button works on the last analyzed photo.
+        // The detect button works on the last analyzed photo.
         viewModel.analyzeImage(mockk<Uri>())
         advanceUntilIdle()
 
-        viewModel.debugAnalyzePanel()
+        assertTrue(viewModel.analyzePanel())
         advanceUntilIdle()
 
-        val text = viewModel.uiState.value.messages.last().text
-        assertNotNull(text)
-        assertTrue(text!!.contains("Start/Pause"))
-        assertTrue(text.contains("button"))
+        val state = viewModel.uiState.value
+        assertEquals(1, state.panelControls.size)
+        assertEquals("Start/Pause", state.panelControls[0].label)
+        assertNotNull(state.panelImageUri)
+        assertFalse(state.isAnalyzing)
     }
 
     @Test
-    fun debugAnalyzePanelWithoutAPhotoShowsAnError() = runTest(dispatcher) {
-        viewModel.debugAnalyzePanel()
+    fun analyzePanelClearsPreviousControlsWhileLoading() = runTest(dispatcher) {
+        service.controls = listOf(
+            PanelControl(
+                id = "c1",
+                label = "Start/Pause",
+                type = ControlType.BUTTON,
+                description = "Starts the program",
+                box = ControlBox(0.62f, 0.40f, 0.10f, 0.12f)
+            )
+        )
+
+        viewModel.analyzeImage(mockk<Uri>())
+        advanceUntilIdle()
+        viewModel.analyzePanel()
+        advanceUntilIdle()
+
+        // A second run keeps the old boxes off the screen until the new ones arrive.
+        service.controls = emptyList()
+        viewModel.analyzePanel()
+
+        assertTrue(viewModel.uiState.value.panelControls.isEmpty())
+        assertTrue(viewModel.uiState.value.isAnalyzing)
+
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.panelControls.isEmpty())
+    }
+
+    @Test
+    fun analyzePanelWithoutAPhotoShowsAnErrorAndDoesNotStart() = runTest(dispatcher) {
+        assertFalse(viewModel.analyzePanel())
         advanceUntilIdle()
 
         assertNotNull(viewModel.uiState.value.error)
+        assertFalse(viewModel.uiState.value.isAnalyzing)
+    }
+
+    @Test
+    fun failedPanelAnalysisShowsError() = runTest(dispatcher) {
+        service.analyzeError = IllegalStateException("boom")
+
+        viewModel.analyzeImage(mockk<Uri>())
+        advanceUntilIdle()
+        viewModel.analyzePanel()
+        advanceUntilIdle()
+
+        assertEquals("boom", viewModel.uiState.value.error)
+        assertFalse(viewModel.uiState.value.isAnalyzing)
     }
 
     // ---------- helpers ----------

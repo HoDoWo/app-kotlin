@@ -79,6 +79,15 @@ data class ChatUiState(
     /** True while waiting for the AI answer to a text question. */
     val isSending: Boolean = false,
 
+    /**
+     * Photo the panel analysis (S1-14) runs on. It is what the interactive
+     * overlay (S1-15) shows the detected controls on top of.
+     */
+    val panelImageUri: Uri? = null,
+
+    /** Controls detected on [panelImageUri]; empty when there are none. */
+    val panelControls: List<PanelControl> = emptyList(),
+
     val error: String? = null
 ) {
 
@@ -451,11 +460,14 @@ class ChatViewModel(
     }
 
     /**
-     * Debug-only helper for S1-14 (button and dial detection): runs the panel
-     * analysis on the last photo and shows the detected controls as a chat
-     * message. The interactive overlay in S1-15 will replace this.
+     * Runs the button and dial detection (S1-14) on the last analyzed photo and
+     * stores the result in the state, where the interactive overlay (S1-15)
+     * reads it from.
+     *
+     * @return true when the analysis was started; false when there is no photo
+     *   yet (an error is stored in the state in that case).
      */
-    fun debugAnalyzePanel() {
+    fun analyzePanel(): Boolean {
 
         val uri = lastImageUri
 
@@ -465,10 +477,13 @@ class ChatViewModel(
                 error = "Take a photo first, then tap the detect button."
             )
 
-            return
+            return false
         }
 
         _uiState.value = _uiState.value.copy(
+            // The overlay shows the photo right away, with the loading spinner.
+            panelImageUri = uri,
+            panelControls = emptyList(),
             isAnalyzing = true,
             error = null
         )
@@ -482,12 +497,8 @@ class ChatViewModel(
                     appliance = _uiState.value.appliance
                 )
 
-                addMessage(
-                    Message(
-                        id = nextMessageId(),
-                        text = buildControlsText(controls),
-                        isUser = false
-                    )
+                _uiState.value = _uiState.value.copy(
+                    panelControls = controls
                 )
 
             } catch (e: Exception) {
@@ -503,31 +514,8 @@ class ChatViewModel(
                 )
             }
         }
-    }
 
-    /** Readable summary of a panel analysis, shown by the debug button. */
-    private fun buildControlsText(controls: List<PanelControl>): String {
-
-        if (controls.isEmpty()) {
-            return "No controls detected in the photo."
-        }
-
-        return buildString {
-
-            append("Detected ${controls.size} control(s):")
-
-            controls.forEach { control ->
-
-                append("\n• ${control.label} (${control.type.name.lowercase()})")
-
-                append(
-                    " — x=${"%.2f".format(control.box.x)}" +
-                            ", y=${"%.2f".format(control.box.y)}" +
-                            ", w=${"%.2f".format(control.box.w)}" +
-                            ", h=${"%.2f".format(control.box.h)}"
-                )
-            }
-        }
+        return true
     }
 
     /**
