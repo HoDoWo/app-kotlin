@@ -79,6 +79,15 @@ data class ChatUiState(
     /** True while waiting for the AI answer to a text question. */
     val isSending: Boolean = false,
 
+    /**
+     * Photo the panel analysis (S1-14) runs on. It is what the interactive
+     * overlay (S1-15) shows the detected controls on top of.
+     */
+    val panelImageUri: Uri? = null,
+
+    /** Controls detected on [panelImageUri]; empty when there are none. */
+    val panelControls: List<PanelControl> = emptyList(),
+
     val error: String? = null
 ) {
 
@@ -121,6 +130,12 @@ interface HoDoWoAiService {
         question: String,
         appliance: Appliance?
     ): String
+
+    /**
+     * Locates the control panel inside the full photo at [uri] (S1-16).
+     * Returns null when the photo shows no panel.
+     */
+    suspend fun locatePanel(uri: Uri): PanelBox?
 
     /**
      * Detects the buttons, dials and other controls in the cropped panel photo
@@ -195,6 +210,12 @@ class DemoHoDoWoAiService : HoDoWoAiService {
         }
     }
 
+    /**
+     * The demo has no vision model, so it never finds a panel and the overlay
+     * shows the whole photo.
+     */
+    override suspend fun locatePanel(uri: Uri): PanelBox? = null
+
     override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> {
         // Simulate the network and model latency.
         delay(900)
@@ -248,7 +269,8 @@ class DemoHoDoWoAiService : HoDoWoAiService {
  * (send a question, analyze a photo, rate an answer).
  */
 class ChatViewModel(
-    private val aiService: HoDoWoAiService = DemoHoDoWoAiService()
+    private val aiService: HoDoWoAiService = DemoHoDoWoAiService(),
+    private val panelCropper: PanelCropper = PanelCropper.None
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -451,11 +473,18 @@ class ChatViewModel(
     }
 
     /**
-     * Debug-only helper for S1-14 (button and dial detection): runs the panel
-     * analysis on the last photo and shows the detected controls as a chat
-     * message. The interactive overlay in S1-15 will replace this.
+     * Runs the panel analysis on the last analyzed photo and stores the result
+     * in the state, where the interactive overlay (S1-15) reads it from.
+     *
+     * The photo is first cropped to the control panel using the box located by
+     * the backend (S1-16); the buttons and dials are then detected on that crop
+     * (S1-14). Cropping is best effort: when no panel can be located, the whole
+     * photo is used.
+     *
+     * @return true when the analysis was started; false when there is no photo
+     *   yet (an error is stored in the state in that case).
      */
-    fun debugAnalyzePanel() {
+    fun analyzePanel(): Boolean {
 
         val uri = lastImageUri
 
@@ -465,10 +494,13 @@ class ChatViewModel(
                 error = "Take a photo first, then tap the detect button."
             )
 
-            return
+            return false
         }
 
         _uiState.value = _uiState.value.copy(
+            // The overlay shows the photo right away, with the loading spinner.
+            panelImageUri = uri,
+            panelControls = emptyList(),
             isAnalyzing = true,
             error = null
         )
@@ -477,17 +509,22 @@ class ChatViewModel(
 
             try {
 
+                // 1. Locate the panel and crop the photo to it (S1-16).
+                val panelUri = panelPhotoOf(uri)
+
+                // The overlay (S1-15) shows the very image the detection runs on.
+                _uiState.value = _uiState.value.copy(
+                    panelImageUri = panelUri
+                )
+
+                // 2. Detect the controls on that image (S1-14).
                 val controls = aiService.analyzePanel(
-                    uri = uri,
+                    uri = panelUri,
                     appliance = _uiState.value.appliance
                 )
 
-                addMessage(
-                    Message(
-                        id = nextMessageId(),
-                        text = buildControlsText(controls),
-                        isUser = false
-                    )
+                _uiState.value = _uiState.value.copy(
+                    panelControls = controls
                 )
 
             } catch (e: Exception) {
@@ -503,31 +540,28 @@ class ChatViewModel(
                 )
             }
         }
+
+        return true
     }
 
-    /** Readable summary of a panel analysis, shown by the debug button. */
-    private fun buildControlsText(controls: List<PanelControl>): String {
+    /**
+     * Returns the image the detection should run on (S1-16): the photo cropped
+     * to the located panel, or the original photo when the panel cannot be
+     * found. Cropping is an optimisation, so a failure never blocks the flow.
+     */
+    private suspend fun panelPhotoOf(uri: Uri): Uri = try {
 
-        if (controls.isEmpty()) {
-            return "No controls detected in the photo."
-        }
+        val box = aiService.locatePanel(uri)
 
-        return buildString {
+        if (box == null) uri else panelCropper.crop(uri, box) ?: uri
 
-            append("Detected ${controls.size} control(s):")
+    } catch (cancellation: CancellationException) {
 
-            controls.forEach { control ->
+        throw cancellation
 
-                append("\n• ${control.label} (${control.type.name.lowercase()})")
+    } catch (_: Exception) {
 
-                append(
-                    " — x=${"%.2f".format(control.box.x)}" +
-                            ", y=${"%.2f".format(control.box.y)}" +
-                            ", w=${"%.2f".format(control.box.w)}" +
-                            ", h=${"%.2f".format(control.box.h)}"
-                )
-            }
-        }
+        uri
     }
 
     /**

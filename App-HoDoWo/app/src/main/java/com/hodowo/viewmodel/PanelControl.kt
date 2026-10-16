@@ -37,6 +37,19 @@ data class ControlBox(
 )
 
 /**
+ * Bounding box of the control panel inside a photo, normalised to 0..1.
+ *
+ * Returned by the panel location step (S1-16) and used to crop the photo
+ * before detection, so the vision model only sees the panel.
+ */
+data class PanelBox(
+    val x: Float,
+    val y: Float,
+    val w: Float,
+    val h: Float
+)
+
+/**
  * A single control detected on the control panel.
  *
  * [id] is stable across calls (`c1`, `c2`, ...), so the overlay can rely on it.

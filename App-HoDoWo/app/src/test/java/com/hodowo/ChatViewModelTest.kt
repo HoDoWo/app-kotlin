@@ -34,6 +34,7 @@ class ChatViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private lateinit var service: FakeAiService
+    private lateinit var cropper: FakePanelCropper
     private lateinit var viewModel: ChatViewModel
 
     @Before
@@ -41,7 +42,8 @@ class ChatViewModelTest {
         // viewModelScope uses Dispatchers.Main, which does not exist in unit tests.
         Dispatchers.setMain(dispatcher)
         service = FakeAiService()
-        viewModel = ChatViewModel(service)
+        cropper = FakePanelCropper()
+        viewModel = ChatViewModel(service, cropper)
     }
 
     @After
@@ -427,10 +429,10 @@ class ChatViewModelTest {
         }
     }
 
-    // ---------- debug panel detection (S1-14) ----------
+    // ---------- panel detection (S1-14) + overlay state (S1-15) ----------
 
     @Test
-    fun debugAnalyzePanelShowsTheDetectedControls() = runTest(dispatcher) {
+    fun analyzePanelStoresTheDetectedControls() = runTest(dispatcher) {
         service.controls = listOf(
             PanelControl(
                 id = "c1",
@@ -441,25 +443,136 @@ class ChatViewModelTest {
             )
         )
 
-        // The debug button works on the last analyzed photo.
+        // The detect button works on the last analyzed photo.
         viewModel.analyzeImage(mockk<Uri>())
         advanceUntilIdle()
 
-        viewModel.debugAnalyzePanel()
+        assertTrue(viewModel.analyzePanel())
         advanceUntilIdle()
 
-        val text = viewModel.uiState.value.messages.last().text
-        assertNotNull(text)
-        assertTrue(text!!.contains("Start/Pause"))
-        assertTrue(text.contains("button"))
+        val state = viewModel.uiState.value
+        assertEquals(1, state.panelControls.size)
+        assertEquals("Start/Pause", state.panelControls[0].label)
+        assertNotNull(state.panelImageUri)
+        assertFalse(state.isAnalyzing)
     }
 
     @Test
-    fun debugAnalyzePanelWithoutAPhotoShowsAnError() = runTest(dispatcher) {
-        viewModel.debugAnalyzePanel()
+    fun analyzePanelClearsPreviousControlsWhileLoading() = runTest(dispatcher) {
+        service.controls = listOf(
+            PanelControl(
+                id = "c1",
+                label = "Start/Pause",
+                type = ControlType.BUTTON,
+                description = "Starts the program",
+                box = ControlBox(0.62f, 0.40f, 0.10f, 0.12f)
+            )
+        )
+
+        viewModel.analyzeImage(mockk<Uri>())
+        advanceUntilIdle()
+        viewModel.analyzePanel()
+        advanceUntilIdle()
+
+        // A second run keeps the old boxes off the screen until the new ones arrive.
+        service.controls = emptyList()
+        viewModel.analyzePanel()
+
+        assertTrue(viewModel.uiState.value.panelControls.isEmpty())
+        assertTrue(viewModel.uiState.value.isAnalyzing)
+
+        advanceUntilIdle()
+        assertTrue(viewModel.uiState.value.panelControls.isEmpty())
+    }
+
+    @Test
+    fun analyzePanelWithoutAPhotoShowsAnErrorAndDoesNotStart() = runTest(dispatcher) {
+        assertFalse(viewModel.analyzePanel())
         advanceUntilIdle()
 
         assertNotNull(viewModel.uiState.value.error)
+        assertFalse(viewModel.uiState.value.isAnalyzing)
+    }
+
+    @Test
+    fun failedPanelAnalysisShowsError() = runTest(dispatcher) {
+        service.analyzeError = IllegalStateException("boom")
+
+        viewModel.analyzeImage(mockk<Uri>())
+        advanceUntilIdle()
+        viewModel.analyzePanel()
+        advanceUntilIdle()
+
+        assertEquals("boom", viewModel.uiState.value.error)
+        assertFalse(viewModel.uiState.value.isAnalyzing)
+    }
+
+    // ---------- panel cropping (S1-16) ----------
+
+    @Test
+    fun analyzePanelCropsThePhotoToTheLocatedPanel() = runTest(dispatcher) {
+        val original = mockk<Uri>()
+        val cropped = mockk<Uri>()
+
+        service.panelBox = PanelBox(0.1f, 0.2f, 0.6f, 0.5f)
+        cropper.result = cropped
+
+        viewModel.analyzeImage(original)
+        advanceUntilIdle()
+        viewModel.analyzePanel()
+        advanceUntilIdle()
+
+        // The detection ran on the crop, and that is what the overlay shows.
+        assertEquals(cropped, service.lastAnalyzedUri)
+        assertEquals(cropped, viewModel.uiState.value.panelImageUri)
+    }
+
+    @Test
+    fun analyzePanelUsesTheWholePhotoWhenThereIsNoPanel() = runTest(dispatcher) {
+        val original = mockk<Uri>()
+
+        service.panelBox = null
+        cropper.result = mockk<Uri>()
+
+        viewModel.analyzeImage(original)
+        advanceUntilIdle()
+        viewModel.analyzePanel()
+        advanceUntilIdle()
+
+        assertEquals(original, service.lastAnalyzedUri)
+        assertEquals(original, viewModel.uiState.value.panelImageUri)
+    }
+
+    @Test
+    fun analyzePanelKeepsThePhotoWhenCroppingFails() = runTest(dispatcher) {
+        val original = mockk<Uri>()
+
+        service.panelBox = PanelBox(0.1f, 0.2f, 0.6f, 0.5f)
+        cropper.result = null
+
+        viewModel.analyzeImage(original)
+        advanceUntilIdle()
+        viewModel.analyzePanel()
+        advanceUntilIdle()
+
+        assertEquals(original, service.lastAnalyzedUri)
+        assertEquals(original, viewModel.uiState.value.panelImageUri)
+    }
+
+    @Test
+    fun analyzePanelStillDetectsWhenLocatingThePanelFails() = runTest(dispatcher) {
+        val original = mockk<Uri>()
+
+        service.locateError = IllegalStateException("locate down")
+
+        viewModel.analyzeImage(original)
+        advanceUntilIdle()
+        viewModel.analyzePanel()
+        advanceUntilIdle()
+
+        // Cropping is best effort: the analysis runs on the full photo.
+        assertEquals(original, service.lastAnalyzedUri)
+        assertNull(viewModel.uiState.value.error)
     }
 
     // ---------- helpers ----------
@@ -481,9 +594,16 @@ class ChatViewModelTest {
         var askError: Exception? = null
         var identifyError: Exception? = null
         var analyzeError: Exception? = null
+        var locateError: Exception? = null
         var failFeedback = false
 
+        /** Panel located by the backend (S1-16); null means "no panel". */
+        var panelBox: PanelBox? = null
+
         var lastAppliance: Appliance? = null
+
+        /** Photo the detection actually ran on (the crop, when there is one). */
+        var lastAnalyzedUri: Uri? = null
 
         /** When set, the answer arrives as these pieces instead of one block. */
         var stream: Flow<String>? = null
@@ -503,9 +623,15 @@ class ChatViewModelTest {
             return "fake answer"
         }
 
+        override suspend fun locatePanel(uri: Uri): PanelBox? {
+            locateError?.let { throw it }
+            return panelBox
+        }
+
         override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> {
             analyzeError?.let { throw it }
             lastAppliance = appliance
+            lastAnalyzedUri = uri
             return controls
         }
 
@@ -516,5 +642,16 @@ class ChatViewModelTest {
 
         override fun streamAnswer(question: String, appliance: Appliance?): Flow<String> =
             stream ?: super.streamAnswer(question, appliance)
+    }
+
+    /** Cropper that returns whatever the test asks for, without touching an image. */
+    private class FakePanelCropper(var result: Uri? = null) : PanelCropper {
+
+        var lastBox: PanelBox? = null
+
+        override suspend fun crop(uri: Uri, box: PanelBox): Uri? {
+            lastBox = box
+            return result
+        }
     }
 }
