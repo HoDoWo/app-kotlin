@@ -1,9 +1,33 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzg-8MpU": {
+  "c": 2.0,
+  "done": false,
+  "issue": 67,
+  "title": "LangChain agent wiring"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8CqM": {
+  "c": 0.0,
+  "done": true,
+  "issue": 45,
+  "title": "Setup and proxy"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8Jx0": {
+  "c": 0.0,
+  "done": true,
+  "issue": 59,
+  "title": "Control panel cropping"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-8Kl0": {
   "c": 5.0,
   "done": false,
   "issue": 62,
   "title": "Sprint 1 clickable prototype"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8JYo": {
+  "c": 12.0,
+  "done": false,
+  "issue": 58,
+  "title": "Control Panel"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8MRo": {
   "c": 6.0,
@@ -46,12 +70,6 @@
   "done": false,
   "issue": 40,
   "title": "Reinforcement AI learning"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8CqM": {
-  "c": 0.0,
-  "done": false,
-  "issue": 45,
-  "title": "Setup and proxy"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8Dk0": {
   "c": 0.0,
@@ -161,12 +179,6 @@
   "issue": 65,
   "title": "Error codes"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-8MpU": {
-  "c": 2.0,
-  "done": false,
-  "issue": 67,
-  "title": "LangChain agent wiring"
- },
  "PVTI_lADOFCkyKM4Bl88jzg_M0PY": {
   "c": 4.0,
   "done": false,
@@ -203,18 +215,6 @@
   "issue": 87,
   "title": "Working on fixing issues on Pull Requests"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-8JYo": {
-  "c": 12.0,
-  "done": false,
-  "issue": 58,
-  "title": "Control Panel"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8Jx0": {
-  "c": 3.0,
-  "done": false,
-  "issue": 59,
-  "title": "Control panel cropping"
- },
  "PVTI_lADOFCkyKM4Bl88jzg-8KLY": {
   "c": 0.0,
   "done": true,
@@ -238,5 +238,11 @@
   "done": true,
   "issue": 94,
   "title": "Crop the photo to the detected panel (#59)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhBTvBM": {
+  "c": 0.0,
+  "done": false,
+  "issue": 14,
+  "title": "Wire the control panel analyzer into the agent (#67)"
  }
 }
