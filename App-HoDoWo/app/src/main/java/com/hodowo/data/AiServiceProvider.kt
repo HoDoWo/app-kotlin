@@ -38,7 +38,10 @@ object AiServiceProvider {
     fun chatViewModelFactory(context: Context): ViewModelProvider.Factory =
         viewModelFactory {
             initializer {
-                ChatViewModel(create(context))
+                ChatViewModel(
+                    aiService = create(context),
+                    panelCropper = BitmapPanelCropper(context.applicationContext)
+                )
             }
         }
 }
