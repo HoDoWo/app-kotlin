@@ -223,19 +223,19 @@
  },
  "PVTI_lADOFCkyKM4Bl88jzhBM_mM": {
   "c": 0.0,
-  "done": false,
+  "done": true,
   "issue": 92,
   "title": "Interactive control panel overlay (Compose)"
  },
  "PVTI_lADOFCkyKM4Bl88jzhBM_qY": {
   "c": 0.0,
-  "done": false,
+  "done": true,
   "issue": 93,
   "title": "Interactive control panel overlay (Compose) (#92)"
  },
  "PVTI_lADOFCkyKM4Bl88jzhBM_uA": {
   "c": 0.0,
-  "done": false,
+  "done": true,
   "issue": 94,
   "title": "Crop the photo to the detected panel (#59)"
  }
