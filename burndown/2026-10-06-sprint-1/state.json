@@ -167,12 +167,6 @@
   "issue": 63,
   "title": "Chat and Q&A"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-7_xI": {
-  "c": 0.0,
-  "done": false,
-  "issue": 44,
-  "title": "Configure OWASP ZAP"
- },
  "PVTI_lADOFCkyKM4Bl88jzg-8MOE": {
   "c": 0.0,
   "done": false,
@@ -196,6 +190,12 @@
   "done": true,
   "issue": 38,
   "title": "Camera capture with CameraX"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7_xI": {
+  "c": 0.0,
+  "done": true,
+  "issue": 44,
+  "title": "Configure OWASP ZAP"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8L94": {
   "c": 0.0,
@@ -241,7 +241,7 @@
  },
  "PVTI_lADOFCkyKM4Bl88jzhBTvBM": {
   "c": 0.0,
-  "done": false,
+  "done": true,
   "issue": 14,
   "title": "Wire the control panel analyzer into the agent (#67)"
  }
