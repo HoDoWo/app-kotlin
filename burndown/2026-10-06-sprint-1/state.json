@@ -161,17 +161,17 @@
   "issue": 12,
   "title": "Create Project Documentation - Sprint 1"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-7_xI": {
-  "c": 0.0,
-  "done": false,
-  "issue": 44,
-  "title": "Configure OWASP ZAP"
- },
  "PVTI_lADOFCkyKM4Bl88jzg-8LkU": {
   "c": 8.0,
   "done": false,
   "issue": 63,
   "title": "Chat and Q&A"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7_xI": {
+  "c": 0.0,
+  "done": false,
+  "issue": 44,
+  "title": "Configure OWASP ZAP"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8MOE": {
   "c": 0.0,
