@@ -1,4 +1,22 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzg-7rMw": {
+  "c": 0.0,
+  "done": true,
+  "issue": 10,
+  "title": "Image Overlay Guide generation"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8MRo": {
+  "c": 6.0,
+  "done": false,
+  "issue": 66,
+  "title": "Conversational route: history, context, streaming"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-78vE": {
+  "c": 3.0,
+  "done": false,
+  "issue": 39,
+  "title": "Upload image to Firebase Storage"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-8MpU": {
   "c": 2.0,
   "done": false,
@@ -29,23 +47,11 @@
   "issue": 58,
   "title": "Control Panel"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-8MRo": {
-  "c": 6.0,
-  "done": false,
-  "issue": 66,
-  "title": "Conversational route: history, context, streaming"
- },
  "PVTI_lADOFCkyKM4Bl88jzg-8EKE": {
   "c": 0.0,
   "done": true,
   "issue": 48,
   "title": "FastAPI on Vercel: CORS, rate limiting, env keys"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-7rMw": {
-  "c": 0.0,
-  "done": false,
-  "issue": 10,
-  "title": "Image Overlay Guide generation"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8HOs": {
   "c": 2.0,
@@ -130,12 +136,6 @@
   "done": false,
   "issue": 15,
   "title": "Implement guide rating"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-78vE": {
-  "c": 3.0,
-  "done": false,
-  "issue": 39,
-  "title": "Upload image to Firebase Storage"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-7-CQ": {
   "c": 0.0,
