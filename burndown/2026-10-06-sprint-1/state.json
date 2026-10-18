@@ -1,4 +1,10 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzhBp48k": {
+  "c": 0.0,
+  "done": false,
+  "issue": 95,
+  "title": "Implement bookmark manuals"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-7rMw": {
   "c": 0.0,
   "done": true,
@@ -244,11 +250,5 @@
   "done": true,
   "issue": 14,
   "title": "Wire the control panel analyzer into the agent (#67)"
- },
- "PVTI_lADOFCkyKM4Bl88jzhBp48k": {
-  "c": 0.0,
-  "done": false,
-  "issue": 95,
-  "title": "Implement bookmark manuals"
  }
 }
