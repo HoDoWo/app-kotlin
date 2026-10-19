@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -195,6 +196,15 @@ class RemoteHoDoWoAiServiceTest {
     }
 
     @Test
+    fun setBookmarkHandlesEmptyResponseBody() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200))
+
+        val result = service.setBookmark("m-123", false)
+
+        assertFalse(result)
+    }
+
+    @Test
     fun rateManualReturnsUpdatedRating() = runTest {
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"current_rating": 5}"""))
 
@@ -204,6 +214,15 @@ class RemoteHoDoWoAiServiceTest {
         val request = mockWebServer.takeRequest()
         assertEquals("/api/manuals/m-123/rate", request.path)
         assertEquals("POST", request.method)
+    }
+
+    @Test
+    fun rateManualHandlesEmptyResponseBodyAndError() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200))
+
+        val rating = service.rateManual("m-123", 4)
+
+        assertEquals(4, rating)
     }
 
     @Test
@@ -261,12 +280,61 @@ class RemoteHoDoWoAiServiceTest {
 
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(sseResponse))
 
-        val events = service.streamAnswerEvents("Identify this", null, mockUri, emptyList()).toList()
+        val history = listOf(ChatMessageHistory("user", "Hi"))
+        val events = service.streamAnswerEvents("Identify this", null, mockUri, history).toList()
 
         assertEquals(1, events.size)
         val request = mockWebServer.takeRequest()
         assertEquals("/api/chat/stream", request.path)
         assertTrue(request.getHeader("Content-Type")?.contains("multipart/form-data") == true)
+    }
+
+    @Test
+    fun streamAnswerEventsWithHistoryNoImageSendsJsonBody() = runTest {
+        val sseResponse = """
+            event: response
+            data: {"reply": "Continuous answer."}
+            
+        """.trimIndent()
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(sseResponse))
+
+        val history = listOf(ChatMessageHistory("user", "Previous question"))
+        val events = service.streamAnswerEvents("Next question", null, null, history).toList()
+
+        assertEquals(1, events.size)
+        val request = mockWebServer.takeRequest()
+        val bodyText = request.body.readUtf8()
+        assertTrue(bodyText.contains("Previous question"))
+    }
+
+    @Test(expected = IOException::class)
+    fun streamAnswerEventsThrowsOnServerError() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(500))
+
+        service.streamAnswerEvents("Hello", null, null, emptyList()).toList()
+    }
+
+    @Test
+    fun streamAnswerEventsWithFailingImageLoadFallsBackToTextRequest() = runTest {
+        val failingService = RemoteHoDoWoAiService(
+            backendUrl = mockWebServer.url("/").toString(),
+            loadImage = { throw RuntimeException("Failed to load image") },
+            tokenProvider = { "token" }
+        )
+
+        val sseResponse = """
+            event: response
+            data: {"reply": "Text fallback response."}
+            
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(sseResponse))
+
+        val events = failingService.streamAnswerEvents("Question", null, mockUri, emptyList()).toList()
+
+        assertEquals(1, events.size)
+        assertTrue(events[0] is ChatStreamEvent.Response)
+        assertEquals("Text fallback response.", (events[0] as ChatStreamEvent.Response).fullText)
     }
 
     // ==========================================
@@ -295,7 +363,7 @@ class RemoteHoDoWoAiServiceTest {
 
     @Test
     fun parseControlsFiltersEmptyLabelsAndClampsCoordinates() {
-        val payload = org.json.JSONObject("""{
+        val payload = JSONObject("""{
             "controls": [
                 {"label": "", "box": {"x": 0.1, "y": 0.1, "w": 0.1, "h": 0.1}},
                 {"label": "Power", "box": {"x": -0.5, "y": 1.5, "w": 0.2, "h": 0.2}}
@@ -308,5 +376,14 @@ class RemoteHoDoWoAiServiceTest {
         assertEquals("Power", controls[0].label)
         assertEquals(0f, controls[0].box.x) // Clamped from -0.5 to 0.0
         assertEquals(1f, controls[0].box.y) // Clamped from 1.5 to 1.0
+    }
+
+    @Test
+    fun parsePanelBoxReturnsNullForInvalidOrNegativeWidthHeight() {
+        val jsonInvalidWidth = JSONObject("""{"box": {"x": 0.1, "y": 0.1, "w": -0.5, "h": 0.5}}""")
+        assertNull(RemoteHoDoWoAiService.parsePanelBox(jsonInvalidWidth))
+
+        val jsonNoBox = JSONObject("""{"other": "data"}""")
+        assertNull(RemoteHoDoWoAiService.parsePanelBox(jsonNoBox))
     }
 }

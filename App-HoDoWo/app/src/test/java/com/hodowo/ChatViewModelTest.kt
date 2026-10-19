@@ -3,6 +3,9 @@ package com.hodowo.viewmodel
 import android.net.Uri
 import com.hodowo.data.AuthManager
 import com.hodowo.data.FirebaseRepository
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -382,6 +385,27 @@ class ChatViewModelTest {
         assertEquals(demo.askQuestion("Water everywhere", machine), pieces.joinToString(""))
     }
 
+    @Test
+    fun demoServiceStreamAnswerEventsWithImageAndManualQuery() = runTest {
+        val demo = DemoHoDoWoAiService()
+        val mockUri = mockk<Uri>()
+        val events = demo.streamAnswerEvents("Fix error E18", null, mockUri, emptyList()).toList()
+
+        assertTrue(events.isNotEmpty())
+        assertTrue(events.any { it is ChatStreamEvent.Step && it.title.contains("Identifying") })
+        assertTrue(events.any { it is ChatStreamEvent.Response && it.manualGuide != null })
+    }
+
+    @Test
+    fun demoServiceStreamAnswerEventsWithNonManualQuery() = runTest {
+        val demo = DemoHoDoWoAiService()
+        val events = demo.streamAnswerEvents("Hello", null, null, emptyList()).toList()
+
+        assertTrue(events.isNotEmpty())
+        assertTrue(events.any { it is ChatStreamEvent.Token })
+        assertTrue(events.any { it is ChatStreamEvent.Response })
+    }
+
     // ---------- DemoHoDoWoAiService ----------
 
     @Test
@@ -582,6 +606,83 @@ class ChatViewModelTest {
         // Cropping is best effort: the analysis runs on the full photo.
         assertEquals(original, service.lastAnalyzedUri)
         assertNull(viewModel.uiState.value.error)
+    }
+
+    // ---------- additional state & repository integration tests ----------
+
+    @Test
+    fun setSelectedImageAndClearSelectedImage() {
+        val uri = mockk<Uri>()
+        viewModel.setSelectedImage(uri)
+        assertEquals(uri, viewModel.uiState.value.selectedImageUri)
+
+        viewModel.clearSelectedImage()
+        assertNull(viewModel.uiState.value.selectedImageUri)
+    }
+
+    @Test
+    fun startNewChatSavesSessionWhenMessagesExist() = runTest(dispatcher) {
+        viewModel.sendTextMessage("How do I fix E18?")
+        advanceUntilIdle()
+
+        viewModel.startNewChat()
+
+        val state = viewModel.uiState.value
+        assertEquals(1, state.chatSessions.size)
+        assertTrue(state.messages.isEmpty())
+        assertNull(state.appliance)
+    }
+
+    @Test
+    fun startNewChatDoesNotSaveSessionWhenEmpty() = runTest(dispatcher) {
+        viewModel.startNewChat()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.chatSessions.isEmpty())
+    }
+
+    @Test
+    fun toggleBookmarkTogglesStateAndCallsRepositoryAndService() = runTest(dispatcher) {
+        every { authManager.currentUserId } returns "user-456"
+        val answerId = askAndGetAnswerId("Fix question")
+
+        viewModel.toggleBookmark(answerId)
+        advanceUntilIdle()
+
+        val bookmarkedMsg = viewModel.uiState.value.messages.first { it.id == answerId }
+        assertTrue(bookmarkedMsg.isBookmarked)
+        coVerify { firebaseRepository.saveBookmark("user-456", any()) }
+
+        viewModel.toggleBookmark(answerId)
+        advanceUntilIdle()
+
+        val unbookmarkedMsg = viewModel.uiState.value.messages.first { it.id == answerId }
+        assertFalse(unbookmarkedMsg.isBookmarked)
+        coVerify { firebaseRepository.removeBookmark("user-456", answerId) }
+    }
+
+    @Test
+    fun refreshBookmarksUpdatesUiStateWithRepositoryData() = runTest(dispatcher) {
+        every { authManager.currentUserId } returns "user-456"
+        val guide = ManualGuide("Washer", "E18", "Overview")
+        coEvery { firebaseRepository.getBookmarks("user-456") } returns listOf(guide)
+
+        viewModel.refreshBookmarks()
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.bookmarkedGuides.size)
+        assertEquals("Washer", viewModel.uiState.value.bookmarkedGuides[0].applianceName)
+    }
+
+    @Test
+    fun setFeedbackCallsFirebaseRepository() = runTest(dispatcher) {
+        every { authManager.currentUserId } returns "user-123"
+        val answerId = askAndGetAnswerId("How to clean filter?")
+
+        viewModel.setFeedback(answerId, Feedback.LIKE, "Great explanation")
+        advanceUntilIdle()
+
+        coVerify { firebaseRepository.saveFeedback("user-123", any()) }
     }
 
     // ---------- helpers ----------
