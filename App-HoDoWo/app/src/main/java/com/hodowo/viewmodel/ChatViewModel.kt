@@ -731,7 +731,7 @@ class ChatViewModel(
         return true
     }
 
-    private fun buildControlsText(controls: List<PanelControl>): String {
+    internal fun buildControlsText(controls: List<PanelControl>): String {
         if (controls.isEmpty()) {
             return "No controls detected in the photo."
         }
