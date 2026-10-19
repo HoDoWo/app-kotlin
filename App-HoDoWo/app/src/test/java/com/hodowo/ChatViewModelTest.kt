@@ -1,6 +1,8 @@
 package com.hodowo.viewmodel
 
 import android.net.Uri
+import com.hodowo.data.AuthManager
+import com.hodowo.data.FirebaseRepository
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -9,6 +11,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -35,6 +38,8 @@ class ChatViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var service: FakeAiService
     private lateinit var cropper: FakePanelCropper
+    private lateinit var authManager: AuthManager
+    private lateinit var firebaseRepository: FirebaseRepository
     private lateinit var viewModel: ChatViewModel
 
     @Before
@@ -43,7 +48,11 @@ class ChatViewModelTest {
         Dispatchers.setMain(dispatcher)
         service = FakeAiService()
         cropper = FakePanelCropper()
-        viewModel = ChatViewModel(service, cropper)
+        authManager = mockk(relaxed = true)
+        firebaseRepository = mockk(relaxed = true)
+
+        // Correct parameter order matching ChatViewModel constructor
+        viewModel = ChatViewModel(service, firebaseRepository, authManager, cropper)
     }
 
     @After
@@ -578,7 +587,7 @@ class ChatViewModelTest {
     // ---------- helpers ----------
 
     /** Sends a question and returns the id of the AI answer. */
-    private suspend fun kotlinx.coroutines.test.TestScope.askAndGetAnswerId(
+    private suspend fun TestScope.askAndGetAnswerId(
         question: String
     ): Long {
         viewModel.sendTextMessage(question)
