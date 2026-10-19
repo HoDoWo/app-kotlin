@@ -92,11 +92,24 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+
+/**
+ * Main chat screen.
+ *
+ * Shows the identified appliance (if any), the conversation, the text input
+ * and the camera button. All the state comes from [viewModel].
+ *
+ * @param viewModel source of the UI state and target of the user actions.
+ * @param onOpenCamera called when the user taps the camera button.
+ * @param onDetectPanel called when the user taps the debug detect button
+ *   (S1-14/S1-15): runs the panel analysis and opens the overlay.
+ */
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel,
     onOpenCamera: () -> Unit,
     onOpenAuth: () -> Unit
+    onDetectPanel: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()

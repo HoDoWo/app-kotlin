@@ -207,6 +207,33 @@ class RemoteHoDoWoAiServiceTest {
         assertEquals("Invalid server response", error?.message)
     }
 
+    // ---------- locatePanel (S1-16) ----------
+
+    @Test
+    fun photoIsSentToTheLocateEndpointAndTheBoxIsParsed() = runTest {
+        server.enqueue(
+            MockResponse().setBody("""{"box": {"x": 0.1, "y": 0.2, "w": 0.6, "h": 0.5}}""")
+        )
+
+        val box = service.locatePanel(mockk<Uri>())
+
+        assertEquals(0.1f, box?.x ?: -1f, 0.001f)
+        assertEquals(0.2f, box?.y ?: -1f, 0.001f)
+        assertEquals(0.6f, box?.w ?: -1f, 0.001f)
+        assertEquals(0.5f, box?.h ?: -1f, 0.001f)
+
+        val request = server.takeRequest()
+        assertEquals("/api/panel/locate", request.path)
+        assertTrue(request.getHeader("Content-Type").orEmpty().startsWith("multipart/form-data"))
+    }
+
+    @Test
+    fun aPhotoWithoutAPanelGivesNull() = runTest {
+        server.enqueue(MockResponse().setBody("""{"box": null}"""))
+
+        assertNull(service.locatePanel(mockk<Uri>()))
+    }
+
     // ---------- parseControls ----------
 
     @Test
@@ -238,6 +265,31 @@ class RemoteHoDoWoAiServiceTest {
         )
 
         assertEquals(ControlType.OTHER, RemoteHoDoWoAiService.parseControls(json).single().type)
+    }
+
+    // ---------- parsePanelBox (S1-16) ----------
+
+    @Test
+    fun panelLocationBoxIsClampedAndRead() {
+        val json = JSONObject("""{"box": {"x": -0.5, "y": 0.2, "w": 0.6, "h": 2.0}}""")
+
+        val box = RemoteHoDoWoAiService.parsePanelBox(json)
+
+        assertEquals(0f, box?.x ?: -1f, 0.001f)
+        assertEquals(0.2f, box?.y ?: -1f, 0.001f)
+        assertEquals(0.6f, box?.w ?: -1f, 0.001f)
+        assertEquals(1f, box?.h ?: -1f, 0.001f)
+    }
+
+    @Test
+    fun panelLocationWithoutAUsableBoxGivesNull() {
+        assertNull(RemoteHoDoWoAiService.parsePanelBox(JSONObject("""{"box": null}""")))
+        assertNull(RemoteHoDoWoAiService.parsePanelBox(JSONObject("{}")))
+        assertNull(
+            RemoteHoDoWoAiService.parsePanelBox(
+                JSONObject("""{"box": {"x": 0.1, "y": 0.1, "w": 0, "h": 0.5}}""")
+            )
+        )
     }
 
     // ---------- parseAppliance ----------

@@ -7,6 +7,7 @@ import com.hodowo.viewmodel.ControlBox
 import com.hodowo.viewmodel.ControlType
 import com.hodowo.viewmodel.FeedbackReport
 import com.hodowo.viewmodel.HoDoWoAiService
+import com.hodowo.viewmodel.PanelBox
 import com.hodowo.viewmodel.PanelControl
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -30,7 +31,9 @@ import java.util.concurrent.TimeUnit
  * Every call goes to the backend:
  * - questions and photos go to `POST {backendUrl}/api/chat`, which answers `{"reply": "..."}`;
  * - `POST {backendUrl}/api/panel/analyze` receives a panel photo as multipart/form-data
- *   and answers `{"controls": [...]}` (button and dial detection, S1-14).
+ *   and answers `{"controls": [...]}` (button and dial detection, S1-14);
+ * - `POST {backendUrl}/api/panel/locate` receives the full photo and answers
+ *   `{"box": {...}}` or `{"box": null}` (panel location, S1-16).
  *
  * @param backendUrl base URL of the backend (from `backend.url` in local.properties).
  * @param loadImage reads and compresses the photo at the given [Uri] into JPEG bytes.
@@ -84,6 +87,23 @@ class RemoteHoDoWoAiService(
         appliance?.model?.let { builder.addFormDataPart("model", it) }
 
         return parseControls(jsonOf(post(PANEL_PATH, builder.build())))
+    }
+
+    /**
+     * Locates the control panel inside the full photo (S1-16).
+     *
+     * The caller crops the photo with the returned box, so the detection only
+     * sees the panel. A photo without a panel gives null.
+     */
+    override suspend fun locatePanel(uri: Uri): PanelBox? {
+        val image = loadImage(uri)
+
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("image", "photo.jpg", image.toRequestBody(JPEG))
+            .build()
+
+        return parsePanelBox(jsonOf(post(LOCATE_PATH, body)))
     }
 
     override suspend fun sendFeedback(report: FeedbackReport) {
@@ -353,6 +373,7 @@ class RemoteHoDoWoAiService(
         internal const val STREAM_CHAT_PATH = "/api/chat/stream"
         internal const val FEEDBACK_PATH = "/api/feedback"
         internal const val PANEL_PATH = "/api/panel/analyze"
+        internal const val LOCATE_PATH = "/api/panel/locate"
 
         internal const val UNKNOWN_APPLIANCE = "Unknown appliance"
 
@@ -463,6 +484,29 @@ class RemoteHoDoWoAiService(
         private fun JSONObject.unitValue(key: String): Float {
             val value = optDouble(key, 0.0).toFloat()
             return if (value.isNaN()) 0f else value.coerceIn(0f, 1f)
+        }
+
+        /**
+         * Turns the /api/panel/locate answer into the panel box (S1-16).
+         *
+         * Returns null when the backend found no panel, or sent no usable box,
+         * so the caller then keeps the full photo.
+         */
+        internal fun parsePanelBox(payload: JSONObject): PanelBox? {
+            val box = payload.optJSONObject("box") ?: return null
+
+            val width = box.unitValue("w")
+            val height = box.unitValue("h")
+            if (width <= 0f || height <= 0f) {
+                return null
+            }
+
+            return PanelBox(
+                x = box.unitValue("x"),
+                y = box.unitValue("y"),
+                w = width,
+                h = height
+            )
         }
     }
 }
