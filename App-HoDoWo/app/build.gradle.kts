@@ -27,24 +27,31 @@ android {
             xml.required.set(true)
             html.required.set(true)
         }
+        val excludes = listOf(
+            "**/ui/**",
+            "**/*MainActivity*.class",
+            "**/*SkeletonScreen*.class",
+            "**/*OpenRouterChatClient*.class",
+            "**/*CameraScreen*.class",
+            "**/*ChatScreen*.class",
+            "**/*PanelOverlayKt*.class",
+            "**/*HoDoWoApp*.class",
+            "**/*ImageCompressor*.class",
+            "**/*BitmapPanelCropper*.class",
+            "**/*AiServiceProvider*.class",
+            "**/*FirebaseTokenProvider*.class",
+            "**/BuildConfig.class"
+        )
         val kotlinClasses = fileTree(layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes")) {
-            exclude("**/*MainActivity*.class")
-            exclude("**/*SkeletonScreen*.class")
-            exclude("**/*OpenRouterChatClient*.class")
-            exclude("**/*CameraScreen*.class")
-            exclude("**/*ChatScreen*.class")
-            exclude("**/*PanelOverlayKt*.class")
-            exclude("**/*HoDoWoApp*.class")
-            exclude("**/*ImageCompressor*.class")
-            exclude("**/*BitmapPanelCropper*.class")
-            exclude("**/*AiServiceProvider*.class")
-            exclude("**/*FirebaseTokenProvider*.class")
-            exclude("**/BuildConfig.class")
+            exclude(excludes)
+        }
+        val tmpKotlinClasses = fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
+            exclude(excludes)
         }
         val javaClasses = fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
             exclude("**/MainActivity.class")
         }
-        classDirectories.setFrom(files(kotlinClasses, javaClasses))
+        classDirectories.setFrom(files(kotlinClasses, tmpKotlinClasses, javaClasses))
         sourceDirectories.setFrom(files("src/main/java"))
         executionData.setFrom(fileTree(layout.buildDirectory) {
             include("jacoco/testDebugUnitTest.exec")
