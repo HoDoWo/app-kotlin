@@ -298,6 +298,38 @@ class RemoteHoDoWoAiServiceTest {
         assertEquals(0, server.requestCount)
     }
 
+    @Test
+    fun setBookmarkCallsPatchBookmarkEndpoint() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setHeader("Content-Type", "application/json")
+                .setBody("""{"status": "success", "manual_id": "man-1", "is_bookmarked": true}""")
+        )
+
+        val result = service.setBookmark("man-1", true)
+        assertTrue(result)
+
+        val request = server.takeRequest()
+        assertEquals("PATCH", request.method)
+        assertEquals("/api/manuals/man-1/bookmark", request.path)
+    }
+
+    @Test
+    fun rateManualCallsPostRateEndpoint() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setHeader("Content-Type", "application/json")
+                .setBody("""{"status": "success", "manual_id": "man-1", "current_rating": 1}""")
+        )
+
+        val result = service.rateManual("man-1", 1)
+        assertEquals(1, result)
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/manuals/man-1/rate", request.path)
+    }
+
     /** Builds a backend answer: {"reply": text}. */
     private fun reply(text: String) =
         MockResponse()

@@ -10,6 +10,7 @@ import com.hodowo.viewmodel.HoDoWoAiService
 import com.hodowo.viewmodel.PanelControl
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -144,18 +145,213 @@ class RemoteHoDoWoAiService(
         throw IOException("Invalid server response", e)
     }
 
+    override fun streamAnswerEvents(
+        question: String,
+        appliance: Appliance?,
+        imageUri: Uri?,
+        history: List<com.hodowo.viewmodel.ChatMessageHistory>
+    ): kotlinx.coroutines.flow.Flow<com.hodowo.viewmodel.ChatStreamEvent> = kotlinx.coroutines.flow.flow {
+        val imageBytes = imageUri?.let { runCatching { loadImage(it) }.getOrNull() }
+        val token = tokenProvider()
+
+        val request = try {
+            val builder = Request.Builder()
+                .url("${backendUrl.trimEnd('/')}$STREAM_CHAT_PATH")
+
+            if (!token.isNullOrBlank()) {
+                builder.header("Authorization", "Bearer $token")
+            }
+
+            if (imageBytes != null) {
+                val bodyBuilder = MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("message", buildQuestion(question, appliance))
+                    .addFormDataPart("image", "appliance.jpg", imageBytes.toRequestBody(JPEG))
+
+                if (history.isNotEmpty()) {
+                    val historyArray = org.json.JSONArray()
+                    for (item in history) {
+                        historyArray.put(JSONObject().put("role", item.role).put("content", item.content))
+                    }
+                    bodyBuilder.addFormDataPart("history", historyArray.toString())
+                }
+
+                builder.post(bodyBuilder.build())
+            } else {
+                val jsonBody = JSONObject()
+                    .put("message", buildQuestion(question, appliance))
+
+                if (history.isNotEmpty()) {
+                    val historyArray = org.json.JSONArray()
+                    for (item in history) {
+                        historyArray.put(JSONObject().put("role", item.role).put("content", item.content))
+                    }
+                    jsonBody.put("history", historyArray)
+                }
+
+                builder.post(jsonBody.toString().toRequestBody(JSON))
+            }
+            builder.build()
+        } catch (e: Exception) {
+            null
+        }
+
+        if (request == null) {
+            val ans = askQuestion(question, appliance)
+            emit(com.hodowo.viewmodel.ChatStreamEvent.Token(ans))
+            emit(com.hodowo.viewmodel.ChatStreamEvent.Response(ans))
+            return@flow
+        }
+
+        try {
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("Server error ${response.code}")
+                }
+                val source = response.body?.source() ?: throw IOException("Empty response")
+                var currentEvent: String? = null
+
+                while (!source.exhausted()) {
+                    val line = source.readUtf8Line() ?: break
+                    if (line.startsWith("event:")) {
+                        currentEvent = line.removePrefix("event:").trim()
+                    } else if (line.startsWith("data:")) {
+                        val data = line.removePrefix("data:").trim()
+                        when (currentEvent) {
+                            "step" -> {
+                                val json = JSONObject(data)
+                                val title = json.optString("title", "Processing...")
+                                val detail = json.optString("detail", "")
+                                emit(com.hodowo.viewmodel.ChatStreamEvent.Step(title, detail))
+                            }
+                            "token" -> {
+                                val json = JSONObject(data)
+                                val tokenText = json.optString("token", "")
+                                emit(com.hodowo.viewmodel.ChatStreamEvent.Token(tokenText))
+                            }
+                            "response" -> {
+                                val json = JSONObject(data)
+                                val reply = json.optString("reply", "")
+                                val imageUrl = json.optString("image").takeIf { it.isNotBlank() }
+                                val isManual = json.optBoolean("is_manual", false)
+                                val manualId = json.optString("manual_id").takeIf { it.isNotBlank() }
+
+                                val manualGuide = if (isManual) {
+                                    val stepsArray = json.optJSONArray("steps")
+                                    val steps = mutableListOf<com.hodowo.viewmodel.ManualStep>()
+                                    if (stepsArray != null) {
+                                        for (i in 0 until stepsArray.length()) {
+                                            val s = stepsArray.optJSONObject(i)
+                                            if (s != null) {
+                                                steps.add(
+                                                    com.hodowo.viewmodel.ManualStep(
+                                                        number = s.optInt("number", i + 1),
+                                                        title = s.optString("title", "Step ${i + 1}"),
+                                                        description = s.optString("description", "")
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
+                                    com.hodowo.viewmodel.ManualGuide(
+                                        applianceName = json.optString("appliance_name", appliance?.name ?: "Appliance"),
+                                        issueTitle = json.optString("issue_title", "Repair Guide"),
+                                        overview = json.optString("overview", reply),
+                                        steps = steps,
+                                        imageUrl = imageUrl,
+                                        manualId = manualId
+                                    )
+                                } else null
+
+                                emit(com.hodowo.viewmodel.ChatStreamEvent.Response(reply, manualGuide, imageUrl))
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            throw IOException("Stream failed: ${e.localizedMessage}", e)
+        }
+    }.flowOn(ioDispatcher)
+
+    override suspend fun setBookmark(manualId: String, isBookmarked: Boolean): Boolean {
+        val token = tokenProvider()
+        val request = Request.Builder()
+            .url("${backendUrl.trimEnd('/')}/api/manuals/$manualId/bookmark")
+            .apply {
+                if (!token.isNullOrBlank()) {
+                    header("Authorization", "Bearer $token")
+                }
+            }
+            .patch(
+                JSONObject().put("is_bookmarked", isBookmarked).toString().toRequestBody(JSON)
+            )
+            .build()
+
+        return withContext(ioDispatcher) {
+            try {
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.string()
+                        if (body != null) {
+                            JSONObject(body).optBoolean("is_bookmarked", isBookmarked)
+                        } else isBookmarked
+                    } else {
+                        isBookmarked
+                    }
+                }
+            } catch (e: Exception) {
+                isBookmarked
+            }
+        }
+    }
+
+    override suspend fun rateManual(manualId: String, rating: Int): Int {
+        val token = tokenProvider()
+        val request = Request.Builder()
+            .url("${backendUrl.trimEnd('/')}/api/manuals/$manualId/rate")
+            .apply {
+                if (!token.isNullOrBlank()) {
+                    header("Authorization", "Bearer $token")
+                }
+            }
+            .post(
+                JSONObject().put("rating", rating).toString().toRequestBody(JSON)
+            )
+            .build()
+
+        return withContext(ioDispatcher) {
+            try {
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.string()
+                        if (body != null) {
+                            JSONObject(body).optInt("current_rating", rating)
+                        } else rating
+                    } else {
+                        rating
+                    }
+                }
+            } catch (e: Exception) {
+                rating
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "RemoteHoDoWoAiService"
         private const val HTTP_UNAUTHORIZED = 401
         private const val CONNECT_TIMEOUT_SECONDS = 15L
 
         // The LangChain agent can take a while, so reads get a longer timeout.
-        private const val READ_TIMEOUT_SECONDS = 60L
+        private const val READ_TIMEOUT_SECONDS = 560L
 
         private val JSON = "application/json".toMediaType()
         private val JPEG = "image/jpeg".toMediaType()
 
         internal const val CHAT_PATH = "/api/chat"
+        internal const val STREAM_CHAT_PATH = "/api/chat/stream"
+        internal const val FEEDBACK_PATH = "/api/feedback"
         internal const val PANEL_PATH = "/api/panel/analyze"
 
         internal const val UNKNOWN_APPLIANCE = "Unknown appliance"

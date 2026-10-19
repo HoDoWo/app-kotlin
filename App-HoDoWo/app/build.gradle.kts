@@ -83,6 +83,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.constraintlayout)
     // CameraX: camera preview and photo capture (#38).
     val cameraxVersion = "1.3.1"
     implementation("androidx.camera:camera-core:$cameraxVersion")
@@ -113,4 +114,7 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.compose.material.icons.extended)
 }

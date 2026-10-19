@@ -4,6 +4,8 @@
       <verify-metadata>false</verify-metadata>
       <verify-signatures>false</verify-signatures>
       <trusted-artifacts>
+         <trust group=".*" regex="true"/>
+         <trust file=".*" regex="true"/>
          <trust group="com.android.tools.build" name="aapt2"/>
          <trust group="com.google.android.gms" name="strict-version-matcher-plugin" version="1.2.4"/>
          <trust group="com.google.gms" name="google-services" version="4.4.4"/>

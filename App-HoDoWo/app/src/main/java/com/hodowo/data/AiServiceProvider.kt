@@ -10,15 +10,16 @@ import com.hodowo.viewmodel.DemoHoDoWoAiService
 import com.hodowo.viewmodel.HoDoWoAiService
 
 /**
- * Chooses which AI service the app uses.
- *
- * - `backend.url` set in local.properties: the real backend.
- * - `backend.url` missing: the demo service, so the app still runs offline.
+ * Chooses which AI service the app uses and provides singletons for Auth and Firebase.
  */
 object AiServiceProvider {
 
+    val authManager by lazy { AuthManager() }
+    val firebaseRepository by lazy { FirebaseRepository() }
+
     fun create(context: Context): HoDoWoAiService {
-        val backendUrl = BuildConfig.BACKEND_URL
+        //val backendUrl = BuildConfig.BACKEND_URL
+        val backendUrl = "http://localhost:8000"
 
         if (backendUrl.isBlank()) {
             return DemoHoDoWoAiService()
@@ -34,11 +35,15 @@ object AiServiceProvider {
         )
     }
 
-    /** Factory that builds [ChatViewModel] with the service chosen above. */
+    /** Factory that builds [ChatViewModel] with the service and Firebase repos. */
     fun chatViewModelFactory(context: Context): ViewModelProvider.Factory =
         viewModelFactory {
             initializer {
-                ChatViewModel(create(context))
+                ChatViewModel(
+                    aiService = create(context),
+                    firebaseRepository = firebaseRepository,
+                    authManager = authManager
+                )
             }
         }
 }
