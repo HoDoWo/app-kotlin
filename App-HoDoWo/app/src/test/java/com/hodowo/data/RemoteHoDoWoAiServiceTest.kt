@@ -334,20 +334,93 @@ class RemoteHoDoWoAiServiceTest {
         assertEquals("Hello", RemoteHoDoWoAiService.buildQuestion("Hello", null))
     }
 
+    // ---------- sendFeedback (#40) ----------
+
     @Test
-    fun feedbackDoesNotCallTheBackendYet() = runTest {
+    fun likeIsSentToTheFeedbackEndpoint() = runTest {
+        server.enqueue(MockResponse().setResponseCode(201).setBody("""{"status":"stored"}"""))
+
         service.sendFeedback(
             FeedbackReport(
                 messageId = 1L,
-                appliance = null,
-                question = "q",
-                answer = "a",
+                appliance = Appliance("Washing machine", "Bosch", null, 0.9f),
+                question = "Why does it leak?",
+                answer = "Check the door seal.",
                 feedback = Feedback.LIKE,
                 comment = null
             )
         )
 
-        assertEquals(0, server.requestCount)
+        val request = server.takeRequest()
+        assertEquals("/api/feedback", request.path)
+        assertEquals("POST", request.method)
+
+        val body = JSONObject(request.body.readUtf8())
+        assertEquals("Why does it leak?", body.getString("question"))
+        assertEquals("Check the door seal.", body.getString("answer"))
+        assertEquals(1, body.getInt("rating"))
+        assertTrue(body.isNull("comment"))
+        assertEquals("Bosch", body.getJSONObject("appliance").getString("brand"))
+        assertTrue(body.getJSONObject("appliance").isNull("model"))
+    }
+
+    @Test
+    fun dislikeIsSentWithItsComment() = runTest {
+        server.enqueue(MockResponse().setResponseCode(201).setBody("""{"status":"stored"}"""))
+
+        service.sendFeedback(
+            FeedbackReport(
+                messageId = 2L,
+                appliance = null,
+                question = "Error E18?",
+                answer = "Call a technician.",
+                feedback = Feedback.DISLIKE,
+                comment = "too generic"
+            )
+        )
+
+        val body = JSONObject(server.takeRequest().body.readUtf8())
+        assertEquals(-1, body.getInt("rating"))
+        assertEquals("too generic", body.getString("comment"))
+        assertTrue(!body.has("appliance"))
+    }
+
+    @Test
+    fun feedbackErrorIsThrownSoTheRatingIsRetried() = runTest {
+        server.enqueue(MockResponse().setResponseCode(503).setBody("""{"detail":"not configured"}"""))
+
+        val error = runCatching {
+            service.sendFeedback(
+                FeedbackReport(1L, null, "q", "a", Feedback.LIKE, null)
+            )
+        }.exceptionOrNull()
+
+        assertTrue(error is IOException)
+        assertEquals("Server error 503", error?.message)
+    }
+
+    @Test
+    fun questionCarriesTheApplianceAsStructuredData() = runTest {
+        server.enqueue(reply("ok"))
+        val machine = Appliance("Washing machine", "Bosch", "WAN28", 0.9f)
+
+        service.askQuestion("Why does it leak?", machine)
+
+        val body = JSONObject(server.takeRequest().body.readUtf8())
+        val appliance = body.getJSONObject("appliance")
+        assertEquals("Washing machine", appliance.getString("name"))
+        assertEquals("Bosch", appliance.getString("brand"))
+        assertEquals("WAN28", appliance.getString("model"))
+    }
+
+    @Test
+    fun questionWithoutApplianceHasNoApplianceField() = runTest {
+        server.enqueue(reply("ok"))
+
+        service.askQuestion("Hello", null)
+
+        val body = JSONObject(server.takeRequest().body.readUtf8())
+        assertTrue(!body.has("appliance"))
     }
 
     /** Builds a backend answer: {"reply": text}. */
