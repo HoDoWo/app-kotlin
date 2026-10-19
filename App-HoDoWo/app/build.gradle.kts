@@ -119,4 +119,5 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.coil.compose)
     implementation(libs.androidx.compose.material.icons.extended)
+    testImplementation(kotlin("test"))
 }

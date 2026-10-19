@@ -44,7 +44,7 @@ import java.util.concurrent.TimeUnit
 class RemoteHoDoWoAiService(
     private val backendUrl: String,
     private val loadImage: suspend (Uri) -> ByteArray,
-    private val tokenProvider: suspend () -> String? = { null },
+    internal val tokenProvider: suspend () -> String? = { null },
     private val httpClient: OkHttpClient = defaultClient(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val language: String = Locale.getDefault().language
