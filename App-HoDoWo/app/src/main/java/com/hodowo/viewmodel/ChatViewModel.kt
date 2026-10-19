@@ -163,7 +163,6 @@ data class FeedbackReport(
  */
 interface HoDoWoAiService {
     suspend fun identifyAppliance(uri: Uri): Appliance
-    suspend fun askQuestion(question: String, appliance: Appliance?): String
 
     /** Answers a user [question], using the identified [appliance] as context. */
     suspend fun askQuestion(
@@ -351,8 +350,8 @@ class DemoHoDoWoAiService : HoDoWoAiService {
 class ChatViewModel(
     private val aiService: HoDoWoAiService = DemoHoDoWoAiService(),
     private val firebaseRepository: FirebaseRepository? = null,
-    private val authManager: AuthManager? = null
-    private val panelCropper: PanelCropper = PanelCropper.None
+    private val authManager: AuthManager? = null,
+    val panelCropper: PanelCropper = PanelCropper.None
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -581,6 +580,26 @@ class ChatViewModel(
                 }
             }
         )
+    }
+
+    /**
+     * Returns the image the detection should run on (S1-16): the photo cropped
+     * to the located panel, or the original photo when the panel cannot be
+     * found. Cropping is an optimisation, so a failure never blocks the flow.
+     */
+    private suspend fun panelPhotoOf(uri: Uri): Uri = try {
+
+        val box = aiService.locatePanel(uri)
+
+        if (box == null) uri else panelCropper.crop(uri, box) ?: uri
+
+    } catch (cancellation: CancellationException) {
+
+        throw cancellation
+
+    } catch (_: Exception) {
+
+        uri
     }
 
     private fun finishStreaming(id: Long) {
