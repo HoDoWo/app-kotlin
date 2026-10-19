@@ -1,4 +1,28 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzg-8MpU": {
+  "c": 0.0,
+  "done": true,
+  "issue": 67,
+  "title": "LangChain agent wiring"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8HOs": {
+  "c": 2.0,
+  "done": false,
+  "issue": 53,
+  "title": "Firebase project + Auth SDK"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-79JQ": {
+  "c": 8.0,
+  "done": false,
+  "issue": 40,
+  "title": "Reinforcement AI learning"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-78vE": {
+  "c": 3.0,
+  "done": false,
+  "issue": 39,
+  "title": "Upload image to Firebase Storage"
+ },
  "PVTI_lADOFCkyKM4Bl88jzhBp48k": {
   "c": 0.0,
   "done": false,
@@ -16,18 +40,6 @@
   "done": false,
   "issue": 66,
   "title": "Conversational route: history, context, streaming"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-78vE": {
-  "c": 3.0,
-  "done": false,
-  "issue": 39,
-  "title": "Upload image to Firebase Storage"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8MpU": {
-  "c": 2.0,
-  "done": false,
-  "issue": 67,
-  "title": "LangChain agent wiring"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8CqM": {
   "c": 0.0,
@@ -59,12 +71,6 @@
   "issue": 48,
   "title": "FastAPI on Vercel: CORS, rate limiting, env keys"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-8HOs": {
-  "c": 2.0,
-  "done": false,
-  "issue": 53,
-  "title": "Firebase project + Auth SDK"
- },
  "PVTI_lADOFCkyKM4Bl88jzg-8DHw": {
   "c": 0.0,
   "done": true,
@@ -76,12 +82,6 @@
   "done": true,
   "issue": 5,
   "title": "Manual retrieval"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-79JQ": {
-  "c": 8.0,
-  "done": false,
-  "issue": 40,
-  "title": "Reinforcement AI learning"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8Dk0": {
   "c": 0.0,
