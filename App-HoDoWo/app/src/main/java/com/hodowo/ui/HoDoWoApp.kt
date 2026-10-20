@@ -70,7 +70,6 @@ import com.hodowo.ui.theme.SecondaryContainer
 import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLowest
 import com.hodowo.viewmodel.ChatViewModel
-import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.ManualGuide
 
 enum class AppNavTab(val label: String, val icon: ImageVector) {
@@ -91,15 +90,10 @@ fun HoDoWoApp(
             LocalContext.current.applicationContext
         )
     ),
-    homeViewModel: HomeViewModel = viewModel(
-        factory = AiServiceProvider.homeViewModelFactory(
-            LocalContext.current.applicationContext
-        )
-    ),
     authManager: AuthManager = AiServiceProvider.authManager
 ) {
     val context = LocalContext.current
-    var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
+    var currentTab by remember { mutableStateOf(AppNavTab.AI_CHAT) }
     var showCamera by remember { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }
 
@@ -144,25 +138,6 @@ fun HoDoWoApp(
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.weight(1f)) {
                 when (currentTab) {
-                    AppNavTab.HOME -> {
-                        HomeScreen(
-                            viewModel = homeViewModel,
-                            onSearch = { query ->
-                                currentTab = AppNavTab.AI_CHAT
-                                chatViewModel.sendTextMessage(query)
-                            },
-                            onDiagnose = ::openCamera,
-                            onOpenArCore = { currentTab = AppNavTab.AR_CORE },
-                            onOpenMarket = { currentTab = AppNavTab.MARKET },
-                            onOpenProfile = { currentTab = AppNavTab.PROFILE },
-                            onAskAboutManual = { guide ->
-                                currentTab = AppNavTab.AI_CHAT
-                                chatViewModel.sendTextMessage(
-                                    "I need help with \"${guide.issueTitle}\" on my ${guide.applianceName}."
-                                )
-                            }
-                        )
-                    }
                     AppNavTab.AI_CHAT -> {
                         ChatScreen(
                             viewModel = chatViewModel,
@@ -178,7 +153,7 @@ fun HoDoWoApp(
                             onNavigateToChat = { currentTab = AppNavTab.AI_CHAT }
                         )
                     }
-                    AppNavTab.MARKET, AppNavTab.AR_CORE -> {
+                    AppNavTab.HOME, AppNavTab.MARKET, AppNavTab.AR_CORE -> {
                         NotImplementedScreen(
                             tabName = currentTab.label,
                             icon = currentTab.icon,
