@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -168,14 +167,14 @@ fun ManualGuideCard(
             guide.imageUrl?.let { url ->
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(url)
+                        .data(imageData(url))
                         .crossfade(true)
                         .build(),
                     contentDescription = "Step-by-step visual diagram",
-                    contentScale = ContentScale.Crop,
+                    // Whole image, full width: the height follows the image's own proportions.
+                    contentScale = ContentScale.FillWidth,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(4f / 3f)
                         .clip(RoundedCornerShape(12.dp))
                         .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(12.dp))
                         .clickable { onImageClick(url) } // Makes the image trigger full screen
