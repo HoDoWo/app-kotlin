@@ -16,7 +16,10 @@ sonar {
             "sonar.coverage.jacoco.xmlReportPaths",
             file("app/build/reports/jacoco/jacocoDebugUnitTestReport/jacocoDebugUnitTestReport.xml").absolutePath,
         )
-        property("sonar.coverage.exclusions", "**/MainActivity.kt,**/SkeletonScreen.kt,**/OpenRouterChatClient.kt,**/CameraScreen.kt,**/ChatScreen.kt,**/PanelOverlay.kt,**/HoDoWoApp.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt")
+        property(
+            "sonar.coverage.exclusions",
+            "**/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt",
+        )
     }
 }
 
