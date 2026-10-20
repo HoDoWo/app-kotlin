@@ -29,8 +29,8 @@ android {
             xml.required.set(true)
             html.required.set(true)
         }
-        // Only the classes that need the Android framework (or a real Firebase
-        // project) are left out of the report: the rest of them are pure
+        // The classes that need the Android framework (or a real Firebase
+        // project) are left out of the report; the rest of them are pure
         // Kotlin and are covered by the unit tests. The same list is in
         // sonar.coverage.exclusions (root project).
         val excludes = listOf(
@@ -46,6 +46,7 @@ android {
             "**/*BitmapPanelCropper*.class",
             "**/*AiServiceProvider*.class",
             "**/*FirebaseTokenProvider*.class",
+            // Android / Firebase bound, so they cannot be unit tested (#54).
             "**/*FirebaseAuthRepository*.class",
             "**/*GoogleSignInHelper*.class",
             "**/BuildConfig.class"
@@ -58,8 +59,6 @@ android {
         }
         val javaClasses = fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
             exclude("**/MainActivity.class")
-            // Generated code, it has nothing to do with the tests.
-            exclude("**/BuildConfig.class")
         }
         classDirectories.setFrom(files(kotlinClasses, tmpKotlinClasses, javaClasses))
         sourceDirectories.setFrom(files("src/main/java"))
