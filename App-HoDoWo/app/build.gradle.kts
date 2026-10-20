@@ -29,6 +29,21 @@ android {
             xml.required.set(true)
             html.required.set(true)
         }
+        val excludes = listOf(
+            "**/ui/**",
+            "**/*MainActivity*.class",
+            "**/*SkeletonScreen*.class",
+            "**/*OpenRouterChatClient*.class",
+            "**/*CameraScreen*.class",
+            "**/*ChatScreen*.class",
+            "**/*PanelOverlayKt*.class",
+            "**/*HoDoWoApp*.class",
+            "**/*ImageCompressor*.class",
+            "**/*BitmapPanelCropper*.class",
+            "**/*AiServiceProvider*.class",
+            "**/*FirebaseTokenProvider*.class",
+            "**/BuildConfig.class"
+        )
         val kotlinClasses = fileTree(layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes")) {
             exclude("**/*MainActivity*.class")
             exclude("**/*SkeletonScreen*.class")
@@ -46,11 +61,15 @@ android {
             exclude("**/*GoogleSignInHelper*.class")
             exclude("**/*TaskExtKt*.class")
             exclude("**/BuildConfig.class")
+            exclude(excludes)
+        }
+        val tmpKotlinClasses = fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
+            exclude(excludes)
         }
         val javaClasses = fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
             exclude("**/MainActivity.class")
         }
-        classDirectories.setFrom(files(kotlinClasses, javaClasses))
+        classDirectories.setFrom(files(kotlinClasses, tmpKotlinClasses, javaClasses))
         sourceDirectories.setFrom(files("src/main/java"))
         executionData.setFrom(fileTree(layout.buildDirectory) {
             include("jacoco/testDebugUnitTest.exec")
@@ -92,6 +111,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.constraintlayout)
     // CameraX: camera preview and photo capture (#38).
     val cameraxVersion = "1.3.1"
     implementation("androidx.camera:camera-core:$cameraxVersion")
@@ -127,4 +147,8 @@ dependencies {
     implementation("androidx.credentials:credentials:1.2.0-rc01")
     implementation("androidx.credentials:credentials-play-services-auth:1.2.0-rc01")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
+    implementation(libs.firebase.firestore)
+    implementation(libs.coil.compose)
+    implementation(libs.androidx.compose.material.icons.extended)
+    testImplementation(kotlin("test"))
 }
