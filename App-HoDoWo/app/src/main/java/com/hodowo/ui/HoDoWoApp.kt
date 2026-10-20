@@ -15,11 +15,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.hodowo.BuildConfig
 import com.hodowo.data.AiServiceProvider
+import com.hodowo.data.auth.FirebaseAuthRepository
+import com.hodowo.data.auth.GoogleSignInHelper
+import com.hodowo.viewmodel.AuthViewModel
 import com.hodowo.viewmodel.ChatViewModel
 
 /**
- * Root composable of the app: switches between the chat and the camera.
+ * Root composable of the app: shows the login / register screen until the
+ * user is signed in, then switches between the chat and the camera.
  *
  * It also takes care of the CAMERA runtime permission: the camera opens only
  * when the permission is granted, and it is requested the first time the
@@ -34,8 +41,24 @@ fun HoDoWoApp(
         factory = AiServiceProvider.chatViewModelFactory(
             LocalContext.current.applicationContext
         )
+    ),
+    authViewModel: AuthViewModel = viewModel(
+        factory = viewModelFactory {
+            initializer { AuthViewModel(FirebaseAuthRepository()) }
+        }
     )
 ) {
+
+    val authState by authViewModel.uiState.collectAsState()
+
+    // Nothing else is shown until the user is signed in (#54).
+    if (!authState.isSignedIn) {
+        AuthRoute(
+            viewModel = authViewModel,
+            googleSignIn = remember { GoogleSignInHelper(BuildConfig.GOOGLE_WEB_CLIENT_ID) }
+        )
+        return
+    }
 
     val context = LocalContext.current
 

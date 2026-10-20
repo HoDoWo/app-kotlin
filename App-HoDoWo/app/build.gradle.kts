@@ -7,6 +7,8 @@ if (localPropertiesFile.exists()) {
 }
 
 val backendUrl = localProperties.getProperty("backend.url", "")
+// OAuth *Web* client ID of the Firebase project, used by Google sign-in (#54).
+val googleWebClientId = localProperties.getProperty("google.web.client.id", "")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -39,6 +41,10 @@ android {
             exclude("**/*BitmapPanelCropper*.class")
             exclude("**/*AiServiceProvider*.class")
             exclude("**/*FirebaseTokenProvider*.class")
+            exclude("**/*AuthScreen*.class")
+            exclude("**/*FirebaseAuthRepository*.class")
+            exclude("**/*GoogleSignInHelper*.class")
+            exclude("**/*TaskExtKt*.class")
             exclude("**/BuildConfig.class")
         }
         val javaClasses = fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
@@ -61,6 +67,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     buildTypes {
@@ -115,4 +122,9 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    // Google sign-in through Credential Manager (#54). Same versions that
+    // firebase-auth already pulls in, so they are in verification-metadata.xml.
+    implementation("androidx.credentials:credentials:1.2.0-rc01")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.0-rc01")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
 }
