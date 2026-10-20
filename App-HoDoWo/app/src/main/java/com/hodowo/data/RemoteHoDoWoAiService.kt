@@ -1,6 +1,7 @@
 package com.hodowo.data
 
 import android.net.Uri
+import android.util.Log
 import com.hodowo.viewmodel.Appliance
 import com.hodowo.viewmodel.ControlBox
 import com.hodowo.viewmodel.ControlType
@@ -32,8 +33,11 @@ import java.util.concurrent.TimeUnit
  * - `POST {backendUrl}/api/panel/analyze` receives a panel photo as multipart/form-data
  *   and answers `{"controls": [...]}` (button and dial detection, S1-14);
  * - `POST {backendUrl}/api/panel/locate` receives the full photo and answers
- *   `{"box": {...}}` or `{"box": null}` (panel location, S1-16);
- * - `POST {backendUrl}/api/feedback` stores the user's rating of an answer (#40).
+ *   `{"box": {...}}` or `{"box": null}` (panel location, S1-16).
+ *
+ * Questions also carry the identified appliance as structured data
+ * (`"appliance": {"name", "brand", "model"}`): the backend uses it to add the
+ * rated guides of the same appliance to the prompt (#40).
  *
  * @param backendUrl base URL of the backend (from `backend.url` in local.properties).
  * @param loadImage reads and compresses the photo at the given [Uri] into JPEG bytes.
@@ -68,10 +72,7 @@ class RemoteHoDoWoAiService(
     ): String {
         val json = JSONObject()
             .put("message", buildQuestion(question, appliance))
-
-        // Also sent as structured data: the backend uses it to add previous
-        // rated answers for the same appliance to the prompt (#40).
-        appliance?.let { json.put("appliance", applianceJson(it)) }
+        applianceJson(appliance)?.let { json.put("appliance", it) }
 
         return replyOf(post(CHAT_PATH, json.toString().toRequestBody(JSON)))
     }
@@ -108,13 +109,10 @@ class RemoteHoDoWoAiService(
         return parsePanelBox(jsonOf(post(LOCATE_PATH, body)))
     }
 
-    /**
-     * Stores the rating in the backend (`POST /api/feedback`, #40).
-     * Errors are thrown on purpose: ChatViewModel keeps the rating in its
-     * queue and sends it again with the next vote.
-     */
     override suspend fun sendFeedback(report: FeedbackReport) {
-        post(FEEDBACK_PATH, feedbackJson(report).toString().toRequestBody(JSON))
+        // TODO(#40): the backend has no endpoint to store ratings yet.
+        // Until it exists the rating is only logged, so it is not retried forever.
+        Log.d(TAG, "Rating of message ${report.messageId} not stored: no backend endpoint yet")
     }
 
     /** Sends [body] to [path] and returns the raw response body. */
@@ -193,6 +191,8 @@ class RemoteHoDoWoAiService(
                     .addFormDataPart("message", buildQuestion(question, appliance))
                     .addFormDataPart("image", "appliance.jpg", imageBytes.toRequestBody(JPEG))
 
+                applianceJson(appliance)?.let { bodyBuilder.addFormDataPart("appliance", it.toString()) }
+
                 if (history.isNotEmpty()) {
                     val historyArray = org.json.JSONArray()
                     for (item in history) {
@@ -205,6 +205,7 @@ class RemoteHoDoWoAiService(
             } else {
                 val jsonBody = JSONObject()
                     .put("message", buildQuestion(question, appliance))
+                applianceJson(appliance)?.let { jsonBody.put("appliance", it) }
 
                 if (history.isNotEmpty()) {
                     val historyArray = org.json.JSONArray()
@@ -364,6 +365,7 @@ class RemoteHoDoWoAiService(
     }
 
     companion object {
+        private const val TAG = "RemoteHoDoWoAiService"
         private const val HTTP_UNAUTHORIZED = 401
         private const val CONNECT_TIMEOUT_SECONDS = 15L
 
@@ -378,7 +380,6 @@ class RemoteHoDoWoAiService(
         internal const val FEEDBACK_PATH = "/api/feedback"
         internal const val PANEL_PATH = "/api/panel/analyze"
         internal const val LOCATE_PATH = "/api/panel/locate"
-        internal const val FEEDBACK_PATH = "/api/feedback"
 
         internal const val UNKNOWN_APPLIANCE = "Unknown appliance"
 
@@ -409,26 +410,20 @@ class RemoteHoDoWoAiService(
             return "Appliance: $details\nQuestion: $question"
         }
 
-        /** The appliance as JSON: {"name", "brand", "model"} (null when unknown). */
-        internal fun applianceJson(appliance: Appliance): JSONObject =
-            JSONObject()
+        /**
+         * The appliance as JSON: {"name", "brand", "model"} (null fields when unknown), for #40.
+         * Returns null when there is no appliance or it was not recognised, so the
+         * backend does not group the guides of unrelated appliances.
+         */
+        internal fun applianceJson(appliance: Appliance?): JSONObject? {
+            if (appliance == null || appliance.name == UNKNOWN_APPLIANCE) {
+                return null
+            }
+
+            return JSONObject()
                 .put("name", appliance.name)
                 .put("brand", appliance.brand ?: JSONObject.NULL)
                 .put("model", appliance.model ?: JSONObject.NULL)
-
-        /**
-         * Body of `POST /api/feedback`. The user is not included: the backend
-         * reads it from the verified token.
-         */
-        internal fun feedbackJson(report: FeedbackReport): JSONObject {
-            val json = JSONObject()
-                .put("question", report.question)
-                .put("answer", report.answer)
-                .put("rating", report.feedback.score)
-                .put("comment", report.comment ?: JSONObject.NULL)
-
-            report.appliance?.let { json.put("appliance", applianceJson(it)) }
-            return json
         }
 
         /**
