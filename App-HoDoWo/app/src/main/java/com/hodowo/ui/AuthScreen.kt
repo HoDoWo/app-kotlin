@@ -35,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -57,8 +56,8 @@ import kotlinx.coroutines.launch
 fun AuthRoute(
     viewModel: AuthViewModel,
     googleSignIn: GoogleSignInHelper,
+    context: Context,
     modifier: Modifier = Modifier,
-    context: Context = LocalContext.current,
 ) {
     val state by viewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
@@ -71,6 +70,7 @@ fun AuthRoute(
         onConfirmPasswordChange = viewModel::onConfirmPasswordChange,
         onSubmit = viewModel::submit,
         onModeChange = viewModel::setMode,
+        googleConfigured = googleSignIn.isConfigured,
         onGoogleClick = {
             scope.launch {
                 viewModel.signInWithGoogle { googleSignIn.getIdToken(context) }
@@ -89,6 +89,7 @@ fun AuthScreen(
     onSubmit: () -> Unit,
     onModeChange: (AuthMode) -> Unit,
     onGoogleClick: () -> Unit,
+    googleConfigured: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val isRegister = state.mode == AuthMode.REGISTER
@@ -96,6 +97,11 @@ fun AuthScreen(
     var showPassword by remember { mutableStateOf(false) }
     val passwordTransformation =
         if (showPassword) VisualTransformation.None else PasswordVisualTransformation()
+
+    // Kept in local vals so the smart cast works inside the lambdas below.
+    val emailError = state.emailError
+    val passwordError = state.passwordError
+    val confirmError = state.confirmError
 
     Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(
@@ -122,8 +128,12 @@ fun AuthScreen(
                 label = { Text("Email") },
                 singleLine = true,
                 enabled = !state.isLoading,
-                isError = state.emailError != null,
-                supportingText = state.emailError?.let { { Text(it) } },
+                isError = emailError != null,
+                supportingText = if (emailError != null) {
+                    { Text(emailError) }
+                } else {
+                    null
+                },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) }),
             )
@@ -135,8 +145,12 @@ fun AuthScreen(
                 label = { Text("Password") },
                 singleLine = true,
                 enabled = !state.isLoading,
-                isError = state.passwordError != null,
-                supportingText = state.passwordError?.let { { Text(it) } },
+                isError = passwordError != null,
+                supportingText = if (passwordError != null) {
+                    { Text(passwordError) }
+                } else {
+                    null
+                },
                 visualTransformation = passwordTransformation,
                 trailingIcon = {
                     TextButton(onClick = { showPassword = !showPassword }) {
@@ -161,8 +175,12 @@ fun AuthScreen(
                     label = { Text("Confirm password") },
                     singleLine = true,
                     enabled = !state.isLoading,
-                    isError = state.confirmError != null,
-                    supportingText = state.confirmError?.let { { Text(it) } },
+                    isError = confirmError != null,
+                    supportingText = if (confirmError != null) {
+                        { Text(confirmError) }
+                    } else {
+                        null
+                    },
                     visualTransformation = passwordTransformation,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Password,
@@ -198,7 +216,8 @@ fun AuthScreen(
 
             OutlinedButton(
                 onClick = onGoogleClick,
-                enabled = !state.isLoading,
+                // Without a web client id the picker cannot be opened (#54).
+                enabled = !state.isLoading && googleConfigured,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
             ) {
                 Text("Continue with Google")

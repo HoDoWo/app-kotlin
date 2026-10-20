@@ -8,8 +8,8 @@ import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.GoogleAuthProvider
-import com.hodowo.data.await
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.tasks.await
 
 /** [AuthRepository] backed by Firebase Authentication. */
 class FirebaseAuthRepository(

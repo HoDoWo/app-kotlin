@@ -18,7 +18,7 @@ sonar {
         )
         property(
             "sonar.coverage.exclusions",
-            "**/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt",
+            "**/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt,**/FirebaseAuthRepository.kt,**/GoogleSignInHelper.kt",
         )
     }
 }

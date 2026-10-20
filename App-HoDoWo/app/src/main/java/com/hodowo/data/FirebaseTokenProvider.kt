@@ -1,6 +1,7 @@
 package com.hodowo.data
 
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.tasks.await
 
 /**
  * Provides the Firebase ID token that the backend expects in

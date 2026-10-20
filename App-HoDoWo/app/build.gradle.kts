@@ -29,6 +29,10 @@ android {
             xml.required.set(true)
             html.required.set(true)
         }
+        // Only the classes that need the Android framework (or a real Firebase
+        // project) are left out of the report: the rest of them are pure
+        // Kotlin and are covered by the unit tests. The same list is in
+        // sonar.coverage.exclusions (root project).
         val excludes = listOf(
             "**/ui/**",
             "**/*MainActivity*.class",
@@ -42,25 +46,11 @@ android {
             "**/*BitmapPanelCropper*.class",
             "**/*AiServiceProvider*.class",
             "**/*FirebaseTokenProvider*.class",
+            "**/*FirebaseAuthRepository*.class",
+            "**/*GoogleSignInHelper*.class",
             "**/BuildConfig.class"
         )
         val kotlinClasses = fileTree(layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes")) {
-            exclude("**/*MainActivity*.class")
-            exclude("**/*SkeletonScreen*.class")
-            exclude("**/*OpenRouterChatClient*.class")
-            exclude("**/*CameraScreen*.class")
-            exclude("**/*ChatScreen*.class")
-            exclude("**/*PanelOverlayKt*.class")
-            exclude("**/*HoDoWoApp*.class")
-            exclude("**/*ImageCompressor*.class")
-            exclude("**/*BitmapPanelCropper*.class")
-            exclude("**/*AiServiceProvider*.class")
-            exclude("**/*FirebaseTokenProvider*.class")
-            exclude("**/*AuthScreen*.class")
-            exclude("**/*FirebaseAuthRepository*.class")
-            exclude("**/*GoogleSignInHelper*.class")
-            exclude("**/*TaskExtKt*.class")
-            exclude("**/BuildConfig.class")
             exclude(excludes)
         }
         val tmpKotlinClasses = fileTree(layout.buildDirectory.dir("tmp/kotlin-classes/debug")) {
@@ -68,6 +58,8 @@ android {
         }
         val javaClasses = fileTree(layout.buildDirectory.dir("intermediates/javac/debug/compileDebugJavaWithJavac/classes")) {
             exclude("**/MainActivity.class")
+            // Generated code, it has nothing to do with the tests.
+            exclude("**/BuildConfig.class")
         }
         classDirectories.setFrom(files(kotlinClasses, tmpKotlinClasses, javaClasses))
         sourceDirectories.setFrom(files("src/main/java"))

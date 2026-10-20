@@ -1,14 +1,11 @@
 package com.hodowo.data
 
-import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.tasks.await
 
 class AuthManager(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -55,10 +52,4 @@ class AuthManager(
 
     val isAnonymous: Boolean
         get() = auth.currentUser?.isAnonymous ?: true
-}
-
-private suspend fun <T> Task<T>.await(): T = suspendCancellableCoroutine { cont ->
-    addOnSuccessListener { result -> cont.resume(result) }
-    addOnFailureListener { error -> cont.resumeWithException(error) }
-    addOnCanceledListener { cont.cancel() }
 }

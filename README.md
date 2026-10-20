@@ -82,8 +82,22 @@ project documentation live in a separate repository: [LINK-TO-BACKEND-REPO](#).
 ```
 2. Open the `App-HoDoWo/` folder in Android Studio.
 3. Add your own `google-services.json` to `App-HoDoWo/app/` (not tracked by Git).
-4. Set the backend URL in `local.properties` (see the backend repository).
+4. Copy `App-HoDoWo/local.properties.template` to `App-HoDoWo/local.properties`
+   and fill in the values below (the file is ignored by Git).
 5. Sync Gradle and run the app.
+
+#### `local.properties`
+
+| Property | What it is | Without it |
+|----------|------------|------------|
+| `backend.url` | URL of the backend (see the backend repository) | The app runs with the offline demo service |
+| `google.web.client.id` | OAuth **web** client ID of the Firebase project (Firebase console → Authentication → Sign-in method → Google → Web client ID) | The "Continue with Google" button is disabled and the app answers that Google sign-in is not configured in this build |
+
+`google.web.client.id` is read at build time into `BuildConfig.GOOGLE_WEB_CLIENT_ID`,
+so it is empty in CI (where `local.properties` does not exist) and the Google
+button simply stays disabled. Alternatively, add the OAuth web client to the
+Firebase project and use the `default_web_client_id` string that the
+`google-services` plugin generates from `google-services.json`.
 
 ## Contributing
 

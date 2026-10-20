@@ -65,17 +65,16 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.hodowo.BuildConfig
 import com.hodowo.data.AiServiceProvider
+import com.hodowo.data.AuthManager
 import com.hodowo.data.auth.FirebaseAuthRepository
 import com.hodowo.data.auth.GoogleSignInHelper
-import com.hodowo.viewmodel.AuthViewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.hodowo.data.AiServiceProvider
-import com.hodowo.data.AuthManager
 import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SecondaryContainer
 import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLowest
+import com.hodowo.viewmodel.AuthViewModel
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.ManualGuide
@@ -98,6 +97,12 @@ fun HoDoWoApp(
             LocalContext.current.applicationContext
         )
     ),
+    homeViewModel: HomeViewModel = viewModel(
+        factory = AiServiceProvider.homeViewModelFactory(
+            LocalContext.current.applicationContext
+        )
+    ),
+    authManager: AuthManager = AiServiceProvider.authManager,
     authViewModel: AuthViewModel = viewModel(
         factory = viewModelFactory {
             initializer { AuthViewModel(FirebaseAuthRepository()) }
@@ -105,25 +110,20 @@ fun HoDoWoApp(
     )
 ) {
 
+    val context = LocalContext.current
+
     val authState by authViewModel.uiState.collectAsState()
 
     // Nothing else is shown until the user is signed in (#54).
     if (!authState.isSignedIn) {
         AuthRoute(
             viewModel = authViewModel,
-            googleSignIn = remember { GoogleSignInHelper(BuildConfig.GOOGLE_WEB_CLIENT_ID) }
+            googleSignIn = remember { GoogleSignInHelper(BuildConfig.GOOGLE_WEB_CLIENT_ID) },
+            context = context
         )
         return
     }
 
-    homeViewModel: HomeViewModel = viewModel(
-        factory = AiServiceProvider.homeViewModelFactory(
-            LocalContext.current.applicationContext
-        )
-    ),
-    authManager: AuthManager = AiServiceProvider.authManager
-) {
-    val context = LocalContext.current
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }
