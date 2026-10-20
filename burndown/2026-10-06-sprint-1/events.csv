@@ -47,3 +47,7 @@ timestamp,issue,title,type,delta_hours
 2026-10-19T17:11:04+00:00,67,LangChain agent wiring,completado,-2.0
 2026-10-20T11:34:18+00:00,40,Reinforcement AI learning,completado,-8.0
 2026-10-20T10:03:07+00:00,66,"Conversational route: history, context, streaming",completado,-6.0
+2026-10-20T17:06:52+00:00,63,Chat and Q&A,completado,-8.0
+2026-10-20T16:13:55+00:00,53,Firebase project + Auth SDK,completado,-2.0
+2026-10-20T16:16:21+00:00,55,JWT interceptor + token check in backend,completado,-2.0
+2026-10-20T16:13:52+00:00,87,Working on fixing issues on Pull Requests,completado,-4.0

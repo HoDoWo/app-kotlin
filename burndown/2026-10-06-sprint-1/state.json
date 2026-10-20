@@ -11,9 +11,15 @@
   "issue": 37,
   "title": "Implement Favourites and Recent scanned Page"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-8LkU": {
-  "c": 8.0,
+ "PVTI_lADOFCkyKM4Bl88jzg-8Hl0": {
+  "c": 3.0,
   "done": false,
+  "issue": 54,
+  "title": "Login, register and Google sign-in screens"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8LkU": {
+  "c": 0.0,
+  "done": true,
   "issue": 63,
   "title": "Chat and Q&A"
  },
@@ -24,8 +30,8 @@
   "title": "LangChain agent wiring"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8HOs": {
-  "c": 2.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 53,
   "title": "Firebase project + Auth SDK"
  },
@@ -132,16 +138,10 @@
   "title": "Auth and profile"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8IGw": {
-  "c": 2.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 55,
   "title": "JWT interceptor + token check in backend"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8Hl0": {
-  "c": 3.0,
-  "done": false,
-  "issue": 54,
-  "title": "Login, register and Google sign-in screens"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8Ihk": {
   "c": 2.0,
@@ -175,7 +175,7 @@
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8MOE": {
   "c": 0.0,
-  "done": false,
+  "done": true,
   "issue": 65,
   "title": "Error codes"
  },
@@ -216,8 +216,8 @@
   "title": "Prepare UI to receive SSE"
  },
  "PVTI_lADOFCkyKM4Bl88jzhAf37I": {
-  "c": 4.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 87,
   "title": "Working on fixing issues on Pull Requests"
  },
@@ -253,7 +253,7 @@
  },
  "PVTI_lADOFCkyKM4Bl88jzhCGtqo": {
   "c": 0.0,
-  "done": false,
+  "done": true,
   "issue": 99,
   "title": "Kotlin App Tests"
  }
