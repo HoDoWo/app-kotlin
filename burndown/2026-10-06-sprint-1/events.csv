@@ -45,3 +45,5 @@ timestamp,issue,title,type,delta_hours
 2026-10-15T17:33:41+00:00,61,Button and dial detection,completado,-4.0
 2026-10-16T16:56:54+00:00,59,Control panel cropping,completado,-3.0
 2026-10-19T17:11:04+00:00,67,LangChain agent wiring,completado,-2.0
+2026-10-20T11:34:18+00:00,40,Reinforcement AI learning,completado,-8.0
+2026-10-20T10:03:07+00:00,66,"Conversational route: history, context, streaming",completado,-6.0

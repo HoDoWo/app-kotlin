@@ -1,4 +1,22 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzg-7q-A": {
+  "c": 4.0,
+  "done": false,
+  "issue": 15,
+  "title": "Implement guide rating"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-70zc": {
+  "c": 0.0,
+  "done": false,
+  "issue": 37,
+  "title": "Implement Favourites and Recent scanned Page"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-8LkU": {
+  "c": 8.0,
+  "done": false,
+  "issue": 63,
+  "title": "Chat and Q&A"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-8MpU": {
   "c": 0.0,
   "done": true,
@@ -12,8 +30,8 @@
   "title": "Firebase project + Auth SDK"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-79JQ": {
-  "c": 8.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 40,
   "title": "Reinforcement AI learning"
  },
@@ -25,7 +43,7 @@
  },
  "PVTI_lADOFCkyKM4Bl88jzhBp48k": {
   "c": 0.0,
-  "done": false,
+  "done": true,
   "issue": 95,
   "title": "Implement bookmark manuals"
  },
@@ -36,8 +54,8 @@
   "title": "Image Overlay Guide generation"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8MRo": {
-  "c": 6.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 66,
   "title": "Conversational route: history, context, streaming"
  },
@@ -119,12 +137,6 @@
   "issue": 55,
   "title": "JWT interceptor + token check in backend"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-70zc": {
-  "c": 0.0,
-  "done": false,
-  "issue": 37,
-  "title": "Implement Favourites and Recent scanned Page"
- },
  "PVTI_lADOFCkyKM4Bl88jzg-8Hl0": {
   "c": 3.0,
   "done": false,
@@ -136,12 +148,6 @@
   "done": false,
   "issue": 56,
   "title": "Profile and saved appliances: Firestore schema + UI"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-7q-A": {
-  "c": 4.0,
-  "done": false,
-  "issue": 15,
-  "title": "Implement guide rating"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-7-CQ": {
   "c": 0.0,
@@ -166,12 +172,6 @@
   "done": false,
   "issue": 12,
   "title": "Create Project Documentation - Sprint 1"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8LkU": {
-  "c": 8.0,
-  "done": false,
-  "issue": 63,
-  "title": "Chat and Q&A"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8MOE": {
   "c": 0.0,
@@ -250,5 +250,11 @@
   "done": true,
   "issue": 14,
   "title": "Wire the control panel analyzer into the agent (#67)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCGtqo": {
+  "c": 0.0,
+  "done": false,
+  "issue": 99,
+  "title": "Kotlin App Tests"
  }
 }
