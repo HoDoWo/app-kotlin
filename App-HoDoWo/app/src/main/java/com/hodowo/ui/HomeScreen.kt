@@ -492,7 +492,7 @@ private fun RecentManualCard(
                 }
             }
 
-            guide.imageUrl?.let { url -> GuideImage(url = url, height = 128) }
+            guide.imageUrl?.let { url -> GuideImage(url = url) }
         }
     }
 }
@@ -523,14 +523,14 @@ private fun ApplianceChip(name: String, highlighted: Boolean, modifier: Modifier
 }
 
 @Composable
-private fun GuideImage(url: String, height: Int) {
+private fun GuideImage(url: String) {
     AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current).data(url).crossfade(true).build(),
+        model = ImageRequest.Builder(LocalContext.current).data(imageData(url)).crossfade(true).build(),
         contentDescription = null,
-        contentScale = ContentScale.Crop,
+        // Whole image, full width: the height follows the image's own proportions.
+        contentScale = ContentScale.FillWidth,
         modifier = Modifier
             .fillMaxWidth()
-            .height(height.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(SurfaceContainerHigh)
     )
@@ -630,7 +630,7 @@ private fun ManualDetailDialog(
                 if (guide.overview.isNotBlank()) {
                     Text(text = guide.overview, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
                 }
-                guide.imageUrl?.let { url -> GuideImage(url = url, height = 200) }
+                guide.imageUrl?.let { url -> GuideImage(url = url) }
 
                 guide.steps.forEach { step ->
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

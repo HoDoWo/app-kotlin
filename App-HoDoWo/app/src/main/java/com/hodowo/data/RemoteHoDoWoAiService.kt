@@ -263,6 +263,7 @@ class RemoteHoDoWoAiService(
                 }
                 val source = response.body?.source() ?: throw IOException("Empty response")
                 var currentEvent: String? = null
+                var answered = false
 
                 while (!source.exhausted()) {
                     val line = source.readUtf8Line() ?: break
@@ -285,9 +286,10 @@ class RemoteHoDoWoAiService(
                             "response" -> {
                                 val json = JSONObject(data)
                                 val reply = json.optString("reply", "")
-                                val imageUrl = json.optString("image").takeIf { it.isNotBlank() }
+                                // optString() turns a JSON null into the text "null": use textOrNull().
+                                val imageUrl = json.textOrNull("image")
                                 val isManual = json.optBoolean("is_manual", false)
-                                val manualId = json.optString("manual_id").takeIf { it.isNotBlank() }
+                                val manualId = json.textOrNull("manual_id")
 
                                 val manualGuide = if (isManual) {
                                     val stepsArray = json.optJSONArray("steps")
@@ -316,10 +318,22 @@ class RemoteHoDoWoAiService(
                                     )
                                 } else null
 
+                                answered = true
                                 emit(com.hodowo.viewmodel.ChatStreamEvent.Response(reply, manualGuide, imageUrl))
+                            }
+                            "error" -> {
+                                // The backend reports its failures as an "error" event:
+                                // show them instead of ending the chat with nothing.
+                                val message = runCatching { JSONObject(data).textOrNull("error") }.getOrNull()
+                                throw IOException(message ?: "The server could not answer")
                             }
                         }
                     }
+                }
+
+                if (!answered) {
+                    // e.g. the server was stopped by its time limit in the middle of the answer.
+                    throw IOException("The server closed the connection before answering")
                 }
             }
         } catch (e: Exception) {

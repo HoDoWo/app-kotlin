@@ -519,14 +519,14 @@ private fun BookmarkedGuideCard(guide: ManualGuide) {
                 Spacer(modifier = Modifier.height(8.dp))
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(url)
+                        .data(imageData(url))
                         .crossfade(true)
                         .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    // Whole image, full width: the height follows the image's own proportions.
+                    contentScale = ContentScale.FillWidth,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp)
                         .clip(RoundedCornerShape(8.dp))
                 )
             }

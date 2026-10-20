@@ -1,5 +1,7 @@
 package com.hodowo.data
 
+import com.hodowo.viewmodel.ChatStreamEvent
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
@@ -115,6 +117,26 @@ class RemoteHomeApiTest {
     @Test
     fun aPayloadWithoutManualsGivesAnEmptyList() {
         assertTrue(RemoteHoDoWoAiService.parseRecentManuals(JSONObject("{}")).isEmpty())
+    }
+
+    // ---------- stream response with null fields ----------
+
+    @Test
+    fun aNullImageAndManualIdAreNotTurnedIntoTheTextNull() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                "event: response\n" +
+                        "data: {\"reply\": \"ok\", \"is_manual\": true, \"image\": null, \"manual_id\": null, " +
+                        "\"steps\": [{\"number\": 1, \"title\": \"Step 1\", \"description\": \"Do it\"}]}\n\n"
+            )
+        )
+
+        val events = service.streamAnswerEvents("How do I switch to HDMI?", null, null, emptyList()).toList()
+
+        val response = events.filterIsInstance<ChatStreamEvent.Response>().single()
+        assertNull(response.imageUrl)
+        assertNull(response.manualGuide?.imageUrl)
+        assertNull(response.manualGuide?.manualId)
     }
 
     // ---------- dailyTip ----------

@@ -283,7 +283,7 @@ fun ChatScreen(
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
-                        .data(url)
+                        .data(imageData(url))
                         .crossfade(true)
                         .build(),
                     contentDescription = "Fullscreen manual diagram",

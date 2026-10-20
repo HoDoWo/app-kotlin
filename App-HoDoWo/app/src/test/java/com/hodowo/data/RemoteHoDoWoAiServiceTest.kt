@@ -271,6 +271,41 @@ class RemoteHoDoWoAiServiceTest {
     }
 
     @Test
+    fun streamAnswerEventsReportTheBackendError() = runTest {
+        val sseResponse = """
+            event: step
+            data: {"title": "Analyzing issue..."}
+
+            event: error
+            data: {"error": "Image overlay failed"}
+            
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(sseResponse))
+
+        val error = runCatching { service.streamAnswerEvents("Help", null, null, emptyList()).toList() }
+            .exceptionOrNull()
+
+        assertTrue(error is IOException)
+        assertTrue(error!!.message!!.contains("Image overlay failed"))
+    }
+
+    @Test
+    fun aStreamThatEndsWithoutAnAnswerIsAnError() = runTest {
+        val sseResponse = """
+            event: step
+            data: {"title": "Analyzing issue..."}
+            
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(sseResponse))
+
+        val error = runCatching { service.streamAnswerEvents("Help", null, null, emptyList()).toList() }
+            .exceptionOrNull()
+
+        assertTrue(error is IOException)
+        assertTrue(error!!.message!!.contains("closed the connection"))
+    }
+
+    @Test
     fun streamAnswerEventsWithImageBuildsMultipartRequest() = runTest {
         val sseResponse = """
             event: response
