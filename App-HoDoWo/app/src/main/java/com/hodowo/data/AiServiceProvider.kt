@@ -8,6 +8,8 @@ import com.hodowo.BuildConfig
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.DemoHoDoWoAiService
 import com.hodowo.viewmodel.HoDoWoAiService
+import com.hodowo.viewmodel.HomeViewModel
+import com.hodowo.viewmodel.greetingName
 
 /**
  * Chooses which AI service the app uses and provides singletons for Auth and Firebase.
@@ -18,8 +20,7 @@ object AiServiceProvider {
     val firebaseRepository by lazy { FirebaseRepository() }
 
     fun create(context: Context): HoDoWoAiService {
-        //val backendUrl = BuildConfig.BACKEND_URL
-        val backendUrl = "http://localhost:8000"
+        val backendUrl = BuildConfig.BACKEND_URL
 
         if (backendUrl.isBlank()) {
             return DemoHoDoWoAiService()
@@ -43,6 +44,20 @@ object AiServiceProvider {
                     aiService = create(context),
                     firebaseRepository = firebaseRepository,
                     authManager = authManager
+                )
+            }
+        }
+
+    /** Factory that builds [HomeViewModel]: same AI service, name of the signed-in user. */
+    fun homeViewModelFactory(context: Context): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                HomeViewModel(
+                    aiService = create(context),
+                    userName = {
+                        val user = authManager.currentUser.value
+                        greetingName(user?.displayName, user?.email)
+                    }
                 )
             }
         }

@@ -187,6 +187,12 @@ interface HoDoWoAiService {
     suspend fun setBookmark(manualId: String, isBookmarked: Boolean): Boolean = isBookmarked
     suspend fun rateManual(manualId: String, rating: Int): Int = rating
 
+    /** Newest manuals of the signed-in user, for "Recent Manuals" on the Home screen. */
+    suspend fun recentManuals(limit: Int): List<RecentManual> = emptyList()
+
+    /** Today's energy-saving tip for the Home screen, or null when unavailable. */
+    suspend fun dailyTip(): String? = null
+
     fun streamAnswer(
         question: String,
         appliance: Appliance?
@@ -264,6 +270,46 @@ class DemoHoDoWoAiService : HoDoWoAiService {
 
     override suspend fun sendFeedback(report: FeedbackReport) {
         delay(200)
+    }
+
+    override suspend fun dailyTip(): String = "Run washer after 10:00 PM tonight to save on power."
+
+    /** The two manuals of the Home mockup, so demo mode shows a realistic Home screen. */
+    override suspend fun recentManuals(limit: Int): List<RecentManual> {
+        delay(300)
+        val now = System.currentTimeMillis()
+        return listOf(
+            RecentManual(
+                guide = ManualGuide(
+                    applianceName = "Bosch Washer",
+                    issueTitle = "Error E18: Drain Pump Clog",
+                    overview = "Follow these steps to safely access and rinse the drain pump " +
+                            "filter cap to resolve water drainage issues.",
+                    steps = listOf(
+                        ManualStep(1, "Place towel", "Lay a towel under the bottom-right maintenance flap."),
+                        ManualStep(2, "Rotate filter", "Turn the filter cap counter-clockwise to drain the water."),
+                        ManualStep(3, "Pull & rinse filter", "Pull out the filter, rinse it and screw it back tightly.")
+                    ),
+                    manualId = "demo-1"
+                ),
+                createdAtMillis = now - 2 * 60 * 60 * 1000L
+            ),
+            RecentManual(
+                guide = ManualGuide(
+                    applianceName = "De'Longhi Coffee Maker",
+                    issueTitle = "Descaling Routine & Flush",
+                    overview = "Clean calcification deposits from the water lines using standard " +
+                            "eco-descaler solution and a 2-cycle hot water purge.",
+                    steps = listOf(
+                        ManualStep(1, "Add descaler", "Fill the tank with water and the descaling solution."),
+                        ManualStep(2, "Run the cycle", "Start the descaling program and wait until it ends."),
+                        ManualStep(3, "Flush twice", "Rinse the tank and run two cycles with clean hot water.")
+                    ),
+                    manualId = "demo-2"
+                ),
+                createdAtMillis = now - 26 * 60 * 60 * 1000L
+            )
+        ).take(limit)
     }
 
     override fun streamAnswer(
