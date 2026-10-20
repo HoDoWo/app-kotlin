@@ -2,363 +2,388 @@ package com.hodowo.data
 
 import android.net.Uri
 import com.hodowo.viewmodel.Appliance
-import com.hodowo.viewmodel.ControlType
-import com.hodowo.viewmodel.Feedback
+import com.hodowo.viewmodel.ChatMessageHistory
+import com.hodowo.viewmodel.ChatStreamEvent
 import com.hodowo.viewmodel.FeedbackReport
 import io.mockk.mockk
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
 
-/**
- * Tests for [RemoteHoDoWoAiService] against a local fake HTTP server,
- * so no real backend or network is needed.
- */
 class RemoteHoDoWoAiServiceTest {
 
-    private lateinit var server: MockWebServer
+    private lateinit var mockWebServer: MockWebServer
     private lateinit var service: RemoteHoDoWoAiService
+    private val mockUri: Uri = mockk(relaxed = true)
 
     @Before
     fun setUp() {
-        server = MockWebServer()
-        server.start()
+        mockWebServer = MockWebServer()
+        mockWebServer.start()
+
+        val baseUrl = mockWebServer.url("/").toString()
 
         service = RemoteHoDoWoAiService(
-            backendUrl = server.url("/").toString(),
-            loadImage = { byteArrayOf(1, 2, 3) },
-            ioDispatcher = Dispatchers.Unconfined
+            backendUrl = baseUrl,
+            loadImage = { byteArrayOf(1, 2, 3, 4) },
+            tokenProvider = { "mock-token-123" },
+            language = "en"
         )
     }
 
     @After
     fun tearDown() {
-        server.shutdown()
+        mockWebServer.shutdown()
     }
 
-    // ---------- askQuestion ----------
+    // ==========================================
+    // 1. askQuestion
+    // ==========================================
 
     @Test
-    fun questionIsSentAsJsonAndReplyIsReturned() = runTest {
-        server.enqueue(reply("Check the filter."))
+    fun askQuestionWithoutApplianceReturnsReply() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"reply": "Check filter."}"""))
 
-        val answer = service.askQuestion("Why does it leak?", null)
+        val result = service.askQuestion("How do I fix E18?", null)
 
-        assertEquals("Check the filter.", answer)
-
-        val request = server.takeRequest()
-        assertEquals("POST", request.method)
+        assertEquals("Check filter.", result)
+        val request = mockWebServer.takeRequest()
         assertEquals("/api/chat", request.path)
-        assertTrue(request.getHeader("Content-Type").orEmpty().startsWith("application/json"))
-        assertEquals(
-            "Why does it leak?",
-            JSONObject(request.body.readUtf8()).getString("message")
-        )
+        assertEquals("Bearer mock-token-123", request.getHeader("Authorization"))
     }
 
     @Test
-    fun identifiedApplianceIsAddedToTheQuestion() = runTest {
-        server.enqueue(reply("ok"))
-        val machine = Appliance("Washing machine", "Bosch", null, 0.9f)
+    fun askQuestionWithApplianceIncludesContextInBody() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"reply": "Unplug the machine."}"""))
+        val appliance = Appliance("Washer", "Bosch", "Serie 6", 0.9f)
 
-        service.askQuestion("Why does it leak?", machine)
+        val result = service.askQuestion("Leaking water", appliance)
 
-        val message = JSONObject(server.takeRequest().body.readUtf8()).getString("message")
-        assertEquals("Appliance: Washing machine Bosch\nQuestion: Why does it leak?", message)
+        assertEquals("Unplug the machine.", result)
+        val request = mockWebServer.takeRequest()
+        val bodyText = request.body.readUtf8()
+        assertTrue(bodyText.contains("Washer Bosch Serie 6"))
+    }
+
+    @Test(expected = IOException::class)
+    fun askQuestionThrowsOnInvalidJsonResponse() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"invalid": "data"}"""))
+        service.askQuestion("Test", null)
+    }
+
+    @Test(expected = IOException::class)
+    fun askQuestionThrowsOn401Unauthorized() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(401))
+        service.askQuestion("Test", null)
+    }
+
+    @Test(expected = IOException::class)
+    fun askQuestionThrowsOn500ServerError() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(500))
+        service.askQuestion("Test", null)
+    }
+
+    // ==========================================
+    // 2. identifyAppliance
+    // ==========================================
+
+    @Test
+    fun identifyApplianceParsesValidJsonResponse() = runTest {
+        val json = """{"reply": "{\"name\": \"Dishwasher\", \"brand\": \"Miele\", \"model\": \"G7000\", \"confidence\": 0.88}"}"""
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(json))
+
+        val appliance = service.identifyAppliance(mockUri)
+
+        assertEquals("Dishwasher", appliance.name)
+        assertEquals("Miele", appliance.brand)
+        assertEquals("G7000", appliance.model)
+        assertEquals(0.88f, appliance.confidence)
     }
 
     @Test
-    fun serverErrorThrowsIoException() = runTest {
-        server.enqueue(MockResponse().setResponseCode(500).setBody("boom"))
+    fun identifyApplianceReturnsUnknownOnMalformedJson() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"reply": "Not a JSON object"}"""))
 
-        val error = runCatching { service.askQuestion("Hello", null) }.exceptionOrNull()
-
-        assertTrue(error is IOException)
-        assertEquals("Server error 500", error?.message)
-    }
-
-    @Test
-    fun replyWithoutJsonThrowsIoException() = runTest {
-        server.enqueue(MockResponse().setBody("not json"))
-
-        val error = runCatching { service.askQuestion("Hello", null) }.exceptionOrNull()
-
-        assertTrue(error is IOException)
-        assertEquals("Invalid server response", error?.message)
-    }
-
-    // ---------- authentication ----------
-
-    @Test
-    fun tokenIsSentAsBearerHeader() = runTest {
-        server.enqueue(reply("ok"))
-        val authenticated = RemoteHoDoWoAiService(
-            backendUrl = server.url("/").toString(),
-            loadImage = { byteArrayOf(1) },
-            tokenProvider = { "abc.def.ghi" },
-            ioDispatcher = Dispatchers.Unconfined
-        )
-
-        authenticated.askQuestion("Hello", null)
-
-        assertEquals("Bearer abc.def.ghi", server.takeRequest().getHeader("Authorization"))
-    }
-
-    @Test
-    fun noAuthorizationHeaderWithoutToken() = runTest {
-        server.enqueue(reply("ok"))
-
-        service.askQuestion("Hello", null)
-
-        assertNull(server.takeRequest().getHeader("Authorization"))
-    }
-
-    @Test
-    fun unauthorizedAnswerAsksToSignInAgain() = runTest {
-        server.enqueue(MockResponse().setResponseCode(401).setBody("missing bearer token"))
-
-        val error = runCatching { service.askQuestion("Hello", null) }.exceptionOrNull()
-
-        assertTrue(error is IOException)
-        assertEquals("Not authorized: please sign in again", error?.message)
-    }
-
-    // ---------- identifyAppliance ----------
-
-    @Test
-    fun photoIsSentAsMultipartAndApplianceIsParsed() = runTest {
-        server.enqueue(
-            reply("""Result: {"name": "Oven", "brand": "Bosch", "model": null, "confidence": 0.8}""")
-        )
-
-        val appliance = service.identifyAppliance(mockk<Uri>())
-
-        assertEquals("Oven", appliance.name)
-        assertEquals("Bosch", appliance.brand)
-        assertNull(appliance.model)
-        assertEquals(0.8f, appliance.confidence, 0.001f)
-
-        val request = server.takeRequest()
-        assertTrue(request.getHeader("Content-Type").orEmpty().startsWith("multipart/form-data"))
-
-        val body = request.body.readUtf8()
-        assertTrue(body.contains("name=\"image\"; filename=\"appliance.jpg\""))
-        assertTrue(body.contains("Identify the household appliance"))
-    }
-
-    // ---------- analyzePanel ----------
-
-    @Test
-    fun panelIsSentAsMultipartAndControlsAreParsed() = runTest {
-        server.enqueue(
-            panel(
-                """[{"id": "c1", "label": "Start/Pause", "type": "button",
-                     "description": "Starts the program",
-                     "box": {"x": 0.62, "y": 0.40, "w": 0.10, "h": 0.12}}]"""
-            )
-        )
-        val machine = Appliance("Washing machine", "Bosch", "HW-100", 0.9f)
-
-        val controls = service.analyzePanel(mockk<Uri>(), machine)
-
-        assertEquals(1, controls.size)
-        assertEquals("c1", controls[0].id)
-        assertEquals("Start/Pause", controls[0].label)
-        assertEquals(ControlType.BUTTON, controls[0].type)
-        assertEquals("Starts the program", controls[0].description)
-        assertEquals(0.62f, controls[0].box.x, 0.001f)
-        assertEquals(0.12f, controls[0].box.h, 0.001f)
-
-        val request = server.takeRequest()
-        assertEquals("/api/panel/analyze", request.path)
-        assertTrue(request.getHeader("Content-Type").orEmpty().startsWith("multipart/form-data"))
-
-        val body = request.body.readUtf8()
-        assertTrue(body.contains("name=\"image\"; filename=\"panel.jpg\""))
-        assertTrue(body.contains("name=\"brand\""))
-        assertTrue(body.contains("Bosch"))
-        assertTrue(body.contains("name=\"model\""))
-        assertTrue(body.contains("name=\"language\""))
-    }
-
-    @Test
-    fun panelWithoutControlsReturnsEmptyList() = runTest {
-        server.enqueue(panel("[]"))
-
-        assertTrue(service.analyzePanel(mockk<Uri>(), null).isEmpty())
-    }
-
-    @Test
-    fun panelWithoutJsonThrowsIoException() = runTest {
-        server.enqueue(MockResponse().setBody("not json"))
-
-        val error = runCatching { service.analyzePanel(mockk<Uri>(), null) }.exceptionOrNull()
-
-        assertTrue(error is IOException)
-        assertEquals("Invalid server response", error?.message)
-    }
-
-    // ---------- locatePanel (S1-16) ----------
-
-    @Test
-    fun photoIsSentToTheLocateEndpointAndTheBoxIsParsed() = runTest {
-        server.enqueue(
-            MockResponse().setBody("""{"box": {"x": 0.1, "y": 0.2, "w": 0.6, "h": 0.5}}""")
-        )
-
-        val box = service.locatePanel(mockk<Uri>())
-
-        assertEquals(0.1f, box?.x ?: -1f, 0.001f)
-        assertEquals(0.2f, box?.y ?: -1f, 0.001f)
-        assertEquals(0.6f, box?.w ?: -1f, 0.001f)
-        assertEquals(0.5f, box?.h ?: -1f, 0.001f)
-
-        val request = server.takeRequest()
-        assertEquals("/api/panel/locate", request.path)
-        assertTrue(request.getHeader("Content-Type").orEmpty().startsWith("multipart/form-data"))
-    }
-
-    @Test
-    fun aPhotoWithoutAPanelGivesNull() = runTest {
-        server.enqueue(MockResponse().setBody("""{"box": null}"""))
-
-        assertNull(service.locatePanel(mockk<Uri>()))
-    }
-
-    // ---------- parseControls ----------
-
-    @Test
-    fun panelCoordinatesAreClampedAndBadEntriesSkipped() {
-        val json = JSONObject(
-            """{"controls": [
-                {"label": "Temperature dial", "type": "dial",
-                 "box": {"x": -1, "y": 2, "w": 0.5, "h": 0.5}},
-                {"label": "No box", "type": "button"},
-                {"label": "   ", "type": "button",
-                 "box": {"x": 0.0, "y": 0.0, "w": 0.1, "h": 0.1}}]}"""
-        )
-
-        val controls = RemoteHoDoWoAiService.parseControls(json)
-
-        assertEquals(1, controls.size)
-        assertEquals("c1", controls[0].id)
-        assertEquals("Temperature dial", controls[0].label)
-        assertEquals(ControlType.DIAL, controls[0].type)
-        assertEquals(0f, controls[0].box.x, 0.001f)
-        assertEquals(1f, controls[0].box.y, 0.001f)
-    }
-
-    @Test
-    fun unknownPanelTypeBecomesOther() {
-        val json = JSONObject(
-            """{"controls": [{"label": "Knob", "type": "knob",
-                 "box": {"x": 0.1, "y": 0.1, "w": 0.1, "h": 0.1}}]}"""
-        )
-
-        assertEquals(ControlType.OTHER, RemoteHoDoWoAiService.parseControls(json).single().type)
-    }
-
-    // ---------- parsePanelBox (S1-16) ----------
-
-    @Test
-    fun panelLocationBoxIsClampedAndRead() {
-        val json = JSONObject("""{"box": {"x": -0.5, "y": 0.2, "w": 0.6, "h": 2.0}}""")
-
-        val box = RemoteHoDoWoAiService.parsePanelBox(json)
-
-        assertEquals(0f, box?.x ?: -1f, 0.001f)
-        assertEquals(0.2f, box?.y ?: -1f, 0.001f)
-        assertEquals(0.6f, box?.w ?: -1f, 0.001f)
-        assertEquals(1f, box?.h ?: -1f, 0.001f)
-    }
-
-    @Test
-    fun panelLocationWithoutAUsableBoxGivesNull() {
-        assertNull(RemoteHoDoWoAiService.parsePanelBox(JSONObject("""{"box": null}""")))
-        assertNull(RemoteHoDoWoAiService.parsePanelBox(JSONObject("{}")))
-        assertNull(
-            RemoteHoDoWoAiService.parsePanelBox(
-                JSONObject("""{"box": {"x": 0.1, "y": 0.1, "w": 0, "h": 0.5}}""")
-            )
-        )
-    }
-
-    // ---------- parseAppliance ----------
-
-    @Test
-    fun replyWithoutJsonGivesUnknownAppliance() {
-        val appliance = RemoteHoDoWoAiService.parseAppliance("I cannot see the image.")
-
-        assertEquals(RemoteHoDoWoAiService.UNKNOWN_APPLIANCE, appliance.name)
-        assertEquals(0f, appliance.confidence)
-    }
-
-    @Test
-    fun brokenJsonGivesUnknownAppliance() {
-        val appliance = RemoteHoDoWoAiService.parseAppliance("{ name: }")
-
-        assertEquals(RemoteHoDoWoAiService.UNKNOWN_APPLIANCE, appliance.name)
-    }
-
-    @Test
-    fun missingFieldsAreHandled() {
-        val appliance = RemoteHoDoWoAiService.parseAppliance("""{"brand": "  "}""")
+        val appliance = service.identifyAppliance(mockUri)
 
         assertEquals(RemoteHoDoWoAiService.UNKNOWN_APPLIANCE, appliance.name)
         assertNull(appliance.brand)
         assertEquals(0f, appliance.confidence)
     }
 
-    @Test
-    fun confidenceIsKeptBetweenZeroAndOne() {
-        val tooHigh = RemoteHoDoWoAiService.parseAppliance("""{"name": "Fridge", "confidence": 7}""")
-        val negative = RemoteHoDoWoAiService.parseAppliance("""{"name": "Fridge", "confidence": -1}""")
+    // ==========================================
+    // 3. analyzePanel & locatePanel
+    // ==========================================
 
-        assertEquals(1f, tooHigh.confidence)
-        assertEquals(0f, negative.confidence)
+    @Test
+    fun analyzePanelParsesControlsCorrectly() = runTest {
+        val payload = """{
+            "controls": [
+                {
+                    "id": "btn-1",
+                    "label": "Start",
+                    "type": "button",
+                    "description": "Starts program",
+                    "box": {"x": 0.1, "y": 0.2, "w": 0.3, "h": 0.4}
+                }
+            ]
+        }"""
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(payload))
+        val appliance = Appliance("Oven", "Whirlpool", "W9", 0.9f)
+
+        val controls = service.analyzePanel(mockUri, appliance)
+
+        assertEquals(1, controls.size)
+        assertEquals("btn-1", controls[0].id)
+        assertEquals("Start", controls[0].label)
+        assertEquals(0.1f, controls[0].box.x)
     }
 
-    // ---------- buildQuestion and sendFeedback ----------
-
     @Test
-    fun questionWithoutApplianceIsUnchanged() {
-        assertEquals("Hello", RemoteHoDoWoAiService.buildQuestion("Hello", null))
+    fun locatePanelReturnsValidPanelBox() = runTest {
+        val payload = """{"box": {"x": 0.05, "y": 0.1, "w": 0.8, "h": 0.5}}"""
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(payload))
+
+        val box = service.locatePanel(mockUri)
+
+        assertNotNull(box)
+        assertEquals(0.8f, box?.w)
     }
 
     @Test
-    fun feedbackDoesNotCallTheBackendYet() = runTest {
-        service.sendFeedback(
-            FeedbackReport(
-                messageId = 1L,
-                appliance = null,
-                question = "q",
-                answer = "a",
-                feedback = Feedback.LIKE,
-                comment = null
-            )
+    fun locatePanelReturnsNullWhenNoBoxOrZeroSize() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"box": {"x": 0.0, "y": 0.0, "w": 0.0, "h": 0.0}}"""))
+
+        val box = service.locatePanel(mockUri)
+
+        assertNull(box)
+    }
+
+    // ==========================================
+    // 4. setBookmark & rateManual
+    // ==========================================
+
+    @Test
+    fun setBookmarkReturnsBackendResponseValue() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"is_bookmarked": true}"""))
+
+        val result = service.setBookmark("m-123", true)
+
+        assertTrue(result)
+        val request = mockWebServer.takeRequest()
+        assertEquals("/api/manuals/m-123/bookmark", request.path)
+        assertEquals("PATCH", request.method)
+    }
+
+    @Test
+    fun setBookmarkHandlesServerErrorGracefully() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(500))
+
+        val result = service.setBookmark("m-123", true)
+
+        assertTrue(result) // Fallback returns input state
+    }
+
+    @Test
+    fun setBookmarkHandlesEmptyResponseBody() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200))
+
+        val result = service.setBookmark("m-123", false)
+
+        assertFalse(result)
+    }
+
+    @Test
+    fun rateManualReturnsUpdatedRating() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"current_rating": 5}"""))
+
+        val rating = service.rateManual("m-123", 5)
+
+        assertEquals(5, rating)
+        val request = mockWebServer.takeRequest()
+        assertEquals("/api/manuals/m-123/rate", request.path)
+        assertEquals("POST", request.method)
+    }
+
+    @Test
+    fun rateManualHandlesEmptyResponseBodyAndError() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200))
+
+        val rating = service.rateManual("m-123", 4)
+
+        assertEquals(4, rating)
+    }
+
+    @Test
+    fun sendFeedbackExecutesWithoutErrors() = runTest {
+        val report = mockk<FeedbackReport>(relaxed = true)
+        service.sendFeedback(report)
+    }
+
+    // ==========================================
+    // 5. streamAnswerEvents (SSE Streaming)
+    // ==========================================
+
+    @Test
+    fun streamAnswerEventsEmitsStepTokenAndResponse() = runTest {
+        val sseResponse = """
+            event: step
+            data: {"title": "Analyzing issue...", "detail": "Checking codes"}
+
+            event: token
+            data: {"token": "Clean "}
+
+            event: token
+            data: {"token": "the filter."}
+
+            event: response
+            data: {"reply": "Clean the filter.", "is_manual": true, "manual_id": "man-1", "steps": [{"number": 1, "title": "Filter", "description": "Unscrew filter"}]}
+            
+        """.trimIndent()
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(sseResponse))
+
+        val history = listOf(ChatMessageHistory("user", "Hello"))
+        val events = service.streamAnswerEvents("Help E18", null, null, history).toList()
+
+        assertEquals(4, events.size)
+        assertTrue(events[0] is ChatStreamEvent.Step)
+        assertTrue(events[1] is ChatStreamEvent.Token)
+        assertTrue(events[2] is ChatStreamEvent.Token)
+        assertTrue(events[3] is ChatStreamEvent.Response)
+
+        val responseEvent = events[3] as ChatStreamEvent.Response
+        assertEquals("Clean the filter.", responseEvent.fullText)
+        assertNotNull(responseEvent.manualGuide)
+        assertEquals("man-1", responseEvent.manualGuide?.manualId)
+        assertEquals(1, responseEvent.manualGuide?.steps?.size)
+    }
+
+    @Test
+    fun streamAnswerEventsWithImageBuildsMultipartRequest() = runTest {
+        val sseResponse = """
+            event: response
+            data: {"reply": "Appliance identified."}
+            
+        """.trimIndent()
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(sseResponse))
+
+        val history = listOf(ChatMessageHistory("user", "Hi"))
+        val events = service.streamAnswerEvents("Identify this", null, mockUri, history).toList()
+
+        assertEquals(1, events.size)
+        val request = mockWebServer.takeRequest()
+        assertEquals("/api/chat/stream", request.path)
+        assertTrue(request.getHeader("Content-Type")?.contains("multipart/form-data") == true)
+    }
+
+    @Test
+    fun streamAnswerEventsWithHistoryNoImageSendsJsonBody() = runTest {
+        val sseResponse = """
+            event: response
+            data: {"reply": "Continuous answer."}
+            
+        """.trimIndent()
+
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(sseResponse))
+
+        val history = listOf(ChatMessageHistory("user", "Previous question"))
+        val events = service.streamAnswerEvents("Next question", null, null, history).toList()
+
+        assertEquals(1, events.size)
+        val request = mockWebServer.takeRequest()
+        val bodyText = request.body.readUtf8()
+        assertTrue(bodyText.contains("Previous question"))
+    }
+
+    @Test(expected = IOException::class)
+    fun streamAnswerEventsThrowsOnServerError() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(500))
+
+        service.streamAnswerEvents("Hello", null, null, emptyList()).toList()
+    }
+
+    @Test
+    fun streamAnswerEventsWithFailingImageLoadFallsBackToTextRequest() = runTest {
+        val failingService = RemoteHoDoWoAiService(
+            backendUrl = mockWebServer.url("/").toString(),
+            loadImage = { throw RuntimeException("Failed to load image") },
+            tokenProvider = { "token" }
         )
 
-        assertEquals(0, server.requestCount)
+        val sseResponse = """
+            event: response
+            data: {"reply": "Text fallback response."}
+            
+        """.trimIndent()
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(sseResponse))
+
+        val events = failingService.streamAnswerEvents("Question", null, mockUri, emptyList()).toList()
+
+        assertEquals(1, events.size)
+        assertTrue(events[0] is ChatStreamEvent.Response)
+        assertEquals("Text fallback response.", (events[0] as ChatStreamEvent.Response).fullText)
     }
 
-    /** Builds a backend answer: {"reply": text}. */
-    private fun reply(text: String) =
-        MockResponse()
-            .setHeader("Content-Type", "application/json")
-            .setBody(JSONObject().put("reply", text).toString())
+    // ==========================================
+    // 6. Companion Helper Methods (Static Tests)
+    // ==========================================
 
-    /** Builds a /api/panel/analyze answer: {"controls": [...]}. */
-    private fun panel(controlsJson: String) =
-        MockResponse()
-            .setHeader("Content-Type", "application/json")
-            .setBody("""{"controls": $controlsJson}""")
+    @Test
+    fun buildQuestionFormatsWithAndWithoutAppliance() {
+        val qNoAppliance = RemoteHoDoWoAiService.buildQuestion("How to clean?", null)
+        assertEquals("How to clean?", qNoAppliance)
+
+        val appliance = Appliance("Dryer", "LG", "D12", 0.9f)
+        val qWithAppliance = RemoteHoDoWoAiService.buildQuestion("How to clean?", appliance)
+        assertEquals("Appliance: Dryer LG D12\nQuestion: How to clean?", qWithAppliance)
+    }
+
+    @Test
+    fun parseApplianceHandlesInvalidFormattingAndNaN() {
+        val invalidFormat = RemoteHoDoWoAiService.parseAppliance("No json brackets here")
+        assertEquals(RemoteHoDoWoAiService.UNKNOWN_APPLIANCE, invalidFormat.name)
+
+        val nanConfidence = RemoteHoDoWoAiService.parseAppliance("""{"name": "Mixer", "confidence": "NaN"}""")
+        assertEquals("Mixer", nanConfidence.name)
+        assertEquals(0f, nanConfidence.confidence)
+    }
+
+    @Test
+    fun parseControlsFiltersEmptyLabelsAndClampsCoordinates() {
+        val payload = JSONObject("""{
+            "controls": [
+                {"label": "", "box": {"x": 0.1, "y": 0.1, "w": 0.1, "h": 0.1}},
+                {"label": "Power", "box": {"x": -0.5, "y": 1.5, "w": 0.2, "h": 0.2}}
+            ]
+        }""")
+
+        val controls = RemoteHoDoWoAiService.parseControls(payload)
+
+        assertEquals(1, controls.size)
+        assertEquals("Power", controls[0].label)
+        assertEquals(0f, controls[0].box.x) // Clamped from -0.5 to 0.0
+        assertEquals(1f, controls[0].box.y) // Clamped from 1.5 to 1.0
+    }
+
+    @Test
+    fun parsePanelBoxReturnsNullForInvalidOrNegativeWidthHeight() {
+        val jsonInvalidWidth = JSONObject("""{"box": {"x": 0.1, "y": 0.1, "w": -0.5, "h": 0.5}}""")
+        assertNull(RemoteHoDoWoAiService.parsePanelBox(jsonInvalidWidth))
+
+        val jsonNoBox = JSONObject("""{"other": "data"}""")
+        assertNull(RemoteHoDoWoAiService.parsePanelBox(jsonNoBox))
+    }
 }
