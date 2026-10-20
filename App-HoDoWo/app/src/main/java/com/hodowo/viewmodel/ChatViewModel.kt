@@ -100,7 +100,9 @@ data class Appliance(
 data class ChatSession(
     val id: String,
     val title: String,
-    val lastUpdated: Long = System.currentTimeMillis()
+    val lastUpdated: Long = System.currentTimeMillis(),
+    /** Appliance (model) the chat was about, when it was recognised. */
+    val applianceName: String? = null
 )
 
 /**
@@ -190,6 +192,9 @@ interface HoDoWoAiService {
     /** Newest manuals of the signed-in user, for "Recent Manuals" on the Home screen. */
     suspend fun recentManuals(limit: Int): List<RecentManual> = emptyList()
 
+    /** Most searched and most saved guides of all users, for "Most popular" on the Home screen. */
+    suspend fun popularManuals(limit: Int): List<RecentManual> = emptyList()
+
     /** Today's energy-saving tip for the Home screen, or null when unavailable. */
     suspend fun dailyTip(): String? = null
 
@@ -273,6 +278,12 @@ class DemoHoDoWoAiService : HoDoWoAiService {
     }
 
     override suspend fun dailyTip(): String = "Run washer after 10:00 PM tonight to save on power."
+
+    /** The mockup manuals again, with example search and save counts. */
+    override suspend fun popularManuals(limit: Int): List<RecentManual> =
+        recentManuals(limit).mapIndexed { index, manual ->
+            manual.copy(searchCount = 120 - index * 35, saveCount = 40 - index * 15)
+        }
 
     /** The two manuals of the Home mockup, so demo mode shows a realistic Home screen. */
     override suspend fun recentManuals(limit: Int): List<RecentManual> {
@@ -397,7 +408,10 @@ class ChatViewModel(
     private val aiService: HoDoWoAiService = DemoHoDoWoAiService(),
     private val firebaseRepository: FirebaseRepository? = null,
     private val authManager: AuthManager? = null,
-    val panelCropper: PanelCropper = PanelCropper.None
+    val panelCropper: PanelCropper = PanelCropper.None,
+    /** Keeps the chats on the phone for the history menu; null keeps them only in memory. */
+    private val chatHistory: ChatHistoryStore? = null,
+    private val clock: () -> Long = System::currentTimeMillis
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
@@ -409,9 +423,120 @@ class ChatViewModel(
     private val pendingFeedback = LinkedHashMap<Long, FeedbackReport>()
     private val feedbackMutex = Mutex()
 
+    /** All past chats (with their messages), newest first. */
+    private var savedChats: List<SavedChat> = emptyList()
+
+    private val userId: String
+        get() = authManager?.currentUserId ?: GUEST_USER
+
+    /** User whose chats are in [savedChats]. */
+    private var historyUser: String = userId
+
     init {
         // Load initial bookmarked manuals from Firebase if user is logged in
         refreshBookmarks()
+        refreshChatHistory()
+    }
+
+    /** Reloads the chat history of the current user (e.g. after signing in). */
+    fun refreshChatHistory() {
+        val store = chatHistory ?: return
+        val user = userId
+        viewModelScope.launch {
+            val chats = try {
+                store.load(user)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                emptyList()
+            }
+            // Same user: keep the chats saved while the file was being read.
+            // Another user (sign in / out): show only that user's chats.
+            savedChats = if (user == historyUser) {
+                chats.fold(savedChats) { all, chat -> if (all.any { it.id == chat.id }) all else all.upsert(chat) }
+            } else {
+                chats
+            }
+            historyUser = user
+            publishSessions()
+        }
+    }
+
+    /**
+     * Opens a past chat from the history menu. The current chat is saved first.
+     * Ignored while an answer is still arriving.
+     */
+    fun openChat(chatId: String) {
+        val current = _uiState.value
+        if (current.isSending || chatId == current.currentChatId) return
+        val chat = savedChats.firstOrNull { it.id == chatId } ?: return
+
+        saveCurrentChat()
+
+        messageId = maxOf(messageId, chat.messages.maxOfOrNull { it.id } ?: 0L)
+        lastImageUri = chat.messages.lastOrNull { it.imageUri != null }?.imageUri
+        _uiState.value = ChatUiState(
+            messages = chat.messages,
+            appliance = chat.applianceName?.let { Appliance(name = it, brand = null, model = null, confidence = 1f) },
+            currentChatId = chat.id,
+            chatSessions = _uiState.value.chatSessions,
+            bookmarkedGuides = current.bookmarkedGuides
+        )
+    }
+
+    /** Removes a chat from the history; deleting the open chat starts a new one. */
+    fun deleteChat(chatId: String) {
+        savedChats = savedChats.filterNot { it.id == chatId }
+        if (chatId == _uiState.value.currentChatId) {
+            resetToNewChat()
+        }
+        publishSessions()
+
+        val store = chatHistory ?: return
+        val user = userId
+        viewModelScope.launch {
+            try {
+                store.delete(user, chatId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // The chat is already gone from the screen; the file is fixed on the next save.
+            }
+        }
+    }
+
+    /** Saves the open chat in the history (in memory at once, on the phone in the background). */
+    private fun saveCurrentChat() {
+        val state = _uiState.value
+        val chat = savedChatOf(state.currentChatId, state.messages, state.appliance) ?: return
+        savedChats = savedChats.upsert(chat)
+        publishSessions()
+
+        val store = chatHistory ?: return
+        val user = userId
+        viewModelScope.launch {
+            try {
+                store.save(user, chat)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Keeping the history is best effort: the chat itself still works.
+            }
+        }
+    }
+
+    private fun publishSessions() {
+        _uiState.update { it.copy(chatSessions = savedChats.map(SavedChat::toSession)) }
+    }
+
+    private fun resetToNewChat() {
+        val current = _uiState.value
+        lastImageUri = null
+        _uiState.value = ChatUiState(
+            currentChatId = "chat_${clock()}",
+            chatSessions = current.chatSessions,
+            bookmarkedGuides = current.bookmarkedGuides
+        )
     }
 
     fun setSelectedImage(uri: Uri?) {
@@ -423,24 +548,12 @@ class ChatViewModel(
     }
 
     /**
-     * Starts a fresh chat session.
+     * Starts a fresh chat session. The current chat (if the user asked something)
+     * is kept in the history menu.
      */
     fun startNewChat() {
-        val current = _uiState.value
-        val sessions = if (current.messages.isNotEmpty()) {
-            val title = current.messages.firstOrNull { it.isUser }?.text?.take(30)
-                ?: current.appliance?.name
-                ?: "Chat #${current.chatSessions.size + 1}"
-            current.chatSessions + ChatSession(current.currentChatId, title)
-        } else {
-            current.chatSessions
-        }
-
-        _uiState.value = ChatUiState(
-            currentChatId = "chat_${System.currentTimeMillis()}",
-            chatSessions = sessions,
-            appliance = null
-        )
+        saveCurrentChat()
+        resetToNewChat()
     }
 
     /**
@@ -535,6 +648,7 @@ class ChatViewModel(
             currentStep = null,
             error = null
         )
+        val chatId = _uiState.value.currentChatId
 
         viewModelScope.launch {
             try {
@@ -589,6 +703,11 @@ class ChatViewModel(
                     isSending = false,
                     currentStep = null
                 )
+                // Keep the chat in the history menu, unless the user already moved to another one.
+                if (_uiState.value.currentChatId == chatId) {
+                    saveCurrentChat()
+                }
+
                 // Persist chat to Firebase
                 val userId = authManager?.currentUserId ?: "guest"
                 firebaseRepository?.saveChatMessages(
@@ -884,5 +1003,9 @@ class ChatViewModel(
     private fun nextMessageId(): Long {
         messageId++
         return messageId
+    }
+
+    private companion object {
+        const val GUEST_USER = "guest"
     }
 }

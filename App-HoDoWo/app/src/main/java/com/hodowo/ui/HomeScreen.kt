@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -71,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import coil.imageLoader
 import coil.request.ImageRequest
 import com.hodowo.ui.theme.OnSurfaceVariant
 import com.hodowo.ui.theme.OutlineVariant
@@ -84,6 +86,7 @@ import com.hodowo.ui.theme.Tertiary
 import com.hodowo.viewmodel.HomeUiState
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.ManualGuide
+import com.hodowo.viewmodel.ManualsSection
 import com.hodowo.viewmodel.RecentManual
 import com.hodowo.viewmodel.relativeTimeLabel
 
@@ -92,7 +95,7 @@ private val TertiaryFixed = Color(0xFFFFDDB8)
 
 /**
  * Home screen from the Stitch mockup: greeting, search, quick actions,
- * daily tip and the user's recent manuals.
+ * daily tip, the user's recent manuals and the most popular manuals of all users.
  *
  * @param onSearch sends the text to the AI chat as a question.
  * @param onDiagnose opens the camera to photograph an appliance.
@@ -110,9 +113,20 @@ fun HomeScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     var openedManual by remember { mutableStateOf<RecentManual?>(null) }
+    var viewerUrl by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
 
     // Reload every time Home is shown, so manuals created in the chat appear.
     LaunchedEffect(Unit) { viewModel.refresh() }
+
+    // Download the images of both lists into Coil's disk cache, so they can be seen offline.
+    LaunchedEffect(state.recentManuals, state.popularManuals) {
+        (state.recentManuals + state.popularManuals)
+            .mapNotNull { it.guide.imageUrl }
+            .filter { it.startsWith("http") }
+            .distinct()
+            .forEach { url -> context.imageLoader.enqueue(ImageRequest.Builder(context).data(url).build()) }
+    }
 
     Column(
         modifier = Modifier
@@ -123,7 +137,8 @@ fun HomeScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
+            // Extra space at the bottom, so the "New chat" button never covers a card.
+            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             item { Greeting(state.userName) }
@@ -137,17 +152,12 @@ fun HomeScreen(
             }
             item { HelpfulTipCard(state.tip) }
             item {
-                Text(
-                    text = "Recent Manuals",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
+                SectionHeader(section = state.section, onSelect = viewModel::selectSection)
             }
-            recentManualsSection(
+            manualsSection(
                 state = state,
                 onOpen = { openedManual = it },
+                onImageClick = { viewerUrl = it },
                 onRetry = viewModel::refresh,
                 onDiagnose = onDiagnose
             )
@@ -158,35 +168,47 @@ fun HomeScreen(
         ManualDetailDialog(
             manual = manual,
             onDismiss = { openedManual = null },
+            onImageClick = { viewerUrl = it },
             onAskInChat = {
                 openedManual = null
                 onAskAboutManual(manual.guide)
             }
         )
     }
+
+    viewerUrl?.let { url ->
+        FullscreenImageViewer(url = url, onDismiss = { viewerUrl = null })
+    }
 }
 
-private fun LazyListScope.recentManualsSection(
+private fun LazyListScope.manualsSection(
     state: HomeUiState,
     onOpen: (RecentManual) -> Unit,
+    onImageClick: (String) -> Unit,
     onRetry: () -> Unit,
     onDiagnose: () -> Unit
 ) {
+    val isPopular = state.section == ManualsSection.POPULAR
+    val manuals = state.shownManuals
+
     when {
-        state.recentManuals.isNotEmpty() -> {
-            itemsIndexed(state.recentManuals) { index, manual ->
+        manuals.isNotEmpty() -> {
+            // Saved copy shown because the backend could not be reached.
+            if (state.shownFailed) {
+                item { OfflineRow(onRetry = onRetry) }
+            }
+            itemsIndexed(manuals, key = { index, manual -> "${state.section}-${manual.guide.manualId ?: index}" }) { index, manual ->
                 RecentManualCard(
                     manual = manual,
                     now = state.now,
                     highlighted = index % 2 == 0,
-                    onClick = { onOpen(manual) }
+                    isPopular = isPopular,
+                    onClick = { onOpen(manual) },
+                    onImageClick = onImageClick
                 )
             }
-            if (state.manualsFailed) {
-                item { ManualsErrorRow(onRetry = onRetry) }
-            }
         }
-        state.isLoadingManuals -> item {
+        state.isLoadingShown -> item {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -196,8 +218,69 @@ private fun LazyListScope.recentManualsSection(
                 CircularProgressIndicator(color = Primary, strokeWidth = 3.dp)
             }
         }
-        state.manualsFailed -> item { ManualsErrorRow(onRetry = onRetry) }
+        state.shownFailed -> item { ManualsErrorRow(onRetry = onRetry) }
+        isPopular -> item { EmptyPopularCard() }
         else -> item { EmptyManualsCard(onDiagnose = onDiagnose) }
+    }
+}
+
+/** Title of the list with the "Recent / Most popular" switch next to it. */
+@Composable
+private fun SectionHeader(section: ManualsSection, onSelect: (ManualsSection) -> Unit) {
+    val other = if (section == ManualsSection.RECENT) ManualsSection.POPULAR else ManualsSection.RECENT
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        // Tapping the title also switches list.
+        Text(
+            text = section.title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier
+                .weight(1f)
+                .clickable { onSelect(other) }
+        )
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = SurfaceContainerHigh,
+            modifier = Modifier.padding(start = 8.dp)
+        ) {
+            Row(modifier = Modifier.padding(3.dp)) {
+                SwitchOption(
+                    label = "Recent",
+                    selected = section == ManualsSection.RECENT,
+                    onClick = { onSelect(ManualsSection.RECENT) }
+                )
+                SwitchOption(
+                    label = "Popular",
+                    selected = section == ManualsSection.POPULAR,
+                    onClick = { onSelect(ManualsSection.POPULAR) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SwitchOption(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = if (selected) Primary else Color.Transparent
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = if (selected) Color.White else OnSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        )
     }
 }
 
@@ -444,7 +527,9 @@ private fun RecentManualCard(
     manual: RecentManual,
     now: Long,
     highlighted: Boolean,
-    onClick: () -> Unit
+    isPopular: Boolean,
+    onClick: () -> Unit,
+    onImageClick: (String) -> Unit
 ) {
     val guide = manual.guide
 
@@ -463,7 +548,9 @@ private fun RecentManualCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 ApplianceChip(name = guide.applianceName, highlighted = highlighted, modifier = Modifier.weight(1f, fill = false))
-                generatedLabel(manual.createdAtMillis, now)?.let { label ->
+                if (isPopular) {
+                    PopularityLabel(searches = manual.searchCount, saves = manual.saveCount)
+                } else generatedLabel(manual.createdAtMillis, now)?.let { label ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(Icons.Outlined.Schedule, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
@@ -492,8 +579,23 @@ private fun RecentManualCard(
                 }
             }
 
-            guide.imageUrl?.let { url -> GuideImage(url = url) }
+            guide.imageUrl?.let { url -> GuideImage(url = url, onClick = { onImageClick(url) }) }
         }
+    }
+}
+
+/** "🔍 12  🔖 3": how many times a popular guide was searched and saved. */
+@Composable
+private fun PopularityLabel(searches: Int, saves: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(Icons.Default.Search, contentDescription = "Searches", tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(2.dp))
+        Text(text = "$searches", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(Icons.Default.Bookmark, contentDescription = "Saves", tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(2.dp))
+        Text(text = "$saves", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
     }
 }
 
@@ -522,18 +624,60 @@ private fun ApplianceChip(name: String, highlighted: Boolean, modifier: Modifier
     }
 }
 
+/** Guide image at full width; tapping it opens the full-screen viewer (zoom, download). */
 @Composable
-private fun GuideImage(url: String) {
+private fun GuideImage(url: String, onClick: () -> Unit) {
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current).data(imageData(url)).crossfade(true).build(),
-        contentDescription = null,
+        contentDescription = "Guide image, tap to enlarge",
         // Whole image, full width: the height follows the image's own proportions.
         contentScale = ContentScale.FillWidth,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(SurfaceContainerHigh)
+            .clickable(onClick = onClick)
     )
+}
+
+@Composable
+private fun EmptyPopularCard() {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = SurfaceContainerLowest,
+        border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "No popular guides yet: they appear when users search and save guides.",
+            style = MaterialTheme.typography.bodySmall,
+            color = OnSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(20.dp)
+        )
+    }
+}
+
+/** Shown above a saved copy of the list when the backend cannot be reached. */
+@Composable
+private fun OfflineRow(onRetry: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "You're offline: showing the saved copy.",
+            style = MaterialTheme.typography.bodySmall,
+            color = OnSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedButton(onClick = onRetry, shape = RoundedCornerShape(12.dp)) {
+            Text("Retry")
+        }
+    }
 }
 
 @Composable
@@ -582,7 +726,7 @@ private fun ManualsErrorRow(onRetry: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = "Couldn't load your manuals.",
+            text = "Couldn't load the manuals.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.weight(1f)
@@ -597,6 +741,7 @@ private fun ManualsErrorRow(onRetry: () -> Unit) {
 private fun ManualDetailDialog(
     manual: RecentManual,
     onDismiss: () -> Unit,
+    onImageClick: (String) -> Unit,
     onAskInChat: () -> Unit
 ) {
     val guide = manual.guide
@@ -630,7 +775,7 @@ private fun ManualDetailDialog(
                 if (guide.overview.isNotBlank()) {
                     Text(text = guide.overview, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
                 }
-                guide.imageUrl?.let { url -> GuideImage(url = url) }
+                guide.imageUrl?.let { url -> GuideImage(url = url, onClick = { onImageClick(url) }) }
 
                 guide.steps.forEach { step ->
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

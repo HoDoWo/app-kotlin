@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Psychology
@@ -37,7 +38,8 @@ import com.hodowo.ui.theme.SecondaryContainer
 @Composable
 fun TopAppHeader(
     onNewChat: () -> Unit,
-    onOpenAuth: () -> Unit
+    onOpenAuth: () -> Unit,
+    onOpenHistory: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -90,11 +92,23 @@ fun TopAppHeader(
                 }
             }
 
-            // Right header actions: New Chat, Notifications, Profile
+            // Right header actions: Chat history, New Chat, Notifications, Profile
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
+                // Chat history: the past chats with their appliance and question
+                IconButton(
+                    onClick = onOpenHistory,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.History,
+                        contentDescription = "Chat history",
+                        tint = Primary
+                    )
+                }
+
                 // New Chat Button
                 IconButton(
                     onClick = onNewChat,
