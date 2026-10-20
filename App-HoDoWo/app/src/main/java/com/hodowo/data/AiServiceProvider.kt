@@ -10,6 +10,7 @@ import com.hodowo.viewmodel.DemoHoDoWoAiService
 import com.hodowo.viewmodel.HoDoWoAiService
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.greetingName
+import java.io.File
 
 /**
  * Chooses which AI service the app uses and provides singletons for Auth and Firebase.
@@ -43,7 +44,8 @@ object AiServiceProvider {
                 ChatViewModel(
                     aiService = create(context),
                     firebaseRepository = firebaseRepository,
-                    authManager = authManager
+                    authManager = authManager,
+                    chatHistory = FileChatHistoryStore(File(context.filesDir, "chat_history"))
                 )
             }
         }
@@ -57,7 +59,9 @@ object AiServiceProvider {
                     userName = {
                         val user = authManager.currentUser.value
                         greetingName(user?.displayName, user?.email)
-                    }
+                    },
+                    cache = FileManualsCache(File(context.filesDir, "home_cache")),
+                    userId = { authManager.currentUserId }
                 )
             }
         }

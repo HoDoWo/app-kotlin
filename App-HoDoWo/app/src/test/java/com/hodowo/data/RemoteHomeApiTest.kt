@@ -139,6 +139,42 @@ class RemoteHomeApiTest {
         assertNull(response.manualGuide?.manualId)
     }
 
+    // ---------- popularManuals ----------
+
+    @Test
+    fun popularManualsAreReadWithTheirCounts() = runTest {
+        server.enqueue(
+            json(
+                """
+                {"manuals": [{
+                  "id": "p1",
+                  "appliance_name": "Bosch Washer",
+                  "issue_title": "Error E18",
+                  "is_bookmarked": false,
+                  "search_count": 31,
+                  "save_count": 9
+                }]}
+                """.trimIndent()
+            )
+        )
+
+        val popular = service.popularManuals(10).single()
+
+        val request = server.takeRequest()
+        assertEquals("/api/manuals/popular?limit=10", request.path)
+        assertEquals("Bearer token-abc", request.getHeader("Authorization"))
+        assertEquals("Error E18", popular.guide.issueTitle)
+        assertEquals(31, popular.searchCount)
+        assertEquals(9, popular.saveCount)
+    }
+
+    @Test(expected = IOException::class)
+    fun popularManualsThrowOnServerError() = runTest {
+        server.enqueue(MockResponse().setResponseCode(503))
+
+        service.popularManuals(10)
+    }
+
     // ---------- dailyTip ----------
 
     @Test

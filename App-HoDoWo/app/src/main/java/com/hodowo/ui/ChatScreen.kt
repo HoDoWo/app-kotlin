@@ -2,6 +2,7 @@ package com.hodowo.ui
 
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -100,12 +101,14 @@ fun ChatScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
+    val context = LocalContext.current
 
     var inputText by remember { mutableStateOf("") }
     var dislikeTargetId by remember { mutableStateOf<Long?>(null) }
     var dislikeComment by remember { mutableStateOf("") }
 
     var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
+    var showHistory by remember { mutableStateOf(false) }
 
     // System gallery picker to upload image from device
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -135,7 +138,8 @@ fun ChatScreen(
             // --- TOP APP HEADER (Matching HTML mock) ---
             TopAppHeader(
                 onNewChat = { viewModel.startNewChat() },
-                onOpenAuth = onOpenAuth
+                onOpenAuth = onOpenAuth,
+                onOpenHistory = { showHistory = true }
             )
 
             // --- ACTIVE APPLIANCE TELEMETRY HEADER ---
@@ -144,7 +148,8 @@ fun ChatScreen(
             ActiveApplianceTelemetryHeader(
                 applianceName = latestManual?.applianceName ?: state.appliance?.name ?: "New Appliance",
                 statusText = if (state.isAnalyzing) "Analyzing Telemetry..."
-                else latestManual?.issueTitle ?: (state.appliance?.let { "Ready • Active" } ?: "New Issue")
+                else latestManual?.issueTitle ?: (state.appliance?.let { "Ready • Active" } ?: "New Issue"),
+                onMore = { showHistory = true }
             )
 
             // --- CHAT MESSAGE STREAM ---
@@ -272,43 +277,33 @@ fun ChatScreen(
             )
         }
 
-        // --- FULLSCREEN IMAGE VIEWER OVERLAY ---
+        // --- FULLSCREEN IMAGE VIEWER (zoom + download) ---
         fullscreenImageUrl?.let { url ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.95f))
-                    .clickable(enabled = false) {},
-                contentAlignment = Alignment.Center
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageData(url))
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Fullscreen manual diagram",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                )
-
-                TextButton(
-                    onClick = { fullscreenImageUrl = null },
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .statusBarsPadding()
-                        .padding(16.dp)
-                ) {
-                    Text(
-                        text = "Back",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
-                }
-            }
+            FullscreenImageViewer(url = url, onDismiss = { fullscreenImageUrl = null })
         }
+    }
+
+    // --- CHAT HISTORY MENU ---
+    if (showHistory) {
+        ChatHistorySheet(
+            sessions = state.chatSessions,
+            currentChatId = state.currentChatId,
+            now = System.currentTimeMillis(),
+            onOpen = { chatId ->
+                if (state.isSending) {
+                    Toast.makeText(context, "Wait for the answer before opening another chat", Toast.LENGTH_SHORT).show()
+                } else {
+                    viewModel.openChat(chatId)
+                    showHistory = false
+                }
+            },
+            onDelete = viewModel::deleteChat,
+            onNewChat = {
+                viewModel.startNewChat()
+                showHistory = false
+            },
+            onDismiss = { showHistory = false }
+        )
     }
 
     // Dislike feedback dialog
@@ -356,7 +351,8 @@ fun ChatScreen(
 @Composable
 private fun ActiveApplianceTelemetryHeader(
     applianceName: String,
-    statusText: String
+    statusText: String,
+    onMore: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -386,10 +382,10 @@ private fun ActiveApplianceTelemetryHeader(
                 )
             }
 
-            IconButton(onClick = {}) {
+            IconButton(onClick = onMore) {
                 Icon(
                     imageVector = Icons.Default.MoreHoriz,
-                    contentDescription = "More",
+                    contentDescription = "Chat history",
                     tint = Primary
                 )
             }

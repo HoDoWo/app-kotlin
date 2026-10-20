@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Construction
 import androidx.compose.material.icons.filled.Forum
@@ -37,6 +38,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -113,6 +115,12 @@ fun HoDoWoApp(
         }
     }
 
+    /** "New chat" button of every section: starts an empty chat and shows it. */
+    fun startNewChat() {
+        chatViewModel.startNewChat()
+        currentTab = AppNavTab.AI_CHAT
+    }
+
     fun openCamera() {
         val hasPermission = ContextCompat.checkSelfPermission(
             context,
@@ -186,6 +194,16 @@ fun HoDoWoApp(
                         )
                     }
                 }
+
+                // The chat has its own "+" in the header; every other section gets this button.
+                if (currentTab != AppNavTab.AI_CHAT) {
+                    NewChatButton(
+                        onClick = { startNewChat() },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp)
+                    )
+                }
             }
 
             // Bottom Navigation Bar matching HTML mockup
@@ -202,9 +220,23 @@ fun HoDoWoApp(
             onDismiss = {
                 showAuthDialog = false
                 chatViewModel.refreshBookmarks()
+                chatViewModel.refreshChatHistory()
             }
         )
     }
+}
+
+@Composable
+private fun NewChatButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    ExtendedFloatingActionButton(
+        onClick = onClick,
+        containerColor = Primary,
+        contentColor = Color.White,
+        shape = RoundedCornerShape(16.dp),
+        icon = { Icon(Icons.Default.Add, contentDescription = null) },
+        text = { Text("New chat", fontWeight = FontWeight.SemiBold) },
+        modifier = modifier
+    )
 }
 
 /**
@@ -347,6 +379,11 @@ private fun ProfileScreen(
 ) {
     val currentUser by authManager.currentUser.collectAsState()
     val state by viewModel.uiState.collectAsState()
+    var viewerUrl by remember { mutableStateOf<String?>(null) }
+
+    viewerUrl?.let { url ->
+        FullscreenImageViewer(url = url, onDismiss = { viewerUrl = null })
+    }
 
     Column(
         modifier = Modifier
@@ -476,10 +513,12 @@ private fun ProfileScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.weight(1f),
+                // Extra space at the bottom, so the "New chat" button never covers a card.
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(state.bookmarkedGuides) { guide ->
-                    BookmarkedGuideCard(guide = guide)
+                    BookmarkedGuideCard(guide = guide, onImageClick = { viewerUrl = it })
                 }
             }
         }
@@ -487,7 +526,7 @@ private fun ProfileScreen(
 }
 
 @Composable
-private fun BookmarkedGuideCard(guide: ManualGuide) {
+private fun BookmarkedGuideCard(guide: ManualGuide, onImageClick: (String) -> Unit) {
     Card(
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
@@ -528,6 +567,7 @@ private fun BookmarkedGuideCard(guide: ManualGuide) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
+                        .clickable { onImageClick(url) }
                 )
             }
         }

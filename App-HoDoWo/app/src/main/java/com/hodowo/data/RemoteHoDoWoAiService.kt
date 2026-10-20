@@ -7,8 +7,6 @@ import com.hodowo.viewmodel.ControlBox
 import com.hodowo.viewmodel.ControlType
 import com.hodowo.viewmodel.FeedbackReport
 import com.hodowo.viewmodel.HoDoWoAiService
-import com.hodowo.viewmodel.ManualGuide
-import com.hodowo.viewmodel.ManualStep
 import com.hodowo.viewmodel.PanelBox
 import com.hodowo.viewmodel.PanelControl
 import com.hodowo.viewmodel.RecentManual
@@ -121,6 +119,10 @@ class RemoteHoDoWoAiService(
     /** Newest manuals of the signed-in user (`GET /api/manuals?limit=`), for the Home screen. */
     override suspend fun recentManuals(limit: Int): List<RecentManual> =
         parseRecentManuals(jsonOf(get("$MANUALS_PATH?limit=$limit")))
+
+    /** Most searched and saved guides of all users (`GET /api/manuals/popular`). */
+    override suspend fun popularManuals(limit: Int): List<RecentManual> =
+        parseRecentManuals(jsonOf(get("$POPULAR_MANUALS_PATH?limit=$limit")))
 
     /** Today's tip (`GET /api/appliances/environmental-tip`), or null when it is empty. */
     override suspend fun dailyTip(): String? =
@@ -422,6 +424,7 @@ class RemoteHoDoWoAiService(
         internal const val PANEL_PATH = "/api/panel/analyze"
         internal const val LOCATE_PATH = "/api/panel/locate"
         internal const val MANUALS_PATH = "/api/manuals"
+        internal const val POPULAR_MANUALS_PATH = "/api/manuals/popular"
         internal const val TIP_PATH = "/api/appliances/environmental-tip"
 
         internal const val UNKNOWN_APPLIANCE = "Unknown appliance"
@@ -473,55 +476,8 @@ class RemoteHoDoWoAiService(
          * Turns the `GET /api/manuals` answer (`{"manuals": [...]}`) into Home cards.
          * Entries without a title are skipped; missing fields get safe defaults.
          */
-        internal fun parseRecentManuals(payload: JSONObject): List<RecentManual> {
-            val array = payload.optJSONArray("manuals") ?: return emptyList()
-            val manuals = ArrayList<RecentManual>(array.length())
-
-            for (index in 0 until array.length()) {
-                val item = array.optJSONObject(index) ?: continue
-                val title = item.optString("issue_title").trim()
-                if (title.isEmpty()) continue
-
-                manuals.add(
-                    RecentManual(
-                        guide = ManualGuide(
-                            applianceName = item.optString("appliance_name").trim()
-                                .ifEmpty { "Appliance" },
-                            issueTitle = title,
-                            overview = item.optString("overview").trim(),
-                            steps = parseSteps(item),
-                            imageUrl = item.textOrNull("image_url"),
-                            warnings = parseWarnings(item),
-                            manualId = item.textOrNull("id")
-                        ),
-                        createdAtMillis = if (item.isNull("created_at_ms")) null
-                        else item.optLong("created_at_ms").takeIf { it > 0 },
-                        isBookmarked = item.optBoolean("is_bookmarked", false)
-                    )
-                )
-            }
-
-            return manuals
-        }
-
-        private fun parseSteps(item: JSONObject): List<ManualStep> {
-            val array = item.optJSONArray("steps") ?: return emptyList()
-            return (0 until array.length()).mapNotNull { index ->
-                val step = array.optJSONObject(index) ?: return@mapNotNull null
-                ManualStep(
-                    number = step.optInt("number", index + 1),
-                    title = step.optString("title").trim().ifEmpty { "Step ${index + 1}" },
-                    description = step.optString("description").trim()
-                )
-            }
-        }
-
-        private fun parseWarnings(item: JSONObject): List<String> {
-            val array = item.optJSONArray("warnings") ?: return emptyList()
-            return (0 until array.length())
-                .map { array.optString(it).trim() }
-                .filter { it.isNotEmpty() }
-        }
+        internal fun parseRecentManuals(payload: JSONObject): List<RecentManual> =
+            ManualJson.parse(payload)
 
         /**
          * Reads the JSON object contained in the AI reply.
@@ -561,9 +517,6 @@ class RemoteHoDoWoAiService(
         )
 
         /** Returns the field as text, or null when it is missing, null or blank. */
-        private fun JSONObject.textOrNull(key: String): String? =
-            if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
-
         /**
          * Turns the /api/panel/analyze answer into the list of controls (S1-14).
          *
