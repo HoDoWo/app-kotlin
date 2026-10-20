@@ -308,6 +308,77 @@ class RemoteHoDoWoAiServiceTest {
         assertTrue(bodyText.contains("Previous question"))
     }
 
+    // ==========================================
+    // Appliance sent as structured data (#40)
+    // ==========================================
+
+    @Test
+    fun askQuestionSendsTheApplianceAsStructuredData() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"reply": "ok"}"""))
+
+        service.askQuestion("Why does it leak?", Appliance("Washing machine", "Bosch", null, 0.9f))
+
+        val appliance = JSONObject(mockWebServer.takeRequest().body.readUtf8()).getJSONObject("appliance")
+        assertEquals("Washing machine", appliance.getString("name"))
+        assertEquals("Bosch", appliance.getString("brand"))
+        assertTrue(appliance.isNull("model"))
+    }
+
+    @Test
+    fun askQuestionWithoutApplianceHasNoApplianceField() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"reply": "ok"}"""))
+
+        service.askQuestion("Hello", null)
+
+        assertFalse(JSONObject(mockWebServer.takeRequest().body.readUtf8()).has("appliance"))
+    }
+
+    @Test
+    fun unrecognisedApplianceIsNotSent() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"reply": "ok"}"""))
+        val unknown = Appliance(RemoteHoDoWoAiService.UNKNOWN_APPLIANCE, null, null, 0f)
+
+        service.askQuestion("Hello", unknown)
+
+        assertFalse(JSONObject(mockWebServer.takeRequest().body.readUtf8()).has("appliance"))
+    }
+
+    @Test
+    fun streamAnswerEventsSendsTheApplianceInJsonBody() = runTest {
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody("event: response\ndata: {\"reply\": \"ok\"}\n\n")
+        )
+
+        service.streamAnswerEvents(
+            "How do I descale it?",
+            Appliance("Espresso machine", "DeLonghi", "EC685", 0.8f),
+            null,
+            emptyList()
+        ).toList()
+
+        val appliance = JSONObject(mockWebServer.takeRequest().body.readUtf8()).getJSONObject("appliance")
+        assertEquals("Espresso machine", appliance.getString("name"))
+        assertEquals("EC685", appliance.getString("model"))
+    }
+
+    @Test
+    fun streamAnswerEventsWithImageSendsTheApplianceFormField() = runTest {
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody("event: response\ndata: {\"reply\": \"ok\"}\n\n")
+        )
+
+        service.streamAnswerEvents(
+            "Why does it leak?",
+            Appliance("Washing machine", "Bosch", null, 0.9f),
+            mockUri,
+            emptyList()
+        ).toList()
+
+        val body = mockWebServer.takeRequest().body.readUtf8()
+        assertTrue(body.contains("name=\"appliance\""))
+        assertTrue(body.contains("\"brand\":\"Bosch\""))
+    }
+
     @Test(expected = IOException::class)
     fun streamAnswerEventsThrowsOnServerError() = runTest {
         mockWebServer.enqueue(MockResponse().setResponseCode(500))

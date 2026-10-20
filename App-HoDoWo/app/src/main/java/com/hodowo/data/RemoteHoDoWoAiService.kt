@@ -35,6 +35,10 @@ import java.util.concurrent.TimeUnit
  * - `POST {backendUrl}/api/panel/locate` receives the full photo and answers
  *   `{"box": {...}}` or `{"box": null}` (panel location, S1-16).
  *
+ * Questions also carry the identified appliance as structured data
+ * (`"appliance": {"name", "brand", "model"}`): the backend uses it to add the
+ * rated guides of the same appliance to the prompt (#40).
+ *
  * @param backendUrl base URL of the backend (from `backend.url` in local.properties).
  * @param loadImage reads and compresses the photo at the given [Uri] into JPEG bytes.
  * @param tokenProvider returns the Firebase ID token of the signed-in user, or null.
@@ -66,12 +70,11 @@ class RemoteHoDoWoAiService(
         question: String,
         appliance: Appliance?
     ): String {
-        val body = JSONObject()
+        val json = JSONObject()
             .put("message", buildQuestion(question, appliance))
-            .toString()
-            .toRequestBody(JSON)
+        applianceJson(appliance)?.let { json.put("appliance", it) }
 
-        return replyOf(post(CHAT_PATH, body))
+        return replyOf(post(CHAT_PATH, json.toString().toRequestBody(JSON)))
     }
 
     override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> {
@@ -188,6 +191,8 @@ class RemoteHoDoWoAiService(
                     .addFormDataPart("message", buildQuestion(question, appliance))
                     .addFormDataPart("image", "appliance.jpg", imageBytes.toRequestBody(JPEG))
 
+                applianceJson(appliance)?.let { bodyBuilder.addFormDataPart("appliance", it.toString()) }
+
                 if (history.isNotEmpty()) {
                     val historyArray = org.json.JSONArray()
                     for (item in history) {
@@ -200,6 +205,7 @@ class RemoteHoDoWoAiService(
             } else {
                 val jsonBody = JSONObject()
                     .put("message", buildQuestion(question, appliance))
+                applianceJson(appliance)?.let { jsonBody.put("appliance", it) }
 
                 if (history.isNotEmpty()) {
                     val historyArray = org.json.JSONArray()
@@ -402,6 +408,22 @@ class RemoteHoDoWoAiService(
                 .joinToString(" ")
 
             return "Appliance: $details\nQuestion: $question"
+        }
+
+        /**
+         * The appliance as JSON: {"name", "brand", "model"} (null fields when unknown), for #40.
+         * Returns null when there is no appliance or it was not recognised, so the
+         * backend does not group the guides of unrelated appliances.
+         */
+        internal fun applianceJson(appliance: Appliance?): JSONObject? {
+            if (appliance == null || appliance.name == UNKNOWN_APPLIANCE) {
+                return null
+            }
+
+            return JSONObject()
+                .put("name", appliance.name)
+                .put("brand", appliance.brand ?: JSONObject.NULL)
+                .put("model", appliance.model ?: JSONObject.NULL)
         }
 
         /**
