@@ -1,4 +1,16 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzg-8JYo": {
+  "c": 0.0,
+  "done": true,
+  "issue": 58,
+  "title": "Control Panel"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7rMI": {
+  "c": 0.0,
+  "done": true,
+  "issue": 4,
+  "title": "Appliance Identification"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-7q-A": {
   "c": 4.0,
   "done": false,
@@ -42,8 +54,8 @@
   "title": "Reinforcement AI learning"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-78vE": {
-  "c": 3.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 39,
   "title": "Upload image to Firebase Storage"
  },
@@ -78,16 +90,10 @@
   "title": "Control panel cropping"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8Kl0": {
-  "c": 5.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 62,
   "title": "Sprint 1 clickable prototype"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8JYo": {
-  "c": 12.0,
-  "done": false,
-  "issue": 58,
-  "title": "Control Panel"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8EKE": {
   "c": 0.0,
@@ -124,12 +130,6 @@
   "done": true,
   "issue": 49,
   "title": "Walking skeleton: Android \u2192 FastAPI \u2192 LLM \u2192 response"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-7rMI": {
-  "c": 20.0,
-  "done": false,
-  "issue": 4,
-  "title": "Appliance Identification"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8Gzg": {
   "c": 12.0,
