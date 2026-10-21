@@ -13,12 +13,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.10'
 
@@ -27,7 +27,8 @@ jobs:
 
       - name: Run Gantt Generator Script
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN cannot read organization Projects: use the same PAT as Burndown
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
           REPOSITORY: ${{ github.repository }}
         run: python scripts/generate_gantt.py
 
@@ -35,6 +36,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ ! -f docs/gantt-chart.md ]; then
+            echo "::error::docs/gantt-chart.md was not generated, see the previous step"
+            exit 1
+          fi
           git checkout -B feature/auto-gantt-update
           git add docs/gantt-chart.md
           if git diff --cached --quiet; then
