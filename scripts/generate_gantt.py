@@ -73,8 +73,9 @@ if "errors" in data:
 
 projects = data["data"]["repository"]["projectsV2"]["nodes"]
 if not projects:
-    print("No GitHub Projects v2 found connected to this repository.")
-    exit(0)
+    # An empty list usually means the token cannot read the Project (GITHUB_TOKEN never can).
+    raise SystemExit("No GitHub Projects v2 visible for this repository: check that the "
+                     "PROJECT_TOKEN secret has the read:project scope and that the Project is linked to the repository.")
 
 # Use the first project found
 project = projects[0]
