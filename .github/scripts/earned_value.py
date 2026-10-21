@@ -145,7 +145,7 @@ def ratio(a, b):
 
 def indicators(pv, ev, ac, bac):
     cpi, spi = ratio(ev, ac), ratio(ev, pv)
-    eac = bac / cpi if cpi else None
+    eac = bac / cpi if (cpi and bac is not None) else None
     return {
         "pv": pv, "ev": ev, "ac": ac, "bac": bac, "cpi": cpi, "spi": spi, "eac": eac,
         "etc": eac - ac if eac is not None else None,
@@ -205,8 +205,12 @@ def calculate(items, cfg, day):
         if base_name and base_name != baseline[0]["name"]:
             since = dt.date.fromisoformat(next(b["start"] for b in baseline if b["name"] == base_name))
         s_services = services_cost(services, day, since=since)
+        # Sprint budget = share of the BAC planned for this Sprint in the Sprint 0 baseline,
+        # so EAC, ETC and VAC of the Sprint are calculated today, not only for the whole project.
+        s_bac = next((b["hours"] for b in baseline if b["name"] == base_name), None)
+        s_bac = s_bac / total * bac if s_bac is not None else None
         sprint = indicators(pv=s_planned / total * bac, ev=s_done / total * bac,
-                            ac=s_spent * rate + s_services, bac=bac)
+                            ac=s_spent * rate + s_services, bac=s_bac)
         sprint.update(name=name, start=start, end=end, items=len(in_sprint),
                       open=[i for i in in_sprint if not i["done"]],
                       hours_estimated=sum(i["estimate"] for i in in_sprint),
@@ -248,7 +252,7 @@ def report(cum, sprint, cfg, day, generated):
         ("PV", "Planned Value", "% planned × BAC", "pv"),
         ("EV", "Earned Value", "% completed × BAC", "ev"),
         ("AC", "Actual Cost", "hours spent × rate + services", "ac"),
-        ("BAC", "Budget at Completion", "Sprint 0 estimate", "bac"),
+        ("BAC", "Budget at Completion", "Sprint 0 estimate (Sprint: its planned share)", "bac"),
         ("EAC", "Estimate at Completion", "BAC / CPI", "eac"),
         ("ETC", "Estimate to Complete", "EAC − AC", "etc"),
         ("VAC", "Variance at Completion", "BAC − EAC", "vac"),
@@ -263,11 +267,15 @@ def report(cum, sprint, cfg, day, generated):
     for kpi, name, formula, key in rows:
         fmt = num if key in ("cpi", "spi") else eur
         s_val = "–"
-        if sprint and key in ("pv", "ev", "ac", "cpi", "spi"):
+        if sprint:
             s_val = fmt(sprint[key])
         out.append("| **{}** | {} | {} | {} | {} |".format(kpi, name, formula, s_val, fmt(cum[key])))
     total = cfg["total_hours"]
     out += ["", "## Reading", ""] + ["- " + n for n in reading(cum)]
+    if sprint and sprint["vac"] is not None:
+        out.append("- {}: budget {} (its share of the BAC), EAC {} with the current CPI, so VAC {} ({}).".format(
+            sprint["name"], eur(sprint["bac"]), eur(sprint["eac"]), eur(sprint["vac"]),
+            "saving money" if sprint["vac"] >= 0 else "over the Sprint budget"))
     out += ["", "## Inputs", "",
             "- BAC: {} (total cost estimated in Sprint 0), {} h planned for the whole project.".format(eur(cfg["bac"]), total),
             "- % planned: {:.1f} h of the Sprint 0 baseline by {} → {:.1%}.".format(cum["hours_planned"], day, cum["hours_planned"] / total),
