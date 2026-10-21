@@ -3,6 +3,8 @@ package com.hodowo.viewmodel
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hodowo.data.AuthManager
+import com.hodowo.data.FirebaseRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -10,15 +12,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
  * User rating of an AI answer.
- *
- * [score] is the numeric value that will be stored in the "rating" field
- * of the ai_response_ratings table.
  */
 enum class Feedback(val score: Int) {
     LIKE(1),
@@ -26,7 +26,37 @@ enum class Feedback(val score: Int) {
 }
 
 /**
- * A single chat message, written either by the user or by the AI.
+ * Single step of a repair / troubleshooting manual.
+ */
+data class ManualStep(
+    val number: Int,
+    val title: String,
+    val description: String
+)
+
+/**
+ * Structured AI manual guide response.
+ */
+data class ManualGuide(
+    val applianceName: String,
+    val issueTitle: String,
+    val overview: String,
+    val steps: List<ManualStep> = emptyList(),
+    val imageUrl: String? = null,
+    val warnings: List<String> = emptyList(),
+    val manualId: String? = null
+)
+
+/**
+ * Message history turn sent to AI for conversation context memory.
+ */
+data class ChatMessageHistory(
+    val role: String,
+    val content: String
+)
+
+/**
+ * A single chat message.
  */
 data class Message(
     val id: Long,
@@ -35,11 +65,7 @@ data class Message(
     val isUser: Boolean,
     val timestamp: Long = System.currentTimeMillis(),
 
-    /**
-     * The user question this answer replies to.
-     * Only set for Q&A answers: it is stored as prompt_query together with
-     * the rating, and it is also what makes the feedback buttons visible.
-     */
+    /** The user question this answer replies to. */
     val question: String? = null,
 
     /** Rating given by the user to this answer, if any. */
@@ -48,16 +74,18 @@ data class Message(
     /** Optional free-text reason attached to the rating. */
     val feedbackComment: String? = null,
 
-    /**
-     * True while the AI answer is still arriving piece by piece (#83).
-     * A message that is still streaming cannot be rated.
-     */
-    val isStreaming: Boolean = false
+    /** True while streaming. */
+    val isStreaming: Boolean = false,
+
+    /** Structured repair guide, if the AI resolved the issue to a manual guide. */
+    val manualGuide: ManualGuide? = null,
+
+    /** True if user bookmarked this manual guide. */
+    val isBookmarked: Boolean = false
 )
 
 /**
  * Appliance identified from a photo.
- * [confidence] goes from 0.0 to 1.0.
  */
 data class Appliance(
     val name: String,
@@ -67,17 +95,42 @@ data class Appliance(
 )
 
 /**
- * Everything the chat screen needs to render itself.
+ * Chat conversation session metadata.
+ */
+data class ChatSession(
+    val id: String,
+    val title: String,
+    val lastUpdated: Long = System.currentTimeMillis(),
+    /** Appliance (model) the chat was about, when it was recognised. */
+    val applianceName: String? = null
+)
+
+/**
+ * Agent streaming events.
+ */
+sealed class ChatStreamEvent {
+    data class Step(val title: String, val detail: String = "") : ChatStreamEvent()
+    data class Token(val token: String) : ChatStreamEvent()
+    data class Response(
+        val fullText: String,
+        val manualGuide: ManualGuide? = null,
+        val imageUrl: String? = null
+    ) : ChatStreamEvent()
+}
+
+/**
+ * UI State for the chat screen.
  */
 data class ChatUiState(
     val messages: List<Message> = emptyList(),
     val appliance: Appliance? = null,
-
-    /** True while a photo is being analyzed. */
     val isAnalyzing: Boolean = false,
-
-    /** True while waiting for the AI answer to a text question. */
     val isSending: Boolean = false,
+    val currentStep: String? = null,
+    val currentChatId: String = "session_${System.currentTimeMillis()}",
+    val chatSessions: List<ChatSession> = emptyList(),
+    val bookmarkedGuides: List<ManualGuide> = emptyList(),
+    val selectedImageUri: Uri? = null,
 
     /**
      * Photo the panel analysis (S1-14) runs on. It is what the interactive
@@ -90,20 +143,12 @@ data class ChatUiState(
 
     val error: String? = null
 ) {
-
-    /**
-     * True while the answer has been requested but no text has arrived yet:
-     * the screen shows "HoDoWo is thinking..." only in this phase.
-     */
     val isWaitingForAnswer: Boolean
-        get() = isSending && messages.none { it.isStreaming && !it.text.isNullOrBlank() }
+        get() = isSending && messages.none { it.isStreaming && (!it.text.isNullOrBlank() || it.manualGuide != null) }
 }
 
 /**
- * Data sent to the backend for each rating
- * (it matches the fields of the ai_response_ratings table).
- *
- * The user is NOT included: the backend gets it from the login token.
+ * Feedback report sent to backend and Firebase.
  */
 data class FeedbackReport(
     val messageId: Long,
@@ -116,13 +161,9 @@ data class FeedbackReport(
 )
 
 /**
- * For now we use a local/demo service.
- *
- * Later this interface will be connected to the real HoDoWo backend.
+ * AI Service interface.
  */
 interface HoDoWoAiService {
-
-    /** Identifies the appliance shown in the photo at [uri]. */
     suspend fun identifyAppliance(uri: Uri): Appliance
 
     /** Answers a user [question], using the identified [appliance] as context. */
@@ -143,43 +184,51 @@ interface HoDoWoAiService {
      * Returns an empty list when the backend finds no controls.
      */
     suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl>
-
-    /**
-     * Sends the user's rating of an answer to the backend.
-     * Must throw an exception if the request fails, so that the ViewModel
-     * can retry later.
-     */
     suspend fun sendFeedback(report: FeedbackReport)
 
-    /**
-     * Streams the answer to [question] piece by piece (#83).
-     *
-     * Default: the whole answer as a single piece, so a service without
-     * streaming support (e.g. the current backend, see #84) keeps working.
-     */
+    suspend fun setBookmark(manualId: String, isBookmarked: Boolean): Boolean = isBookmarked
+    suspend fun rateManual(manualId: String, rating: Int): Int = rating
+
+    /** Newest manuals of the signed-in user, for "Recent Manuals" on the Home screen. */
+    suspend fun recentManuals(limit: Int): List<RecentManual> = emptyList()
+
+    /** Most searched and most saved guides of all users, for "Most popular" on the Home screen. */
+    suspend fun popularManuals(limit: Int): List<RecentManual> = emptyList()
+
+    /** Today's energy-saving tip for the Home screen, or null when unavailable. */
+    suspend fun dailyTip(): String? = null
+
     fun streamAnswer(
         question: String,
         appliance: Appliance?
     ): Flow<String> = flow {
         emit(askQuestion(question, appliance))
     }
+
+    fun streamAnswerEvents(
+        question: String,
+        appliance: Appliance?,
+        imageUri: Uri? = null,
+        history: List<ChatMessageHistory> = emptyList()
+    ): Flow<ChatStreamEvent> = flow {
+        streamAnswer(question, appliance).collect { piece ->
+            emit(ChatStreamEvent.Token(piece))
+        }
+    }
 }
 
 /**
- * Working mock that lets us develop the UI without a backend.
+ * Rich demo service providing realistic progress streaming and manual guide cards.
  */
 class DemoHoDoWoAiService : HoDoWoAiService {
 
     override suspend fun identifyAppliance(uri: Uri): Appliance {
-        // Simulate the network and model latency.
-        delay(1200)
-
-        // Always returns the same fake result.
+        delay(800)
         return Appliance(
             name = "Washing machine",
             brand = "Bosch",
-            model = null,
-            confidence = 0.94f
+            model = "Serie 6",
+            confidence = 0.96f
         )
     }
 
@@ -187,26 +236,14 @@ class DemoHoDoWoAiService : HoDoWoAiService {
         question: String,
         appliance: Appliance?
     ): String {
-
-        // Simulate the network and model latency.
-        delay(900)
-
-        val applianceName =
-            appliance?.name ?: "appliance"
-
-        // Canned answers based on simple keyword matching (English UI text).
+        delay(600)
+        val q = question.lowercase()
         return when {
-            question.contains("error", ignoreCase = true) ->
-                "For the $applianceName, tell me the error code shown on the display."
-
-            question.contains("won't start", ignoreCase = true) ->
-                "Check that the $applianceName is plugged in and that the door is properly closed."
-
-            question.contains("water", ignoreCase = true) ->
-                "Check the water tap and the inlet hose."
-
-            else ->
-                "I looked at your question about the $applianceName. Tell me the specific problem you are having."
+            "e24" in q || "error" in q -> "This error code usually indicates the drain pump or hose is blocked."
+            "start" in q -> "Make sure the appliance is plugged in and the door is firmly closed."
+            "water" in q -> "Turn off the water tap immediately and check the inlet hose connections."
+            appliance != null -> "Hello! How can I help you with your ${appliance.name}?"
+            else -> "Hello! Please tell me which appliance you need help with."
         }
     }
 
@@ -217,10 +254,7 @@ class DemoHoDoWoAiService : HoDoWoAiService {
     override suspend fun locatePanel(uri: Uri): PanelBox? = null
 
     override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> {
-        // Simulate the network and model latency.
-        delay(900)
-
-        // Always returns the same fake controls.
+        delay(600)
         return listOf(
             PanelControl(
                 id = "c1",
@@ -240,79 +274,363 @@ class DemoHoDoWoAiService : HoDoWoAiService {
     }
 
     override suspend fun sendFeedback(report: FeedbackReport) {
-        // Simulates the network call: the real backend will expose POST /feedback.
-        delay(300)
+        delay(200)
     }
 
-    /** Sends the canned answer word by word, like a real stream would. */
+    override suspend fun dailyTip(): String = "Run washer after 10:00 PM tonight to save on power."
+
+    /** The mockup manuals again, with example search and save counts. */
+    override suspend fun popularManuals(limit: Int): List<RecentManual> =
+        recentManuals(limit).mapIndexed { index, manual ->
+            manual.copy(searchCount = 120 - index * 35, saveCount = 40 - index * 15)
+        }
+
+    /** The two manuals of the Home mockup, so demo mode shows a realistic Home screen. */
+    override suspend fun recentManuals(limit: Int): List<RecentManual> {
+        delay(300)
+        val now = System.currentTimeMillis()
+        return listOf(
+            RecentManual(
+                guide = ManualGuide(
+                    applianceName = "Bosch Washer",
+                    issueTitle = "Error E18: Drain Pump Clog",
+                    overview = "Follow these steps to safely access and rinse the drain pump " +
+                            "filter cap to resolve water drainage issues.",
+                    steps = listOf(
+                        ManualStep(1, "Place towel", "Lay a towel under the bottom-right maintenance flap."),
+                        ManualStep(2, "Rotate filter", "Turn the filter cap counter-clockwise to drain the water."),
+                        ManualStep(3, "Pull & rinse filter", "Pull out the filter, rinse it and screw it back tightly.")
+                    ),
+                    manualId = "demo-1"
+                ),
+                createdAtMillis = now - 2 * 60 * 60 * 1000L
+            ),
+            RecentManual(
+                guide = ManualGuide(
+                    applianceName = "De'Longhi Coffee Maker",
+                    issueTitle = "Descaling Routine & Flush",
+                    overview = "Clean calcification deposits from the water lines using standard " +
+                            "eco-descaler solution and a 2-cycle hot water purge.",
+                    steps = listOf(
+                        ManualStep(1, "Add descaler", "Fill the tank with water and the descaling solution."),
+                        ManualStep(2, "Run the cycle", "Start the descaling program and wait until it ends."),
+                        ManualStep(3, "Flush twice", "Rinse the tank and run two cycles with clean hot water.")
+                    ),
+                    manualId = "demo-2"
+                ),
+                createdAtMillis = now - 26 * 60 * 60 * 1000L
+            )
+        ).take(limit)
+    }
+
     override fun streamAnswer(
         question: String,
         appliance: Appliance?
     ): Flow<String> = flow {
-
         val words = askQuestion(question, appliance).split(" ")
-
         words.forEachIndexed { index, word ->
-            delay(STREAM_DELAY_MS)
+            delay(40L)
             emit(if (index == 0) word else " $word")
         }
     }
 
-    private companion object {
-        // Pause between two words of the demo stream.
-        const val STREAM_DELAY_MS = 60L
+    override fun streamAnswerEvents(
+        question: String,
+        appliance: Appliance?,
+        imageUri: Uri?,
+        history: List<ChatMessageHistory>
+    ): Flow<ChatStreamEvent> = flow {
+        val isManualQuery = question.contains("e18", ignoreCase = true) ||
+                question.contains("wash", ignoreCase = true) ||
+                question.contains("fix", ignoreCase = true) ||
+                question.contains("error", ignoreCase = true) ||
+                question.contains("stop", ignoreCase = true) ||
+                imageUri != null
+
+        if (imageUri != null) {
+            emit(ChatStreamEvent.Step("Identifying Appliance...", "Detecting appliance type, make and model markings"))
+            delay(600)
+        }
+
+        emit(ChatStreamEvent.Step("Searching Manuals...", "Retrieving manufacturer repair instructions"))
+        delay(700)
+
+        if (isManualQuery) {
+            emit(ChatStreamEvent.Step("Generating Visual Guide...", "Generating step-by-step visual diagram"))
+            delay(700)
+
+            val guide = ManualGuide(
+                applianceName = if (appliance != null) "${appliance.brand.orEmpty()} ${appliance.name}".trim() else "Bosch Washing Machine",
+                issueTitle = "Error E18: Drain Pump Clog & Filter Cleaning",
+                overview = "Error E18 indicates the drain pump is blocked and cannot expel wastewater, typically resolved by cleaning the pump filter.",
+                steps = listOf(
+                    ManualStep(
+                        number = 1,
+                        title = "Place towel",
+                        description = "Lay a shallow tray or absorbent towel under the bottom-right maintenance access flap."
+                    ),
+                    ManualStep(
+                        number = 2,
+                        title = "Unscrew filter",
+                        description = "Slowly rotate the circular filter plug counter-clockwise 90° to drain residual water."
+                    ),
+                    ManualStep(
+                        number = 3,
+                        title = "Rinse and reseal",
+                        description = "Pull out the cylindrical filter, clear debris or trapped coins under running water, and screw back tightly."
+                    )
+                ),
+                imageUrl = "https://lh3.googleusercontent.com/aida-public/AB6AXuBGU0w5Mr4RbGBYDru45lDQI4Nyx97xXyU41x0BWYDn9pfTndbv2igBkFJ-VXKhpShJUbPSEbi_loUXIzLKl758Z-19hEkSNn3PJzfkavcK_lZL1MQStj8TbiVhDPQRC2E-c3OrWTqmu7cG8_GISbburmbMEPJj13MZsKnVVgV0qJmOIQCPF0KoyFAaVaQvzb-HRxdv6gAT-jJSMq0Ywlhw0pJ8pvP-NhZp_iN7y7faoE0qWyESvL0ZV8Kc1YEAJ36qaQ"
+            )
+
+            emit(
+                ChatStreamEvent.Response(
+                    fullText = "Error E18 indicates the drain pump is blocked and cannot expel wastewater, typically resolved by cleaning the pump filter.",
+                    manualGuide = guide,
+                    imageUrl = guide.imageUrl
+                )
+            )
+        } else {
+            val words = askQuestion(question, appliance).split(" ")
+            words.forEachIndexed { index, word ->
+                delay(30L)
+                emit(ChatStreamEvent.Token(if (index == 0) word else " $word"))
+            }
+            emit(ChatStreamEvent.Response(askQuestion(question, appliance)))
+        }
     }
 }
 
 /**
- * Holds the chat state and handles the user actions
- * (send a question, analyze a photo, rate an answer).
+ * Main ViewModel for Chat and telemetry state.
  */
 class ChatViewModel(
     private val aiService: HoDoWoAiService = DemoHoDoWoAiService(),
-    private val panelCropper: PanelCropper = PanelCropper.None
+    private val firebaseRepository: FirebaseRepository? = null,
+    private val authManager: AuthManager? = null,
+    val panelCropper: PanelCropper = PanelCropper.None,
+    /** Keeps the chats on the phone for the history menu; null keeps them only in memory. */
+    private val chatHistory: ChatHistoryStore? = null,
+    private val clock: () -> Long = System::currentTimeMillis
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
 
-    // Last message id handed out (ids are unique and increasing).
     private var messageId = 0L
-
-    // Last photo the user analyzed; used by the debug panel detection (S1-14).
     private var lastImageUri: Uri? = null
 
-    /**
-     * Ratings not yet delivered to the backend (at most one per message).
-     * If the user changes their mind, the new rating replaces the queued one.
-     */
     private val pendingFeedback = LinkedHashMap<Long, FeedbackReport>()
-
-    // Guards pendingFeedback and prevents parallel sends.
     private val feedbackMutex = Mutex()
 
+    /** All past chats (with their messages), newest first. */
+    private var savedChats: List<SavedChat> = emptyList()
+
+    private val userId: String
+        get() = authManager?.currentUserId ?: GUEST_USER
+
+    /** User whose chats are in [savedChats]. */
+    private var historyUser: String = userId
+
+    init {
+        // Load initial bookmarked manuals from Firebase if user is logged in
+        refreshBookmarks()
+        refreshChatHistory()
+    }
+
+    /** Reloads the chat history of the current user (e.g. after signing in). */
+    fun refreshChatHistory() {
+        val store = chatHistory ?: return
+        val user = userId
+        viewModelScope.launch {
+            val chats = try {
+                store.load(user)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                emptyList()
+            }
+            // Same user: keep the chats saved while the file was being read.
+            // Another user (sign in / out): show only that user's chats.
+            savedChats = if (user == historyUser) {
+                chats.fold(savedChats) { all, chat -> if (all.any { it.id == chat.id }) all else all.upsert(chat) }
+            } else {
+                chats
+            }
+            historyUser = user
+            publishSessions()
+        }
+    }
+
     /**
-     * Adds the user's question to the chat and asks the AI for an answer.
-     * Blank messages are ignored.
+     * Opens a past chat from the history menu. The current chat is saved first.
+     * Ignored while an answer is still arriving.
      */
-    fun sendTextMessage(text: String) {
+    fun openChat(chatId: String) {
+        val current = _uiState.value
+        if (current.isSending || chatId == current.currentChatId) return
+        val chat = savedChats.firstOrNull { it.id == chatId } ?: return
 
+        saveCurrentChat()
+
+        messageId = maxOf(messageId, chat.messages.maxOfOrNull { it.id } ?: 0L)
+        lastImageUri = chat.messages.lastOrNull { it.imageUri != null }?.imageUri
+        _uiState.value = ChatUiState(
+            messages = chat.messages,
+            appliance = chat.applianceName?.let { Appliance(name = it, brand = null, model = null, confidence = 1f) },
+            currentChatId = chat.id,
+            chatSessions = _uiState.value.chatSessions,
+            bookmarkedGuides = current.bookmarkedGuides
+        )
+    }
+
+    /** Removes a chat from the history; deleting the open chat starts a new one. */
+    fun deleteChat(chatId: String) {
+        savedChats = savedChats.filterNot { it.id == chatId }
+        if (chatId == _uiState.value.currentChatId) {
+            resetToNewChat()
+        }
+        publishSessions()
+
+        val store = chatHistory ?: return
+        val user = userId
+        viewModelScope.launch {
+            try {
+                store.delete(user, chatId)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // The chat is already gone from the screen; the file is fixed on the next save.
+            }
+        }
+    }
+
+    /** Saves the open chat in the history (in memory at once, on the phone in the background). */
+    private fun saveCurrentChat() {
+        val state = _uiState.value
+        val chat = savedChatOf(state.currentChatId, state.messages, state.appliance) ?: return
+        savedChats = savedChats.upsert(chat)
+        publishSessions()
+
+        val store = chatHistory ?: return
+        val user = userId
+        viewModelScope.launch {
+            try {
+                store.save(user, chat)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // Keeping the history is best effort: the chat itself still works.
+            }
+        }
+    }
+
+    private fun publishSessions() {
+        _uiState.update { it.copy(chatSessions = savedChats.map(SavedChat::toSession)) }
+    }
+
+    private fun resetToNewChat() {
+        val current = _uiState.value
+        lastImageUri = null
+        _uiState.value = ChatUiState(
+            currentChatId = "chat_${clock()}",
+            chatSessions = current.chatSessions,
+            bookmarkedGuides = current.bookmarkedGuides
+        )
+    }
+
+    fun setSelectedImage(uri: Uri?) {
+        _uiState.value = _uiState.value.copy(selectedImageUri = uri)
+    }
+
+    fun clearSelectedImage() {
+        _uiState.value = _uiState.value.copy(selectedImageUri = null)
+    }
+
+    /**
+     * Starts a fresh chat session. The current chat (if the user asked something)
+     * is kept in the history menu.
+     */
+    fun startNewChat() {
+        saveCurrentChat()
+        resetToNewChat()
+    }
+
+    /**
+     * Toggles bookmark for a manual guide message.
+     */
+    fun toggleBookmark(messageId: Long) {
+        val target = _uiState.value.messages.firstOrNull { it.id == messageId } ?: return
+        val newBookmarked = !target.isBookmarked
+
+        _uiState.value = _uiState.value.copy(
+            messages = _uiState.value.messages.map { msg ->
+                if (msg.id == messageId) msg.copy(isBookmarked = newBookmarked) else msg
+            }
+        )
+
+        val userId = authManager?.currentUserId ?: "guest"
+        viewModelScope.launch {
+            if (newBookmarked) {
+                firebaseRepository?.saveBookmark(userId, target.copy(isBookmarked = true))
+            } else {
+                firebaseRepository?.removeBookmark(userId, messageId)
+            }
+            target.manualGuide?.manualId?.let { manualId ->
+                try {
+                    aiService.setBookmark(manualId, newBookmarked)
+                } catch (e: Exception) {
+                    // Ignore network failure; local and firestore updated
+                }
+            }
+            refreshBookmarks()
+        }
+    }
+
+    fun refreshBookmarks() {
+        val userId = authManager?.currentUserId ?: return
+        viewModelScope.launch {
+            val list = firebaseRepository?.getBookmarks(userId) ?: emptyList()
+            _uiState.value = _uiState.value.copy(bookmarkedGuides = list)
+        }
+    }
+
+    /**
+     * Sends user message (with optional attached image).
+     */
+    fun sendTextMessage(text: String, attachedImageUri: Uri? = null) {
         val cleanText = text.trim()
+        val imageToAttach = attachedImageUri ?: _uiState.value.selectedImageUri
 
-        if (cleanText.isEmpty()) {
+        if (cleanText.isEmpty() && imageToAttach == null) {
             return
         }
+
+        // Build conversation history from previous completed messages
+        val history = _uiState.value.messages
+            .filterNot { it.isStreaming }
+            .mapNotNull { msg ->
+                val content = msg.text?.takeIf { it.isNotBlank() } ?: msg.manualGuide?.overview
+                if (!content.isNullOrBlank()) {
+                    ChatMessageHistory(
+                        role = if (msg.isUser) "user" else "assistant",
+                        content = content
+                    )
+                } else null
+            }
+
+        // Clear selected image preview
+        _uiState.value = _uiState.value.copy(selectedImageUri = null)
 
         addMessage(
             Message(
                 id = nextMessageId(),
-                text = cleanText,
+                text = cleanText.ifEmpty { null },
+                imageUri = imageToAttach,
                 isUser = true
             )
         )
 
-        // Empty AI answer, filled while the pieces of the answer arrive.
-        // It keeps the question so it can be rated once complete.
         val answerId = nextMessageId()
 
         addMessage(
@@ -320,53 +638,104 @@ class ChatViewModel(
                 id = answerId,
                 text = "",
                 isUser = false,
-                question = cleanText,
+                question = cleanText.ifEmpty { "Identify and analyze appliance" },
                 isStreaming = true
             )
         )
 
         _uiState.value = _uiState.value.copy(
             isSending = true,
+            currentStep = null,
             error = null
         )
+        val chatId = _uiState.value.currentChatId
 
         viewModelScope.launch {
-
             try {
-
-                aiService.streamAnswer(
+                aiService.streamAnswerEvents(
                     question = cleanText,
-                    appliance = _uiState.value.appliance
-                ).collect { piece ->
-                    appendToMessage(answerId, piece)
+                    appliance = _uiState.value.appliance,
+                    imageUri = imageToAttach,
+                    history = history
+                ).collect { event ->
+                    when (event) {
+                        is ChatStreamEvent.Step -> {
+                            val friendlyText = when {
+                                event.title.contains("appliance_identification", ignoreCase = true) -> "Identifying appliance model..."
+                                event.title.contains("search_manuals", ignoreCase = true) -> "Searching repair manuals..."
+                                event.title.contains("panel", ignoreCase = true) -> "Analyzing control panel..."
+                                else -> event.title
+                            }
+                            _uiState.update { it.copy(currentStep = friendlyText, isSending = true) }
+                        }
+                        is ChatStreamEvent.Token -> {
+                            appendToMessage(answerId, event.token)
+                        }
+                        is ChatStreamEvent.Response -> {
+                            setFinalMessageContent(answerId, event.fullText, event.manualGuide)
+                            // If guide was returned, persist it to Firebase
+                            event.manualGuide?.let { guide ->
+                                _uiState.update { currentState ->
+                                    currentState.copy(
+                                        appliance = Appliance(
+                                            name = guide.applianceName,
+                                            brand = null,
+                                            model = null,
+                                            confidence = 1.0f
+                                        )
+                                    )
+                                }
+                                val userId = authManager?.currentUserId ?: "guest"
+                                firebaseRepository?.saveManualGuide(userId, answerId, guide)
+                            }
+                        }
+                    }
                 }
-
             } catch (e: CancellationException) {
-
-                // Never swallow coroutine cancellation.
                 throw e
-
             } catch (e: Exception) {
-
-                // Any text received before the error stays visible.
                 _uiState.value = _uiState.value.copy(
                     error = e.message ?: "Error while sending the message."
                 )
-
             } finally {
-
                 finishStreaming(answerId)
-
                 _uiState.value = _uiState.value.copy(
-                    isSending = false
+                    isSending = false,
+                    currentStep = null
+                )
+                // Keep the chat in the history menu, unless the user already moved to another one.
+                if (_uiState.value.currentChatId == chatId) {
+                    saveCurrentChat()
+                }
+
+                // Persist chat to Firebase
+                val userId = authManager?.currentUserId ?: "guest"
+                firebaseRepository?.saveChatMessages(
+                    userId = userId,
+                    chatId = _uiState.value.currentChatId,
+                    messages = _uiState.value.messages,
+                    appliance = _uiState.value.appliance
                 )
             }
         }
     }
 
-    /** Adds a piece of the streamed answer to the message [id]. */
-    private fun appendToMessage(id: Long, piece: String) {
+    private fun setFinalMessageContent(id: Long, text: String, manualGuide: ManualGuide?) {
+        _uiState.value = _uiState.value.copy(
+            messages = _uiState.value.messages.map { current ->
+                if (current.id == id) {
+                    current.copy(
+                        text = if (current.text.isNullOrBlank()) text else current.text,
+                        manualGuide = manualGuide ?: current.manualGuide
+                    )
+                } else {
+                    current
+                }
+            }
+        )
+    }
 
+    private fun appendToMessage(id: Long, piece: String) {
         _uiState.value = _uiState.value.copy(
             messages = _uiState.value.messages.map { current ->
                 if (current.id == id) {
@@ -376,172 +745,6 @@ class ChatViewModel(
                 }
             }
         )
-    }
-
-    /**
-     * Marks the streamed answer [id] as complete.
-     * An answer that received no text at all (e.g. error before the first
-     * piece) is removed, so no empty bubble is left in the chat.
-     */
-    private fun finishStreaming(id: Long) {
-
-        val messages = _uiState.value.messages
-        val message = messages.firstOrNull { it.id == id } ?: return
-
-        _uiState.value = _uiState.value.copy(
-            messages =
-                if (message.text.isNullOrBlank()) {
-                    messages.filterNot { it.id == id }
-                } else {
-                    messages.map { current ->
-                        if (current.id == id) current.copy(isStreaming = false) else current
-                    }
-                }
-        )
-    }
-
-    /**
-     * Adds the photo to the chat, identifies the appliance in it and
-     * stores the result in the state so later questions can use it as context.
-     */
-    fun analyzeImage(uri: Uri) {
-
-        lastImageUri = uri
-
-        addMessage(
-            Message(
-                id = nextMessageId(),
-                imageUri = uri,
-                isUser = true
-            )
-        )
-
-        _uiState.value = _uiState.value.copy(
-            isAnalyzing = true,
-            error = null
-        )
-
-        viewModelScope.launch {
-
-            try {
-
-                val appliance = aiService.identifyAppliance(uri)
-
-                _uiState.value = _uiState.value.copy(
-                    appliance = appliance
-                )
-
-                // Build a readable summary of the identification result.
-                addMessage(
-                    Message(
-                        id = nextMessageId(),
-                        text = buildString {
-
-                            append("I identified: ${appliance.name}")
-
-                            appliance.brand?.let {
-                                append("\nBrand: $it")
-                            }
-
-                            appliance.model?.let {
-                                append("\nModel: $it")
-                            }
-
-                            append(
-                                "\nConfidence: ${
-                                    (appliance.confidence * 100).toInt()
-                                }%"
-                            )
-                        },
-                        isUser = false
-                    )
-                )
-
-            } catch (e: Exception) {
-
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Error while analyzing the image."
-                )
-
-            } finally {
-
-                _uiState.value = _uiState.value.copy(
-                    isAnalyzing = false
-                )
-            }
-        }
-    }
-
-    /**
-     * Runs the panel analysis on the last analyzed photo and stores the result
-     * in the state, where the interactive overlay (S1-15) reads it from.
-     *
-     * The photo is first cropped to the control panel using the box located by
-     * the backend (S1-16); the buttons and dials are then detected on that crop
-     * (S1-14). Cropping is best effort: when no panel can be located, the whole
-     * photo is used.
-     *
-     * @return true when the analysis was started; false when there is no photo
-     *   yet (an error is stored in the state in that case).
-     */
-    fun analyzePanel(): Boolean {
-
-        val uri = lastImageUri
-
-        if (uri == null) {
-
-            _uiState.value = _uiState.value.copy(
-                error = "Take a photo first, then tap the detect button."
-            )
-
-            return false
-        }
-
-        _uiState.value = _uiState.value.copy(
-            // The overlay shows the photo right away, with the loading spinner.
-            panelImageUri = uri,
-            panelControls = emptyList(),
-            isAnalyzing = true,
-            error = null
-        )
-
-        viewModelScope.launch {
-
-            try {
-
-                // 1. Locate the panel and crop the photo to it (S1-16).
-                val panelUri = panelPhotoOf(uri)
-
-                // The overlay (S1-15) shows the very image the detection runs on.
-                _uiState.value = _uiState.value.copy(
-                    panelImageUri = panelUri
-                )
-
-                // 2. Detect the controls on that image (S1-14).
-                val controls = aiService.analyzePanel(
-                    uri = panelUri,
-                    appliance = _uiState.value.appliance
-                )
-
-                _uiState.value = _uiState.value.copy(
-                    panelControls = controls
-                )
-
-            } catch (e: Exception) {
-
-                _uiState.value = _uiState.value.copy(
-                    error = e.message ?: "Error while detecting the controls."
-                )
-
-            } finally {
-
-                _uiState.value = _uiState.value.copy(
-                    isAnalyzing = false
-                )
-            }
-        }
-
-        return true
     }
 
     /**
@@ -564,44 +767,170 @@ class ChatViewModel(
         uri
     }
 
+    private fun finishStreaming(id: Long) {
+        val messages = _uiState.value.messages
+        val message = messages.firstOrNull { it.id == id } ?: return
+
+        _uiState.value = _uiState.value.copy(
+            messages = if (message.text.isNullOrBlank() && message.manualGuide == null) {
+                messages.filterNot { it.id == id }
+            } else {
+                messages.map { current ->
+                    if (current.id == id) current.copy(isStreaming = false) else current
+                }
+            }
+        )
+    }
+
+    fun analyzeImage(uri: Uri) {
+        lastImageUri = uri
+
+        addMessage(
+            Message(
+                id = nextMessageId(),
+                imageUri = uri,
+                isUser = true
+            )
+        )
+
+        _uiState.value = _uiState.value.copy(
+            isAnalyzing = true,
+            currentStep = "Analyzing uploaded appliance photo...",
+            error = null
+        )
+
+        viewModelScope.launch {
+            try {
+                val appliance = aiService.identifyAppliance(uri)
+                _uiState.value = _uiState.value.copy(
+                    appliance = appliance
+                )
+
+                addMessage(
+                    Message(
+                        id = nextMessageId(),
+                        text = buildString {
+                            append("I identified: ${appliance.name}")
+                            appliance.brand?.let { append("\nBrand: $it") }
+                            appliance.model?.let { append("\nModel: $it") }
+                            append("\nConfidence: ${(appliance.confidence * 100).toInt()}%")
+                        },
+                        isUser = false
+                    )
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Error while analyzing the image."
+                )
+            } finally {
+                _uiState.value = _uiState.value.copy(
+                    isAnalyzing = false,
+                    currentStep = null
+                )
+            }
+        }
+    }
+
     /**
-     * Records the user's rating of an answer and sends it to the backend.
+     * Runs the panel analysis on the last analyzed photo and stores the result
+     * in the state, where the interactive overlay (S1-15) reads it from.
      *
-     * - The rating shows up in the UI immediately (optimistic update).
-     * - If the request fails, the rating stays in a queue and is retried
-     *   with the next rating, without showing any error to the user.
-     * - [comment] is optional (typically the reason for a "not useful" vote).
+     * The photo is first cropped to the control panel using the box located by
+     * the backend (S1-16); the buttons and dials are then detected on that crop
+     * (S1-14). Cropping is best effort: when no panel can be located, the whole
+     * photo is used.
+     *
+     * @return true when the analysis was started; false when there is no photo
+     *   yet (an error is stored in the state in that case).
      */
+    fun analyzePanel(): Boolean {
+
+        val uri = lastImageUri
+        if (uri == null) {
+            _uiState.value = _uiState.value.copy(
+                error = "Take a photo first, then tap the detect button."
+            )
+
+            return false
+        }
+
+        _uiState.value = _uiState.value.copy(
+            // The overlay shows the photo right away, with the loading spinner.
+            panelImageUri = uri,
+            panelControls = emptyList(),
+            isAnalyzing = true,
+            error = null
+        )
+
+        viewModelScope.launch {
+            try {
+
+                // 1. Locate the panel and crop the photo to it (S1-16).
+                val panelUri = panelPhotoOf(uri)
+
+                // The overlay (S1-15) shows the very image the detection runs on.
+                _uiState.value = _uiState.value.copy(
+                    panelImageUri = panelUri
+                )
+
+                // 2. Detect the controls on that image (S1-14).
+                val controls = aiService.analyzePanel(
+                    uri = panelUri,
+                    appliance = _uiState.value.appliance
+                )
+
+                _uiState.value = _uiState.value.copy(
+                    panelControls = controls
+                )
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = e.message ?: "Error while detecting the controls."
+                )
+            } finally {
+                _uiState.value = _uiState.value.copy(
+                    isAnalyzing = false
+                )
+            }
+        }
+
+        return true
+    }
+
+    internal fun buildControlsText(controls: List<PanelControl>): String {
+        if (controls.isEmpty()) {
+            return "No controls detected in the photo."
+        }
+
+        return buildString {
+            append("Detected ${controls.size} control(s):")
+            controls.forEach { control ->
+                append("\n• ${control.label} (${control.type.name.lowercase()})")
+                append(
+                    " — x=${"%.2f".format(control.box.x)}" +
+                            ", y=${"%.2f".format(control.box.y)}" +
+                            ", w=${"%.2f".format(control.box.w)}" +
+                            ", h=${"%.2f".format(control.box.h)}"
+                )
+            }
+        }
+    }
+
     fun setFeedback(
         messageId: Long,
         feedback: Feedback,
         comment: String? = null
     ) {
+        val message = _uiState.value.messages.firstOrNull { it.id == messageId } ?: return
+        if (message.isStreaming) return
 
-        val message = _uiState.value.messages
-            .firstOrNull { it.id == messageId }
-            ?: return
-
-        // An answer that is still arriving cannot be rated yet.
-        if (message.isStreaming) {
-            return
-        }
-
-        // Only Q&A answers can be rated (they are the ones with a linked question).
         val question = message.question ?: return
-        val answer = message.text ?: return
-
+        val answer = message.text ?: message.manualGuide?.overview ?: return
         val cleanComment = comment?.trim()?.takeIf { it.isNotEmpty() }
 
-        // Same rating already recorded and no new comment: nothing to do.
-        if (message.feedback == feedback && cleanComment == null) {
-            return
-        }
+        if (message.feedback == feedback && cleanComment == null) return
 
-        // Update the message in the UI right away.
         _uiState.value = _uiState.value.copy(
             messages = _uiState.value.messages.map { current ->
-
                 if (current.id == messageId) {
                     current.copy(
                         feedback = feedback,
@@ -622,57 +951,50 @@ class ChatViewModel(
             comment = cleanComment
         )
 
+        // Sync with Firebase
+        val userId = authManager?.currentUserId ?: "guest"
+        viewModelScope.launch {
+            firebaseRepository?.saveFeedback(userId, report)
+        }
+
+        // Call backend rating endpoint if manualId is present
+        message.manualGuide?.manualId?.let { manualId ->
+            viewModelScope.launch {
+                try {
+                    aiService.rateManual(manualId, feedback.score)
+                } catch (e: Exception) {
+                    // Ignore network failure
+                }
+            }
+        }
+
         viewModelScope.launch {
             submitFeedback(report)
         }
     }
 
-    /**
-     * Queues the rating and tries to send the whole queue.
-     * The Mutex avoids parallel sends when the user rates several
-     * messages in a row.
-     */
     private suspend fun submitFeedback(report: FeedbackReport) {
-
         feedbackMutex.withLock {
-
             pendingFeedback[report.messageId] = report
-
             try {
-
                 val iterator = pendingFeedback.values.iterator()
-
                 while (iterator.hasNext()) {
-
                     aiService.sendFeedback(iterator.next())
-
-                    // Removed from the queue only after a successful send.
                     iterator.remove()
                 }
-
             } catch (e: CancellationException) {
-
-                // Never swallow coroutine cancellation.
                 throw e
-
             } catch (_: Exception) {
-
-                // Send failed: the ratings stay in pendingFeedback
-                // and will be retried with the next rating.
+                // Pending feedback stays queued for retry
             }
         }
     }
 
-    /** Hides the error currently shown on screen. */
     fun clearError() {
-
-        _uiState.value = _uiState.value.copy(
-            error = null
-        )
+        _uiState.value = _uiState.value.copy(error = null)
     }
 
     private fun addMessage(message: Message) {
-
         _uiState.value = _uiState.value.copy(
             messages = _uiState.value.messages + message
         )
@@ -681,5 +1003,9 @@ class ChatViewModel(
     private fun nextMessageId(): Long {
         messageId++
         return messageId
+    }
+
+    private companion object {
+        const val GUEST_USER = "guest"
     }
 }

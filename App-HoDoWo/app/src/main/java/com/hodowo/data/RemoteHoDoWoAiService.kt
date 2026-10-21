@@ -9,8 +9,10 @@ import com.hodowo.viewmodel.FeedbackReport
 import com.hodowo.viewmodel.HoDoWoAiService
 import com.hodowo.viewmodel.PanelBox
 import com.hodowo.viewmodel.PanelControl
+import com.hodowo.viewmodel.RecentManual
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -34,6 +36,10 @@ import java.util.concurrent.TimeUnit
  * - `POST {backendUrl}/api/panel/locate` receives the full photo and answers
  *   `{"box": {...}}` or `{"box": null}` (panel location, S1-16).
  *
+ * Questions also carry the identified appliance as structured data
+ * (`"appliance": {"name", "brand", "model"}`): the backend uses it to add the
+ * rated guides of the same appliance to the prompt (#40).
+ *
  * @param backendUrl base URL of the backend (from `backend.url` in local.properties).
  * @param loadImage reads and compresses the photo at the given [Uri] into JPEG bytes.
  * @param tokenProvider returns the Firebase ID token of the signed-in user, or null.
@@ -43,7 +49,7 @@ import java.util.concurrent.TimeUnit
 class RemoteHoDoWoAiService(
     private val backendUrl: String,
     private val loadImage: suspend (Uri) -> ByteArray,
-    private val tokenProvider: suspend () -> String? = { null },
+    internal val tokenProvider: suspend () -> String? = { null },
     private val httpClient: OkHttpClient = defaultClient(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val language: String = Locale.getDefault().language
@@ -65,12 +71,11 @@ class RemoteHoDoWoAiService(
         question: String,
         appliance: Appliance?
     ): String {
-        val body = JSONObject()
+        val json = JSONObject()
             .put("message", buildQuestion(question, appliance))
-            .toString()
-            .toRequestBody(JSON)
+        applianceJson(appliance)?.let { json.put("appliance", it) }
 
-        return replyOf(post(CHAT_PATH, body))
+        return replyOf(post(CHAT_PATH, json.toString().toRequestBody(JSON)))
     }
 
     override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> {
@@ -109,6 +114,34 @@ class RemoteHoDoWoAiService(
         // TODO(#40): the backend has no endpoint to store ratings yet.
         // Until it exists the rating is only logged, so it is not retried forever.
         Log.d(TAG, "Rating of message ${report.messageId} not stored: no backend endpoint yet")
+    }
+
+    /** Newest manuals of the signed-in user (`GET /api/manuals?limit=`), for the Home screen. */
+    override suspend fun recentManuals(limit: Int): List<RecentManual> =
+        parseRecentManuals(jsonOf(get("$MANUALS_PATH?limit=$limit")))
+
+    /** Most searched and saved guides of all users (`GET /api/manuals/popular`). */
+    override suspend fun popularManuals(limit: Int): List<RecentManual> =
+        parseRecentManuals(jsonOf(get("$POPULAR_MANUALS_PATH?limit=$limit")))
+
+    /** Today's tip (`GET /api/appliances/environmental-tip`), or null when it is empty. */
+    override suspend fun dailyTip(): String? =
+        jsonOf(get(TIP_PATH)).optString("tip").trim().takeIf { it.isNotEmpty() }
+
+    /** Sends a GET to [path] (with the token) and returns the raw response body. */
+    private suspend fun get(path: String): String {
+        val token = tokenProvider()
+
+        val builder = Request.Builder()
+            .url("${backendUrl.trimEnd('/')}$path")
+            .get()
+        if (!token.isNullOrBlank()) {
+            builder.header("Authorization", "Bearer $token")
+        }
+
+        return withContext(ioDispatcher) {
+            execute(builder.build())
+        }
     }
 
     /** Sends [body] to [path] and returns the raw response body. */
@@ -164,20 +197,235 @@ class RemoteHoDoWoAiService(
         throw IOException("Invalid server response", e)
     }
 
+    override fun streamAnswerEvents(
+        question: String,
+        appliance: Appliance?,
+        imageUri: Uri?,
+        history: List<com.hodowo.viewmodel.ChatMessageHistory>
+    ): kotlinx.coroutines.flow.Flow<com.hodowo.viewmodel.ChatStreamEvent> = kotlinx.coroutines.flow.flow {
+        val imageBytes = imageUri?.let { runCatching { loadImage(it) }.getOrNull() }
+        val token = tokenProvider()
+
+        val request = try {
+            val builder = Request.Builder()
+                .url("${backendUrl.trimEnd('/')}$STREAM_CHAT_PATH")
+
+            if (!token.isNullOrBlank()) {
+                builder.header("Authorization", "Bearer $token")
+            }
+
+            if (imageBytes != null) {
+                val bodyBuilder = MultipartBody.Builder()
+                    .setType(MultipartBody.FORM)
+                    .addFormDataPart("message", buildQuestion(question, appliance))
+                    .addFormDataPart("image", "appliance.jpg", imageBytes.toRequestBody(JPEG))
+
+                applianceJson(appliance)?.let { bodyBuilder.addFormDataPart("appliance", it.toString()) }
+
+                if (history.isNotEmpty()) {
+                    val historyArray = org.json.JSONArray()
+                    for (item in history) {
+                        historyArray.put(JSONObject().put("role", item.role).put("content", item.content))
+                    }
+                    bodyBuilder.addFormDataPart("history", historyArray.toString())
+                }
+
+                builder.post(bodyBuilder.build())
+            } else {
+                val jsonBody = JSONObject()
+                    .put("message", buildQuestion(question, appliance))
+                applianceJson(appliance)?.let { jsonBody.put("appliance", it) }
+
+                if (history.isNotEmpty()) {
+                    val historyArray = org.json.JSONArray()
+                    for (item in history) {
+                        historyArray.put(JSONObject().put("role", item.role).put("content", item.content))
+                    }
+                    jsonBody.put("history", historyArray)
+                }
+
+                builder.post(jsonBody.toString().toRequestBody(JSON))
+            }
+            builder.build()
+        } catch (e: Exception) {
+            null
+        }
+
+        if (request == null) {
+            val ans = askQuestion(question, appliance)
+            emit(com.hodowo.viewmodel.ChatStreamEvent.Token(ans))
+            emit(com.hodowo.viewmodel.ChatStreamEvent.Response(ans))
+            return@flow
+        }
+
+        try {
+            httpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    throw IOException("Server error ${response.code}")
+                }
+                val source = response.body?.source() ?: throw IOException("Empty response")
+                var currentEvent: String? = null
+                var answered = false
+
+                while (!source.exhausted()) {
+                    val line = source.readUtf8Line() ?: break
+                    if (line.startsWith("event:")) {
+                        currentEvent = line.removePrefix("event:").trim()
+                    } else if (line.startsWith("data:")) {
+                        val data = line.removePrefix("data:").trim()
+                        when (currentEvent) {
+                            "step" -> {
+                                val json = JSONObject(data)
+                                val title = json.optString("title", "Processing...")
+                                val detail = json.optString("detail", "")
+                                emit(com.hodowo.viewmodel.ChatStreamEvent.Step(title, detail))
+                            }
+                            "token" -> {
+                                val json = JSONObject(data)
+                                val tokenText = json.optString("token", "")
+                                emit(com.hodowo.viewmodel.ChatStreamEvent.Token(tokenText))
+                            }
+                            "response" -> {
+                                val json = JSONObject(data)
+                                val reply = json.optString("reply", "")
+                                // optString() turns a JSON null into the text "null": use textOrNull().
+                                val imageUrl = json.textOrNull("image")
+                                val isManual = json.optBoolean("is_manual", false)
+                                val manualId = json.textOrNull("manual_id")
+
+                                val manualGuide = if (isManual) {
+                                    val stepsArray = json.optJSONArray("steps")
+                                    val steps = mutableListOf<com.hodowo.viewmodel.ManualStep>()
+                                    if (stepsArray != null) {
+                                        for (i in 0 until stepsArray.length()) {
+                                            val s = stepsArray.optJSONObject(i)
+                                            if (s != null) {
+                                                steps.add(
+                                                    com.hodowo.viewmodel.ManualStep(
+                                                        number = s.optInt("number", i + 1),
+                                                        title = s.optString("title", "Step ${i + 1}"),
+                                                        description = s.optString("description", "")
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
+                                    com.hodowo.viewmodel.ManualGuide(
+                                        applianceName = json.optString("appliance_name", appliance?.name ?: "Appliance"),
+                                        issueTitle = json.optString("issue_title", "Repair Guide"),
+                                        overview = json.optString("overview", reply),
+                                        steps = steps,
+                                        imageUrl = imageUrl,
+                                        manualId = manualId
+                                    )
+                                } else null
+
+                                answered = true
+                                emit(com.hodowo.viewmodel.ChatStreamEvent.Response(reply, manualGuide, imageUrl))
+                            }
+                            "error" -> {
+                                // The backend reports its failures as an "error" event:
+                                // show them instead of ending the chat with nothing.
+                                val message = runCatching { JSONObject(data).textOrNull("error") }.getOrNull()
+                                throw IOException(message ?: "The server could not answer")
+                            }
+                        }
+                    }
+                }
+
+                if (!answered) {
+                    // e.g. the server was stopped by its time limit in the middle of the answer.
+                    throw IOException("The server closed the connection before answering")
+                }
+            }
+        } catch (e: Exception) {
+            throw IOException("Stream failed: ${e.localizedMessage}", e)
+        }
+    }.flowOn(ioDispatcher)
+
+    override suspend fun setBookmark(manualId: String, isBookmarked: Boolean): Boolean {
+        val token = tokenProvider()
+        val request = Request.Builder()
+            .url("${backendUrl.trimEnd('/')}/api/manuals/$manualId/bookmark")
+            .apply {
+                if (!token.isNullOrBlank()) {
+                    header("Authorization", "Bearer $token")
+                }
+            }
+            .patch(
+                JSONObject().put("is_bookmarked", isBookmarked).toString().toRequestBody(JSON)
+            )
+            .build()
+
+        return withContext(ioDispatcher) {
+            try {
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.string()
+                        if (body != null) {
+                            JSONObject(body).optBoolean("is_bookmarked", isBookmarked)
+                        } else isBookmarked
+                    } else {
+                        isBookmarked
+                    }
+                }
+            } catch (e: Exception) {
+                isBookmarked
+            }
+        }
+    }
+
+    override suspend fun rateManual(manualId: String, rating: Int): Int {
+        val token = tokenProvider()
+        val request = Request.Builder()
+            .url("${backendUrl.trimEnd('/')}/api/manuals/$manualId/rate")
+            .apply {
+                if (!token.isNullOrBlank()) {
+                    header("Authorization", "Bearer $token")
+                }
+            }
+            .post(
+                JSONObject().put("rating", rating).toString().toRequestBody(JSON)
+            )
+            .build()
+
+        return withContext(ioDispatcher) {
+            try {
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        val body = response.body?.string()
+                        if (body != null) {
+                            JSONObject(body).optInt("current_rating", rating)
+                        } else rating
+                    } else {
+                        rating
+                    }
+                }
+            } catch (e: Exception) {
+                rating
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "RemoteHoDoWoAiService"
         private const val HTTP_UNAUTHORIZED = 401
         private const val CONNECT_TIMEOUT_SECONDS = 15L
 
         // The LangChain agent can take a while, so reads get a longer timeout.
-        private const val READ_TIMEOUT_SECONDS = 60L
+        private const val READ_TIMEOUT_SECONDS = 560L
 
         private val JSON = "application/json".toMediaType()
         private val JPEG = "image/jpeg".toMediaType()
 
         internal const val CHAT_PATH = "/api/chat"
+        internal const val STREAM_CHAT_PATH = "/api/chat/stream"
+        internal const val FEEDBACK_PATH = "/api/feedback"
         internal const val PANEL_PATH = "/api/panel/analyze"
         internal const val LOCATE_PATH = "/api/panel/locate"
+        internal const val MANUALS_PATH = "/api/manuals"
+        internal const val POPULAR_MANUALS_PATH = "/api/manuals/popular"
+        internal const val TIP_PATH = "/api/appliances/environmental-tip"
 
         internal const val UNKNOWN_APPLIANCE = "Unknown appliance"
 
@@ -207,6 +455,29 @@ class RemoteHoDoWoAiService(
 
             return "Appliance: $details\nQuestion: $question"
         }
+
+        /**
+         * The appliance as JSON: {"name", "brand", "model"} (null fields when unknown), for #40.
+         * Returns null when there is no appliance or it was not recognised, so the
+         * backend does not group the guides of unrelated appliances.
+         */
+        internal fun applianceJson(appliance: Appliance?): JSONObject? {
+            if (appliance == null || appliance.name == UNKNOWN_APPLIANCE) {
+                return null
+            }
+
+            return JSONObject()
+                .put("name", appliance.name)
+                .put("brand", appliance.brand ?: JSONObject.NULL)
+                .put("model", appliance.model ?: JSONObject.NULL)
+        }
+
+        /**
+         * Turns the `GET /api/manuals` answer (`{"manuals": [...]}`) into Home cards.
+         * Entries without a title are skipped; missing fields get safe defaults.
+         */
+        internal fun parseRecentManuals(payload: JSONObject): List<RecentManual> =
+            ManualJson.parse(payload)
 
         /**
          * Reads the JSON object contained in the AI reply.
@@ -246,9 +517,6 @@ class RemoteHoDoWoAiService(
         )
 
         /** Returns the field as text, or null when it is missing, null or blank. */
-        private fun JSONObject.textOrNull(key: String): String? =
-            if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
-
         /**
          * Turns the /api/panel/analyze answer into the list of controls (S1-14).
          *

@@ -1,6 +1,11 @@
 package com.hodowo.viewmodel
 
 import android.net.Uri
+import com.hodowo.data.AuthManager
+import com.hodowo.data.FirebaseRepository
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -9,6 +14,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -35,6 +41,8 @@ class ChatViewModelTest {
     private val dispatcher = StandardTestDispatcher()
     private lateinit var service: FakeAiService
     private lateinit var cropper: FakePanelCropper
+    private lateinit var authManager: AuthManager
+    private lateinit var firebaseRepository: FirebaseRepository
     private lateinit var viewModel: ChatViewModel
 
     @Before
@@ -43,7 +51,11 @@ class ChatViewModelTest {
         Dispatchers.setMain(dispatcher)
         service = FakeAiService()
         cropper = FakePanelCropper()
-        viewModel = ChatViewModel(service, cropper)
+        authManager = mockk(relaxed = true)
+        firebaseRepository = mockk(relaxed = true)
+
+        // Correct parameter order matching ChatViewModel constructor
+        viewModel = ChatViewModel(service, firebaseRepository, authManager, cropper)
     }
 
     @After
@@ -373,6 +385,27 @@ class ChatViewModelTest {
         assertEquals(demo.askQuestion("Water everywhere", machine), pieces.joinToString(""))
     }
 
+    @Test
+    fun demoServiceStreamAnswerEventsWithImageAndManualQuery() = runTest {
+        val demo = DemoHoDoWoAiService()
+        val mockUri = mockk<Uri>()
+        val events = demo.streamAnswerEvents("Fix error E18", null, mockUri, emptyList()).toList()
+
+        assertTrue(events.isNotEmpty())
+        assertTrue(events.any { it is ChatStreamEvent.Step && it.title.contains("Identifying") })
+        assertTrue(events.any { it is ChatStreamEvent.Response && it.manualGuide != null })
+    }
+
+    @Test
+    fun demoServiceStreamAnswerEventsWithNonManualQuery() = runTest {
+        val demo = DemoHoDoWoAiService()
+        val events = demo.streamAnswerEvents("Hello", null, null, emptyList()).toList()
+
+        assertTrue(events.isNotEmpty())
+        assertTrue(events.any { it is ChatStreamEvent.Token })
+        assertTrue(events.any { it is ChatStreamEvent.Response })
+    }
+
     // ---------- DemoHoDoWoAiService ----------
 
     @Test
@@ -575,10 +608,213 @@ class ChatViewModelTest {
         assertNull(viewModel.uiState.value.error)
     }
 
+    // ---------- additional state & repository integration tests ----------
+
+    @Test
+    fun setSelectedImageAndClearSelectedImage() {
+        val uri = mockk<Uri>()
+        viewModel.setSelectedImage(uri)
+        assertEquals(uri, viewModel.uiState.value.selectedImageUri)
+
+        viewModel.clearSelectedImage()
+        assertNull(viewModel.uiState.value.selectedImageUri)
+    }
+
+    @Test
+    fun startNewChatSavesSessionWhenMessagesExist() = runTest(dispatcher) {
+        viewModel.sendTextMessage("How do I fix E18?")
+        advanceUntilIdle()
+
+        viewModel.startNewChat()
+
+        val state = viewModel.uiState.value
+        assertEquals(1, state.chatSessions.size)
+        assertTrue(state.messages.isEmpty())
+        assertNull(state.appliance)
+    }
+
+    @Test
+    fun startNewChatDoesNotSaveSessionWhenEmpty() = runTest(dispatcher) {
+        viewModel.startNewChat()
+
+        val state = viewModel.uiState.value
+        assertTrue(state.chatSessions.isEmpty())
+    }
+
+    @Test
+    fun toggleBookmarkTogglesStateAndCallsRepositoryAndService() = runTest(dispatcher) {
+        every { authManager.currentUserId } returns "user-456"
+        val answerId = askAndGetAnswerId("Fix question")
+
+        viewModel.toggleBookmark(answerId)
+        advanceUntilIdle()
+
+        val bookmarkedMsg = viewModel.uiState.value.messages.first { it.id == answerId }
+        assertTrue(bookmarkedMsg.isBookmarked)
+        coVerify { firebaseRepository.saveBookmark("user-456", any()) }
+
+        viewModel.toggleBookmark(answerId)
+        advanceUntilIdle()
+
+        val unbookmarkedMsg = viewModel.uiState.value.messages.first { it.id == answerId }
+        assertFalse(unbookmarkedMsg.isBookmarked)
+        coVerify { firebaseRepository.removeBookmark("user-456", answerId) }
+    }
+
+    @Test
+    fun refreshBookmarksUpdatesUiStateWithRepositoryData() = runTest(dispatcher) {
+        every { authManager.currentUserId } returns "user-456"
+        val guide = ManualGuide("Washer", "E18", "Overview")
+        coEvery { firebaseRepository.getBookmarks("user-456") } returns listOf(guide)
+
+        viewModel.refreshBookmarks()
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.uiState.value.bookmarkedGuides.size)
+        assertEquals("Washer", viewModel.uiState.value.bookmarkedGuides[0].applianceName)
+    }
+
+    @Test
+    fun setFeedbackCallsFirebaseRepository() = runTest(dispatcher) {
+        every { authManager.currentUserId } returns "user-123"
+        val answerId = askAndGetAnswerId("How to clean filter?")
+
+        viewModel.setFeedback(answerId, Feedback.LIKE, "Great explanation")
+        advanceUntilIdle()
+
+        coVerify { firebaseRepository.saveFeedback("user-123", any()) }
+    }
+
+    @Test
+    fun stepEventsMappedToFriendlyText() = runTest(dispatcher) {
+        service.streamEvents = flow {
+            emit(ChatStreamEvent.Step("appliance_identification_step", "detail"))
+            emit(ChatStreamEvent.Step("search_manuals_step", "detail"))
+            emit(ChatStreamEvent.Step("panel_detection_step", "detail"))
+            emit(ChatStreamEvent.Step("Custom Step", "detail"))
+            emit(ChatStreamEvent.Response("Done"))
+        }
+
+        viewModel.sendTextMessage("Test steps")
+        advanceUntilIdle()
+
+        assertEquals("Done", viewModel.uiState.value.messages.last().text)
+    }
+
+    @Test
+    fun responseWithManualGuidePersistsAndUpdatesAppliance() = runTest(dispatcher) {
+        every { authManager.currentUserId } returns "user-789"
+        val guide = ManualGuide("Bosch Washer", "E18", "Filter Clog", manualId = "m-100")
+
+        service.streamEvents = flow {
+            emit(ChatStreamEvent.Response("Here is your guide", guide))
+        }
+
+        viewModel.sendTextMessage("Clean filter")
+        advanceUntilIdle()
+
+        val lastMsg = viewModel.uiState.value.messages.last()
+        assertEquals(guide, lastMsg.manualGuide)
+        assertEquals("Bosch Washer", viewModel.uiState.value.appliance?.name)
+        coVerify { firebaseRepository.saveManualGuide("user-789", lastMsg.id, guide) }
+    }
+
+    @Test
+    fun toggleBookmarkWithManualIdCallsSetBookmark() = runTest(dispatcher) {
+        every { authManager.currentUserId } returns "user-123"
+        val guide = ManualGuide("Dryer", "E01", "Lint filter", manualId = "m-200")
+
+        service.streamEvents = flow {
+            emit(ChatStreamEvent.Response("Guide", guide))
+        }
+
+        viewModel.sendTextMessage("Fix dryer")
+        advanceUntilIdle()
+
+        val answerId = viewModel.uiState.value.messages.last().id
+        viewModel.toggleBookmark(answerId)
+        advanceUntilIdle()
+
+        assertTrue(viewModel.uiState.value.messages.last().isBookmarked)
+    }
+
+    @Test
+    fun setFeedbackWithManualIdCallsRateManual() = runTest(dispatcher) {
+        every { authManager.currentUserId } returns "user-123"
+        val guide = ManualGuide("Dryer", "E01", "Lint filter", manualId = "m-300")
+
+        service.streamEvents = flow {
+            emit(ChatStreamEvent.Response("Guide", guide))
+        }
+
+        viewModel.sendTextMessage("Fix dryer")
+        advanceUntilIdle()
+
+        val answerId = viewModel.uiState.value.messages.last().id
+        viewModel.setFeedback(answerId, Feedback.LIKE, "Helpful")
+        advanceUntilIdle()
+
+        assertEquals(Feedback.LIKE, viewModel.uiState.value.messages.last().feedback)
+    }
+
+    @Test
+    fun isWaitingForAnswerComputedProperty() {
+        val emptyState = ChatUiState(isSending = false)
+        assertFalse(emptyState.isWaitingForAnswer)
+
+        val streamingMsg = Message(id = 1L, text = "", isUser = false, isStreaming = true)
+        val waitingState = ChatUiState(isSending = true, messages = listOf(streamingMsg))
+        assertTrue(waitingState.isWaitingForAnswer)
+
+        val answeredMsg = Message(id = 1L, text = "Hello", isUser = false, isStreaming = true)
+        val answeredState = ChatUiState(isSending = true, messages = listOf(answeredMsg))
+        assertFalse(answeredState.isWaitingForAnswer)
+    }
+
+    @Test
+    fun buildControlsTextFormatsControlsCorrectly() {
+        val emptyText = viewModel.buildControlsText(emptyList())
+        assertEquals("No controls detected in the photo.", emptyText)
+
+        val controls = listOf(
+            PanelControl(
+                id = "c1",
+                label = "Power",
+                type = ControlType.BUTTON,
+                description = "Power button",
+                box = ControlBox(0.1f, 0.2f, 0.3f, 0.4f)
+            )
+        )
+        val text = viewModel.buildControlsText(controls)
+        assertTrue(text.contains("Detected 1 control(s):"))
+        assertTrue(text.contains("Power (button)"))
+    }
+
+    @Test
+    fun hoDoWoAiServiceDefaultMethods() = runTest {
+        val defaultService = object : HoDoWoAiService {
+            override suspend fun identifyAppliance(uri: Uri): Appliance = Appliance("Appliance", null, null, 1f)
+            override suspend fun askQuestion(question: String, appliance: Appliance?): String = "Answer"
+            override suspend fun locatePanel(uri: Uri): PanelBox? = null
+            override suspend fun analyzePanel(uri: Uri, appliance: Appliance?): List<PanelControl> = emptyList()
+            override suspend fun sendFeedback(report: FeedbackReport) {}
+        }
+
+        assertTrue(defaultService.setBookmark("m1", true))
+        assertEquals(5, defaultService.rateManual("m1", 5))
+
+        val answerPieces = defaultService.streamAnswer("Question", null).toList()
+        assertEquals(listOf("Answer"), answerPieces)
+
+        val streamEvents = defaultService.streamAnswerEvents("Question", null).toList()
+        assertEquals(1, streamEvents.size)
+        assertTrue(streamEvents[0] is ChatStreamEvent.Token)
+    }
+
     // ---------- helpers ----------
 
     /** Sends a question and returns the id of the AI answer. */
-    private suspend fun kotlinx.coroutines.test.TestScope.askAndGetAnswerId(
+    private suspend fun TestScope.askAndGetAnswerId(
         question: String
     ): Long {
         viewModel.sendTextMessage(question)
@@ -607,6 +843,7 @@ class ChatViewModelTest {
 
         /** When set, the answer arrives as these pieces instead of one block. */
         var stream: Flow<String>? = null
+        var streamEvents: Flow<ChatStreamEvent>? = null
         val sentFeedback = mutableListOf<FeedbackReport>()
 
         override suspend fun identifyAppliance(uri: Uri): Appliance {
@@ -642,6 +879,13 @@ class ChatViewModelTest {
 
         override fun streamAnswer(question: String, appliance: Appliance?): Flow<String> =
             stream ?: super.streamAnswer(question, appliance)
+
+        override fun streamAnswerEvents(
+            question: String,
+            appliance: Appliance?,
+            imageUri: Uri?,
+            history: List<ChatMessageHistory>
+        ): Flow<ChatStreamEvent> = streamEvents ?: super.streamAnswerEvents(question, appliance, imageUri, history)
     }
 
     /** Cropper that returns whatever the test asks for, without touching an image. */
