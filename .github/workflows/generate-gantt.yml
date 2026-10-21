@@ -1,0 +1,36 @@
+name: Generate Gantt Comparison Chart
+
+on:
+  workflow_dispatch: # Allows manual trigger from the Actions tab
+  schedule:
+    - cron: '0 0 * * 1' # Runs every Monday at midnight (optional)
+
+jobs:
+  build-chart:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Needed to commit the updated chart back to the repo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Gantt Generator Script
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+        run: python scripts/generate_gantt.py
+
+      - name: Commit and push if chart changed
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Auto-update Gantt comparison chart"
+          file_pattern: "docs/gantt-chart.md"
