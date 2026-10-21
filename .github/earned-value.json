@@ -1,0 +1,32 @@
+{
+  "_comment": "Settings for the Earned Value workflow. BAC, hours and services come from the Sprint 0 cost plan.",
+  "bac": 9879,
+  "hourly_rate": 20,
+  "total_hours": 440,
+  "fields": {
+    "status": "Status",
+    "estimate": "Time estimated",
+    "spent": "Time spend",
+    "sprint": "Sprint"
+  },
+  "done_statuses": ["Done"],
+  "baseline": [
+    {"name": "Sprint 1", "start": "2026-10-05", "end": "2026-10-27", "hours": 128},
+    {"name": "Sprint 2", "start": "2026-10-28", "end": "2026-11-30", "hours": 192},
+    {"name": "Sprint 3", "start": "2026-12-01", "end": "2026-12-22", "hours": 120}
+  ],
+  "services_note": "Hypothetical costs: the team uses free tiers and pays nothing. Each service counts with the price planned in Sprint 0 from the date it is used.",
+  "services": [
+    {"name": "Firebase (Blaze plan), October", "date": "2026-10-05", "amount": 10},
+    {"name": "OpenRouter prepaid credit", "date": "2026-10-05", "amount": 32},
+    {"name": "Zyte scraper, first month", "date": "2026-10-05", "amount": 19.5},
+    {"name": "Text embeddings for manual indexing", "date": "2026-10-10", "amount": 2},
+    {"name": "Kie.ai image generation", "date": "2026-10-12", "amount": 20},
+    {"name": "Firebase (Blaze plan), November", "date": "2026-11-05", "amount": 10},
+    {"name": "Zyte scraper, second month", "date": "2026-11-05", "amount": 19.5},
+    {"name": "Firebase (Blaze plan), December", "date": "2026-12-05", "amount": 10},
+    {"name": "OpenAI image generation", "date": "2026-12-01", "amount": 21},
+    {"name": "Google Play Console account", "date": "2026-12-01", "amount": 22},
+    {"name": "Domain name for the web version", "date": "2026-12-01", "amount": 15}
+  ]
+}
