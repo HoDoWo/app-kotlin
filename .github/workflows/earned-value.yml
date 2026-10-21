@@ -1,0 +1,63 @@
+name: Earned Value
+# Daily Earned Value report (PV, EV, AC, BAC, EAC, ETC, VAC, CPI, SPI) built from the GitHub Project.
+# Run it by hand from Actions > Earned Value > Run workflow, or wait for the daily run.
+on:
+  schedule:
+    - cron: "17 5 * * *"   # every day at 05:17 UTC (07:17 in Spain)
+  workflow_dispatch:
+    inputs:
+      date:
+        description: "Status date YYYY-MM-DD (empty = today)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: burndown-data   # same branch as the Burndown workflow, so the two never push at the same time
+  cancel-in-progress: false
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+      OWNER: HoDoWo
+      PROJECT_NUMBER: 1
+    steps:
+      - name: Checkout script and settings (main)
+        uses: actions/checkout@v4
+
+      - name: Checkout report branch (burndown-data)
+        uses: actions/checkout@v4
+        with:
+          ref: burndown-data
+          path: data
+
+      - name: Calculate Earned Value
+        env:
+          STATUS_DATE: ${{ github.event.inputs.date }}
+        run: |
+          DATE_ARG=()
+          if [ -n "$STATUS_DATE" ]; then DATE_ARG=(--date "$STATUS_DATE"); fi
+          python3 .github/scripts/earned_value.py \
+            --config .github/earned-value.json \
+            --out data/earned-value "${DATE_ARG[@]}"
+
+      - name: Save report
+        working-directory: data
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add earned-value
+          git diff --cached --quiet && exit 0
+          git commit -m "Earned Value $(date -u +%F' '%H:%M)"
+          for i in 1 2 3; do
+            if git pull --rebase -X theirs origin burndown-data && git push origin burndown-data; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          exit 1
