@@ -9,11 +9,14 @@ jobs:
   build-chart:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Needed to commit the updated chart back to the repo
+      contents: write
+      pull-requests: write # Required to create the pull request automatically
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -29,8 +32,16 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: python scripts/generate_gantt.py
 
-      - name: Commit and push if chart changed
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Create Pull Request with Updated Chart
+        uses: peter-evans/create-pull-request@v7
         with:
-          commit_message: "Auto-update Gantt comparison chart"
-          file_pattern: "docs/gantt-chart.md"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Auto-update Gantt comparison chart"
+          committer: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          author: github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>
+          branch: feature/auto-gantt-update
+          delete-branch: true
+          title: "📊 Auto-update Project Gantt Comparison Chart"
+          body: |
+            Automated update of the project Gantt comparison chart (`docs/gantt-chart.md`).
+            Generated via GitHub Actions.
