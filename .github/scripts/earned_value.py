@@ -174,6 +174,12 @@ def calculate(items, cfg, day):
     bac, rate, total = cfg["bac"], cfg["hourly_rate"], cfg["total_hours"]
     baseline, services = cfg["baseline"], cfg["services"]
 
+    # Only the Sprints of the Sprint 0 baseline (Sprint 1-3) belong to the BAC.
+    # Items of Sprint 0 or without a Sprint are reported apart and not counted.
+    planned_sprints = {b["name"] for b in baseline}
+    excluded = [i for i in items if i["sprint"] not in planned_sprints and (i["estimate"] or i["spent"])]
+    items = [i for i in items if i["sprint"] in planned_sprints]
+
     done_est = sum(i["estimate"] for i in items if i["done"])
     spent = sum(i["spent"] for i in items)
     services_to_date = services_cost(services, day)
@@ -183,7 +189,7 @@ def calculate(items, cfg, day):
         ac=spent * rate + services_to_date,
         bac=bac)
     cumulative.update(hours_done_estimated=done_est, hours_spent=spent, services=services_to_date,
-                      hours_planned=planned_hours(baseline, day))
+                      hours_planned=planned_hours(baseline, day), excluded=excluded)
 
     name, start, end = current_sprint(items, baseline, day)
     sprint = None
@@ -193,7 +199,12 @@ def calculate(items, cfg, day):
         s_done = sum(i["estimate"] for i in in_sprint if i["done"])
         s_spent = sum(i["spent"] for i in in_sprint)
         s_planned = planned_hours(baseline, day, only=base_name) if base_name else 0.0
-        s_services = services_cost(services, day, since=start)
+        # Services belong to the Sprint of the baseline that contains their date;
+        # the first Sprint also takes the ones dated before it, so Sprint 1 = cumulative.
+        since = None
+        if base_name and base_name != baseline[0]["name"]:
+            since = dt.date.fromisoformat(next(b["start"] for b in baseline if b["name"] == base_name))
+        s_services = services_cost(services, day, since=since)
         sprint = indicators(pv=s_planned / total * bac, ev=s_done / total * bac,
                             ac=s_spent * rate + s_services, bac=bac)
         sprint.update(name=name, start=start, end=end, items=len(in_sprint),
@@ -264,6 +275,13 @@ def report(cum, sprint, cfg, day, generated):
                 cum["hours_done_estimated"], " / ".join(cfg["done_statuses"]), cum["hours_done_estimated"] / total),
             "- AC: {:.1f} h spent × {} €/h + {} of services.".format(cum["hours_spent"], cfg["hourly_rate"], eur(cum["services"])),
             "- " + cfg["services_note"]]
+    if cum["excluded"]:
+        out += ["- Not counted (outside {}): {} items, {:g} h estimated, {:g} h spent.".format(
+            ", ".join(b["name"] for b in cfg["baseline"]), len(cum["excluded"]),
+            sum(i["estimate"] for i in cum["excluded"]), sum(i["spent"] for i in cum["excluded"]))]
+        for i in sorted(cum["excluded"], key=lambda x: x["number"] or 0):
+            out.append("  - #{} {} – {} ({:g} h estimated, {:g} h spent)".format(
+                i["number"] or "", i["title"], i["sprint"] or "no Sprint", i["estimate"], i["spent"]))
     if sprint:
         out += ["", "## {} ({} → {})".format(sprint["name"], sprint["start"], sprint["end"]), "",
                 "- Items: {}, estimated {:.1f} h, completed {:.1f} h, spent {:.1f} h.".format(
