@@ -19,13 +19,13 @@
 <text x="309.9" y="388" fill="#777">Sprint 2</text>
 <line x1="654.6" y1="60" x2="654.6" y2="370" stroke="#ddd" stroke-dasharray="3 3"/>
 <text x="658.6" y="388" fill="#777">Sprint 3</text>
-<polyline points="234.1,127.1" fill="none" stroke="#8250df" stroke-width="3"/>
-<circle cx="234.1" cy="127.1" r="4" fill="#8250df"/>
+<polyline points="234.1,127.1 244.4,112.8" fill="none" stroke="#8250df" stroke-width="3"/>
+<circle cx="244.4" cy="112.8" r="4" fill="#8250df"/>
 <text x="690" y="26" fill="#8250df" font-weight="bold">● PV</text>
-<polyline points="234.1,113.3" fill="none" stroke="#2da44e" stroke-width="3"/>
-<circle cx="234.1" cy="113.3" r="4" fill="#2da44e"/>
+<polyline points="234.1,113.3 244.4,113.3" fill="none" stroke="#2da44e" stroke-width="3"/>
+<circle cx="244.4" cy="113.3" r="4" fill="#2da44e"/>
 <text x="750" y="26" fill="#2da44e" font-weight="bold">● EV</text>
-<polyline points="234.1,100.4" fill="none" stroke="#cf222e" stroke-width="3"/>
-<circle cx="234.1" cy="100.4" r="4" fill="#cf222e"/>
+<polyline points="234.1,100.4 244.4,100.4" fill="none" stroke="#cf222e" stroke-width="3"/>
+<circle cx="244.4" cy="100.4" r="4" fill="#cf222e"/>
 <text x="810" y="26" fill="#cf222e" font-weight="bold">● AC</text>
 </svg>
