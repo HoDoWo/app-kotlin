@@ -63,14 +63,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.hodowo.BuildConfig
 import com.hodowo.data.AiServiceProvider
 import com.hodowo.data.AuthManager
+import com.hodowo.data.auth.FirebaseAuthRepository
+import com.hodowo.data.auth.GoogleSignInHelper
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SecondaryContainer
 import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLowest
+import com.hodowo.viewmodel.AuthViewModel
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.ManualGuide
@@ -98,9 +104,28 @@ fun HoDoWoApp(
             LocalContext.current.applicationContext
         )
     ),
-    authManager: AuthManager = AiServiceProvider.authManager
+    authManager: AuthManager = AiServiceProvider.authManager,
+    authViewModel: AuthViewModel = viewModel(
+        factory = viewModelFactory {
+            initializer { AuthViewModel(FirebaseAuthRepository()) }
+        }
+    )
 ) {
+
     val context = LocalContext.current
+
+    val authState by authViewModel.uiState.collectAsState()
+
+    // Nothing else is shown until the user is signed in (#54).
+    if (!authState.isSignedIn) {
+        AuthRoute(
+            viewModel = authViewModel,
+            googleSignIn = remember { GoogleSignInHelper(BuildConfig.GOOGLE_WEB_CLIENT_ID) },
+            context = context
+        )
+        return
+    }
+
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }

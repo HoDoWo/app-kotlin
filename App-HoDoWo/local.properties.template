@@ -1,0 +1,14 @@
+# Copy this file to `local.properties` (it is ignored by Git) and fill in your
+# own values. Android Studio creates `local.properties` automatically with the
+# path to your Android SDK, so keep that line.
+
+# URL of the backend (see the backend repository). Leave it empty to run the
+# app with the offline demo service.
+backend.url=
+
+# OAuth *Web* client ID of the Firebase project, used by the "Continue with
+# Google" button (#54). You can find it in the Firebase console ->
+# Authentication -> Sign-in method -> Google -> Web client ID.
+# Without it the button is disabled and the app explains that Google sign-in
+# is not configured in this build.
+google.web.client.id=

@@ -1,7 +1,6 @@
 package com.hodowo.data
 
 import android.util.Log
-import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.hodowo.viewmodel.Appliance
@@ -9,9 +8,7 @@ import com.hodowo.viewmodel.FeedbackReport
 import com.hodowo.viewmodel.ManualGuide
 import com.hodowo.viewmodel.ManualStep
 import com.hodowo.viewmodel.Message
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import kotlinx.coroutines.tasks.await
 
 class FirebaseRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -222,10 +219,4 @@ class FirebaseRepository(
             Log.w(TAG, "Failed to persist chat messages to Firebase: ${e.message}")
         }
     }
-}
-
-private suspend fun <T> Task<T>.await(): T = suspendCancellableCoroutine { cont ->
-    addOnSuccessListener { result -> cont.resume(result) }
-    addOnFailureListener { error -> cont.resumeWithException(error) }
-    addOnCanceledListener { cont.cancel() }
 }

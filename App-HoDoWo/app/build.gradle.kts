@@ -7,6 +7,8 @@ if (localPropertiesFile.exists()) {
 }
 
 val backendUrl = localProperties.getProperty("backend.url", "")
+// OAuth *Web* client ID of the Firebase project, used by Google sign-in (#54).
+val googleWebClientId = localProperties.getProperty("google.web.client.id", "")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -27,6 +29,10 @@ android {
             xml.required.set(true)
             html.required.set(true)
         }
+        // The classes that need the Android framework (or a real Firebase
+        // project) are left out of the report; the rest of them are pure
+        // Kotlin and are covered by the unit tests. The same list is in
+        // sonar.coverage.exclusions (root project).
         val excludes = listOf(
             "**/ui/**",
             "**/*MainActivity*.class",
@@ -40,6 +46,9 @@ android {
             "**/*BitmapPanelCropper*.class",
             "**/*AiServiceProvider*.class",
             "**/*FirebaseTokenProvider*.class",
+            // Android / Firebase bound, so they cannot be unit tested (#54).
+            "**/*FirebaseAuthRepository*.class",
+            "**/*GoogleSignInHelper*.class",
             "**/BuildConfig.class"
         )
         val kotlinClasses = fileTree(layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes")) {
@@ -68,6 +77,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     buildTypes {
@@ -123,6 +133,11 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    // Google sign-in through Credential Manager (#54). Same versions that
+    // firebase-auth already pulls in, so they are in verification-metadata.xml.
+    implementation("androidx.credentials:credentials:1.2.0-rc01")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.0-rc01")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
     implementation(libs.firebase.firestore)
     implementation(libs.coil.compose)
     implementation(libs.androidx.compose.material.icons.extended)
