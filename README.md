@@ -5,7 +5,7 @@
 Take a photo of the appliance or its control panel, ask a question in natural
 language and get model-specific help with a step-by-step visual guide.
 
-> University project · Sprint 1 delivery: October 27, 2026
+> University project · Sprint 1 delivery: October 27, 2026 · Backend: [HoDoWo/Backend](https://github.com/HoDoWo/Backend)
 
 ## Main flow
 
@@ -13,7 +13,7 @@ Take a photo → Identify the appliance → Ask the AI → Model-specific answer
 
 ## Features
 
-### Sprint 1 · Core AI engine (in progress)
+### Sprint 1 · Core AI engine
 - Appliance identification and control panel recognition
 - Natural-language Q&A grounded in technical manuals (RAG)
 - Error code translation
@@ -56,7 +56,7 @@ These are not committed to the current sprints and depend on feasibility and tim
 | Data | Firebase (Auth, Firestore, Storage) |
 
 This repository contains the **Android client** only. The backend and the
-project documentation live in a separate repository: [LINK-TO-BACKEND-REPO](#).
+project documentation live in a separate repository: [HoDoWo/Backend](https://github.com/HoDoWo/Backend).
 
 ## Repository structure
 
@@ -64,7 +64,9 @@ project documentation live in a separate repository: [LINK-TO-BACKEND-REPO](#).
 |------|---------|
 | `App-HoDoWo/` | Android app (Kotlin + Jetpack Compose) |
 | `burndown/` | Burndown chart data |
-| `.github/` | CI workflows (Sonar, Detekt, burndown) and PR template |
+| `docs/` | Generated project charts (Gantt comparison) |
+| `scripts/` | Scripts used by the workflows |
+| `.github/` | CI workflows (SonarQube, Detekt, Burndown, Earned Value, Gantt) and PR template |
 
 ## Getting started
 
@@ -78,11 +80,12 @@ project documentation live in a separate repository: [LINK-TO-BACKEND-REPO](#).
 
 1. Clone the repository:
 ```bash
-   git clone https://github.com/Anna-Marin/Howdowo.git
+   git clone https://github.com/HoDoWo/app-kotlin.git
 ```
 2. Open the `App-HoDoWo/` folder in Android Studio.
 3. Add your own `google-services.json` to `App-HoDoWo/app/` (not tracked by Git).
-4. Set the backend URL in `local.properties` (see the backend repository).
+4. Set the backend URL in `App-HoDoWo/local.properties` (not tracked by Git), for example
+   `backend.url=https://backend-howdowo.vercel.app`. Without it the app uses demo answers.
 5. Sync Gradle and run the app.
 
 ## Contributing
@@ -91,7 +94,13 @@ project documentation live in a separate repository: [LINK-TO-BACKEND-REPO](#).
 - One branch per task, named after the backlog ID, e.g. `feature/PB-01-F-01`.
 - Every change goes through a Pull Request with at least one approval and passing checks.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+See [CONTRIBUTING](CONTRIBUING) for details.
+
+## Project tracking
+
+- Burndown chart and Earned Value report (PV, EV, AC, EAC, ETC, VAC, CPI, SPI), updated every day
+  by GitHub Actions on the [`burndown-data`](../../tree/burndown-data) branch.
+- Code quality: [SonarCloud](https://sonarcloud.io/project/overview?id=HoDoWo_app-kotlin).
 
 ## Team
 
