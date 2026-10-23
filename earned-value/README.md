@@ -1,18 +1,18 @@
 # Earned Value – HoDoWo
 
-Status on **2026-10-23** (generated 2026-10-23 10:07 UTC).
+Status on **2026-10-23** (generated 2026-10-23 16:11 UTC).
 
-| KPI | Name | Formula | Sprint 1 | Cumulative |
-|---|---|---|---:|---:|
-| **PV** | Planned Value | % planned × BAC | 2,374 € | 2,374 € |
-| **EV** | Earned Value | % completed × BAC | 2,245 € | 2,245 € |
-| **AC** | Actual Cost | hours spent × rate + services | 2,358 € | 2,358 € |
-| **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 2,874 € | 9,879 € |
-| **EAC** | Estimate at Completion | BAC / CPI | 3,018 € | 10,373 € |
-| **ETC** | Estimate to Complete | EAC − AC | 660 € | 8,016 € |
-| **VAC** | Variance at Completion | BAC − EAC | −144 € | −494 € |
-| **CPI** | Cost Performance Index | EV / AC | 0.95 | 0.95 |
-| **SPI** | Schedule Performance Index | EV / PV | 0.95 | 0.95 |
+| KPI | Name | Formula | Sprint 1 | Cumulative | Hours (cumulative) |
+|---|---|---|---:|---:|---:|
+| **PV** | Planned Value | % planned × BAC | 2,374 € | 2,374 € | 105.7 h |
+| **EV** | Earned Value | % completed × BAC | 2,245 € | 2,245 € | 100.0 h |
+| **AC** | Actual Cost | hours spent × rate + services | 2,358 € | 2,358 € | 113.7 h |
+| **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 2,874 € | 9,879 € | 440.0 h |
+| **EAC** | Estimate at Completion | BAC / CPI | 3,018 € | 10,373 € | 462.0 h |
+| **ETC** | Estimate to Complete | EAC − AC | 660 € | 8,016 € | 348.3 h |
+| **VAC** | Variance at Completion | BAC − EAC | −144 € | −494 € | −22.0 h |
+| **CPI** | Cost Performance Index | EV / AC | 0.95 | 0.95 | – |
+| **SPI** | Schedule Performance Index | EV / PV | 0.95 | 0.95 | – |
 
 ## Reading
 
