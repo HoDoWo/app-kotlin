@@ -247,6 +247,18 @@ def reading(cum):
     return notes
 
 
+def cumulative_hours(cum, cfg):
+    """Hours behind each cumulative value: PV, EV and AC come from the board and the baseline,
+    BAC is the total of the baseline, EAC, ETC and VAC use the same CPI as the euro values."""
+    total = cfg["total_hours"]
+    h = {"pv": cum["hours_planned"], "ev": cum["hours_done_estimated"], "ac": cum["hours_spent"], "bac": total}
+    if cum["cpi"]:
+        h["eac"] = total / cum["cpi"]
+        h["etc"] = h["eac"] - cum["hours_spent"]
+        h["vac"] = total - h["eac"]
+    return h
+
+
 def report(cum, sprint, cfg, day, generated):
     rows = [
         ("PV", "Planned Value", "% planned × BAC", "pv"),
@@ -262,14 +274,17 @@ def report(cum, sprint, cfg, day, generated):
     head = sprint["name"] if sprint else "Sprint"
     out = ["# Earned Value – HoDoWo", "",
            "Status on **{}** (generated {} UTC).".format(day, generated), "",
-           "| KPI | Name | Formula | {} | Cumulative |".format(head),
-           "|---|---|---|---:|---:|"]
+           "| KPI | Name | Formula | {} | Cumulative | Hours (cumulative) |".format(head),
+           "|---|---|---|---:|---:|---:|"]
+    hours = cumulative_hours(cum, cfg)
     for kpi, name, formula, key in rows:
         fmt = num if key in ("cpi", "spi") else eur
         s_val = "–"
         if sprint:
             s_val = fmt(sprint[key])
-        out.append("| **{}** | {} | {} | {} | {} |".format(kpi, name, formula, s_val, fmt(cum[key])))
+        h = hours.get(key)
+        h_val = "–" if h is None else "{:,.1f} h".format(h).replace("-", "−")
+        out.append("| **{}** | {} | {} | {} | {} | {} |".format(kpi, name, formula, s_val, fmt(cum[key]), h_val))
     total = cfg["total_hours"]
     out += ["", "## Reading", ""] + ["- " + n for n in reading(cum)]
     if sprint and sprint["vac"] is not None:
