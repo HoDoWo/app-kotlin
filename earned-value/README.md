@@ -1,32 +1,32 @@
 # Earned Value – HoDoWo
 
-Status on **2026-10-23** (generated 2026-10-23 16:11 UTC).
+Status on **2026-10-24** (generated 2026-10-24 09:34 UTC).
 
 | KPI | Name | Formula | Sprint 1 | Cumulative | Hours (cumulative) |
 |---|---|---|---:|---:|---:|
-| **PV** | Planned Value | % planned × BAC | 2,374 € | 2,374 € | 105.7 h |
-| **EV** | Earned Value | % completed × BAC | 2,245 € | 2,245 € | 100.0 h |
-| **AC** | Actual Cost | hours spent × rate + services | 2,358 € | 2,358 € | 113.7 h |
+| **PV** | Planned Value | % planned × BAC | 2,499 € | 2,499 € | 111.3 h |
+| **EV** | Earned Value | % completed × BAC | 2,582 € | 2,582 € | 115.0 h |
+| **AC** | Actual Cost | hours spent × rate + services | 2,458 € | 2,458 € | 118.7 h |
 | **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 2,874 € | 9,879 € | 440.0 h |
-| **EAC** | Estimate at Completion | BAC / CPI | 3,018 € | 10,373 € | 462.0 h |
-| **ETC** | Estimate to Complete | EAC − AC | 660 € | 8,016 € | 348.3 h |
-| **VAC** | Variance at Completion | BAC − EAC | −144 € | −494 € | −22.0 h |
-| **CPI** | Cost Performance Index | EV / AC | 0.95 | 0.95 | – |
-| **SPI** | Schedule Performance Index | EV / PV | 0.95 | 0.95 | – |
+| **EAC** | Estimate at Completion | BAC / CPI | 2,735 € | 9,403 € | 418.8 h |
+| **ETC** | Estimate to Complete | EAC − AC | 278 € | 6,945 € | 300.1 h |
+| **VAC** | Variance at Completion | BAC − EAC | 139 € | 476 € | 21.2 h |
+| **CPI** | Cost Performance Index | EV / AC | 1.05 | 1.05 | – |
+| **SPI** | Schedule Performance Index | EV / PV | 1.03 | 1.03 | – |
 
 ## Reading
 
-- CPI 0.95: over budget (the completed work cost more than planned)
-- SPI 0.95: behind schedule
-- VAC −494 €: the project would end over the Sprint 0 budget
-- Sprint 1: budget 2,874 € (its share of the BAC), EAC 3,018 € with the current CPI, so VAC −144 € (over the Sprint budget).
+- CPI 1.05: under budget (the completed work cost less than planned)
+- SPI 1.03: ahead of or on schedule
+- VAC 476 €: saving money
+- Sprint 1: budget 2,874 € (its share of the BAC), EAC 2,735 € with the current CPI, so VAC 139 € (saving money).
 
 ## Inputs
 
 - BAC: 9,879 € (total cost estimated in Sprint 0), 440 h planned for the whole project.
-- % planned: 105.7 h of the Sprint 0 baseline by 2026-10-23 → 24.0%.
-- % completed: 100.0 h estimated on the items in Done → 22.7%.
-- AC: 113.7 h spent × 20 €/h + 84 € of services.
+- % planned: 111.3 h of the Sprint 0 baseline by 2026-10-24 → 25.3%.
+- % completed: 115.0 h estimated on the items in Done → 26.1%.
+- AC: 118.7 h spent × 20 €/h + 84 € of services.
 - Hypothetical costs: the team uses free tiers and pays nothing. Each service counts with the price planned in Sprint 0 from the date it is used.
 - Not counted (outside Sprint 1, Sprint 2, Sprint 3): 14 items, 43 h estimated, 29 h spent.
   - #1 Create KanBan Board – Sprint 0 (2 h estimated, 2 h spent)
@@ -46,14 +46,11 @@ Status on **2026-10-23** (generated 2026-10-23 16:11 UTC).
 
 ## Sprint 1 (2026-10-06 → 2026-10-27)
 
-- Items: 43, estimated 127.0 h, completed 100.0 h, spent 113.7 h.
+- Items: 43, estimated 137.0 h, completed 115.0 h, spent 118.7 h.
 - Open items:
   - #12 Create Project Documentation - Sprint 1 – In Progress (2 h estimated, 0 h spent)
   - #15 Implement guide rating – In Progress (4 h estimated, 0 h spent)
-  - #37 Implement Favourites and Recent scanned Page – In Progress (0 h estimated, 0 h spent)
-  - #54 Login, register and Google sign-in screens – In Progress (3 h estimated, 15 h spent)
   - #71 Plan Sprint 2 – In Progress (4 h estimated, 0 h spent)
   - #51 Auth and profile – Todo (12 h estimated, 0 h spent)
-  - #56 Profile and saved appliances: Firestore schema + UI – Todo (2 h estimated, 0 h spent)
 
 ![PV, EV and AC over time](ev.svg)
