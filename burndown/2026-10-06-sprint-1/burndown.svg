@@ -2,7 +2,7 @@
 <!-- generated:2026-10-24 -->
 <rect width="100%" height="100%" fill="white"/>
 <text x="60" y="26" font-size="17" font-weight="bold">Burndown - Sprint 1</text>
-<text x="60" y="46" fill="#555">Pendiente ahora: 22 h  |  Alcance inicial: 144 h</text>
+<text x="60" y="46" fill="#555">Pendiente ahora: 6 h  |  Alcance inicial: 144 h</text>
 <line x1="60" y1="400.0" x2="870" y2="400.0" stroke="#eee"/>
 <text x="52" y="404.0" text-anchor="end">0 h</text>
 <line x1="60" y1="334.0" x2="870" y2="334.0" stroke="#eee"/>
@@ -41,9 +41,9 @@
 <text x="870.0" y="418" text-anchor="middle">28/10</text>
 <line x1="60" y1="400" x2="870" y2="400" stroke="#888"/>
 <line x1="60" y1="70" x2="60" y2="400" stroke="#888"/>
-<line x1="738.5" y1="70" x2="738.5" y2="400" stroke="#bbb" stroke-dasharray="2 3"/>
+<line x1="746.3" y1="70" x2="746.3" y2="400" stroke="#bbb" stroke-dasharray="2 3"/>
 <polyline points="60.0,101.1 870.0,400.0" fill="none" stroke="#999" stroke-dasharray="6 4" stroke-width="2"/>
-<polyline points="60.0,101.1 122.1,101.1 122.1,103.2 265.9,103.2 265.9,105.3 271.3,105.3 271.3,107.4 335.9,107.4 335.9,124.0 335.9,124.0 335.9,132.3 343.9,132.3 343.9,134.3 344.4,134.3 344.4,126.0 344.8,126.0 344.8,134.3 345.8,134.3 345.8,148.9 345.9,148.9 345.9,159.2 345.9,159.2 345.9,171.7 418.3,171.7 418.3,180.0 419.0,180.0 419.0,188.3 419.2,188.3 419.2,177.9 421.1,177.9 421.1,188.3 454.2,188.3 454.2,194.5 565.0,194.5 565.0,198.7 590.9,198.7 590.9,211.1 593.2,211.1 593.2,227.7 600.4,227.7 600.4,236.0 600.4,236.0 600.4,240.2 600.4,240.2 600.4,244.3 601.7,244.3 601.7,260.9 634.0,260.9 634.0,267.2 634.8,267.2 634.8,308.7 637.3,308.7 637.3,319.1 637.7,319.1 637.7,344.0 712.7,344.0 712.7,350.2 735.2,350.2 735.2,354.3 738.5,354.3" fill="none" stroke="#2da44e" stroke-width="3"/>
+<polyline points="60.0,101.1 122.1,101.1 122.1,103.2 265.9,103.2 265.9,105.3 271.3,105.3 271.3,107.4 335.9,107.4 335.9,124.0 335.9,124.0 335.9,132.3 343.9,132.3 343.9,134.3 344.4,134.3 344.4,126.0 344.8,126.0 344.8,134.3 345.8,134.3 345.8,148.9 345.9,148.9 345.9,159.2 345.9,159.2 345.9,171.7 418.3,171.7 418.3,180.0 419.0,180.0 419.0,188.3 419.2,188.3 419.2,177.9 421.1,177.9 421.1,188.3 454.2,188.3 454.2,194.5 565.0,194.5 565.0,198.7 590.9,198.7 590.9,211.1 593.2,211.1 593.2,227.7 600.4,227.7 600.4,236.0 600.4,236.0 600.4,240.2 600.4,240.2 600.4,244.3 601.7,244.3 601.7,260.9 634.0,260.9 634.0,267.2 634.8,267.2 634.8,308.7 637.3,308.7 637.3,319.1 637.7,319.1 637.7,344.0 712.7,344.0 712.7,350.2 735.2,350.2 735.2,354.3 740.5,354.3 740.5,379.2 746.3,379.2 746.3,387.5 746.3,387.5" fill="none" stroke="#2da44e" stroke-width="3"/>
 <circle cx="122.1" cy="103.2" r="5" fill="#2da44e"><title>07/10 16:28 | #47 CI with GitHub Actions | completado -1 h</title></circle>
 <circle cx="265.9" cy="105.3" r="5" fill="#2da44e"><title>11/10 14:14 | #36 Set up SonarQube | completado -1 h</title></circle>
 <circle cx="271.3" cy="107.4" r="5" fill="#2da44e"><title>11/10 17:43 | #49 Walking skeleton: Android → FastAPI → LLM → response | completado -1 h</title></circle>
@@ -73,6 +73,8 @@
 <circle cx="637.7" cy="344.0" r="5" fill="#2da44e"><title>21/10 16:32 | #58 Control Panel | completado -12 h</title></circle>
 <circle cx="712.7" cy="350.2" r="5" fill="#2da44e"><title>23/10 17:26 | #54 Login, register and Google sign-in screens | completado -3 h</title></circle>
 <circle cx="735.2" cy="354.3" r="5" fill="#2da44e"><title>24/10 08:07 | #56 Profile and saved appliances: Firestore schema + UI | completado -2 h</title></circle>
+<circle cx="740.5" cy="379.2" r="5" fill="#2da44e"><title>24/10 11:35 | #51 Auth and profile | completado -12 h</title></circle>
+<circle cx="746.3" cy="387.5" r="5" fill="#2da44e"><title>24/10 15:20 | #15 Implement guide rating | retirado -4 h</title></circle>
 <circle cx="60.0" cy="101.1" r="5" fill="#2da44e"/>
 <text x="570" y="26" fill="#999">--- Ideal</text>
 <text x="640" y="26" fill="#2da44e">— Real</text>

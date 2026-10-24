@@ -11,12 +11,6 @@
   "issue": 4,
   "title": "Appliance Identification"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-7q-A": {
-  "c": 4.0,
-  "done": false,
-  "issue": 15,
-  "title": "Implement guide rating"
- },
  "PVTI_lADOFCkyKM4Bl88jzg-8Ihk": {
   "c": 0.0,
   "done": true,
@@ -138,8 +132,8 @@
   "title": "Walking skeleton: Android \u2192 FastAPI \u2192 LLM \u2192 response"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-8Gzg": {
-  "c": 12.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 51,
   "title": "Auth and profile"
  },

@@ -57,3 +57,5 @@ timestamp,issue,title,type,delta_hours
 2026-10-21T16:18:30+00:00,62,Sprint 1 clickable prototype,completado,-5.0
 2026-10-23T17:26:07+00:00,54,"Login, register and Google sign-in screens",completado,-3.0
 2026-10-24T08:07:32+00:00,56,Profile and saved appliances: Firestore schema + UI,completado,-2.0
+2026-10-24T11:35:57+00:00,51,Auth and profile,completado,-12.0
+2026-10-24T15:20:58+00:00,15,Implement guide rating,retirado,-4.0
