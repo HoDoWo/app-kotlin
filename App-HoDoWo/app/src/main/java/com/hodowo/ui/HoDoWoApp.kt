@@ -104,6 +104,7 @@ fun HoDoWoApp(
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     var showAuthDialog by remember { mutableStateOf(false) }
+    var showApplianceManuals by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -179,12 +180,28 @@ fun HoDoWoApp(
                         )
                     }
                     AppNavTab.PROFILE -> {
-                        ProfileScreen(
-                            authManager = authManager,
-                            viewModel = chatViewModel,
-                            onOpenAuth = { showAuthDialog = true },
-                            onNavigateToChat = { currentTab = AppNavTab.AI_CHAT }
-                        )
+                        if (showApplianceManuals) {
+                            ApplianceManualsScreen(
+                                viewModel = chatViewModel,
+                                onBack = { showApplianceManuals = false },
+                                onNavigateAiChat = {
+                                    showApplianceManuals = false
+                                    currentTab = AppNavTab.AI_CHAT
+                                }
+                            )
+                        } else {
+                            ProfileScreen(
+                                authManager = authManager,
+                                viewModel = chatViewModel,
+                                onOpenAuth = { showAuthDialog = true },
+                                onNavigateHome = { currentTab = AppNavTab.HOME },
+                                onNavigateAiChat = { currentTab = AppNavTab.AI_CHAT },
+                                onNavigateMarket = { currentTab = AppNavTab.MARKET },
+                                onNavigateArCore = { currentTab = AppNavTab.AR_CORE },
+                                onNavigateProfile = { currentTab = AppNavTab.PROFILE },
+                                onOpenApplianceManuals = { showApplianceManuals = true }
+                            )
+                        }
                     }
                     AppNavTab.MARKET, AppNavTab.AR_CORE -> {
                         NotImplementedScreen(
@@ -209,7 +226,10 @@ fun HoDoWoApp(
             // Bottom Navigation Bar matching HTML mockup
             BottomNavBar(
                 currentTab = currentTab,
-                onTabSelected = { currentTab = it }
+                onTabSelected = {
+                    showApplianceManuals = false
+                    currentTab = it
+                }
             )
         }
     }
@@ -363,213 +383,6 @@ private fun NotImplementedScreen(
             shape = RoundedCornerShape(12.dp)
         ) {
             Text("Go to AI Chat")
-        }
-    }
-}
-
-/**
- * Profile and Bookmarked Manuals screen.
- */
-@Composable
-private fun ProfileScreen(
-    authManager: AuthManager,
-    viewModel: ChatViewModel,
-    onOpenAuth: () -> Unit,
-    onNavigateToChat: () -> Unit
-) {
-    val currentUser by authManager.currentUser.collectAsState()
-    val state by viewModel.uiState.collectAsState()
-    var viewerUrl by remember { mutableStateOf<String?>(null) }
-
-    viewerUrl?.let { url ->
-        FullscreenImageViewer(url = url, onDismiss = { viewerUrl = null })
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "My Profile & Bookmarks",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(vertical = 12.dp)
-        )
-
-        // User Account Card
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = Primary,
-                    modifier = Modifier.size(50.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(14.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = if (currentUser != null && !authManager.isAnonymous) currentUser?.email ?: "User"
-                        else "Guest User",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = if (currentUser != null && !authManager.isAnonymous) "Signed in with Firebase"
-                        else "Tap to sign in or create account",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                OutlinedButton(
-                    onClick = onOpenAuth,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(if (currentUser != null && !authManager.isAnonymous) "Manage" else "Sign In")
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Bookmarked Manuals Section
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Saved Manual Guides",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "${state.bookmarkedGuides.size} saved",
-                style = MaterialTheme.typography.labelMedium,
-                color = Primary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (state.bookmarkedGuides.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.Bookmark,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "No bookmarked manuals yet.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Tap the bookmark icon on any AI manual guide in chat to save it here.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = onNavigateToChat,
-                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Start a Chat")
-                    }
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.weight(1f),
-                // Extra space at the bottom, so the "New chat" button never covers a card.
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 88.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(state.bookmarkedGuides) { guide ->
-                    BookmarkedGuideCard(guide = guide, onImageClick = { viewerUrl = it })
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BookmarkedGuideCard(guide: ManualGuide, onImageClick: (String) -> Unit) {
-    Card(
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Text(
-                text = guide.applianceName.uppercase(java.util.Locale.getDefault()),
-                style = MaterialTheme.typography.labelSmall,
-                color = Primary,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = guide.issueTitle,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = guide.overview,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2
-            )
-
-            guide.imageUrl?.let { url ->
-                Spacer(modifier = Modifier.height(8.dp))
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageData(url))
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = null,
-                    // Whole image, full width: the height follows the image's own proportions.
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onImageClick(url) }
-                )
-            }
         }
     }
 }

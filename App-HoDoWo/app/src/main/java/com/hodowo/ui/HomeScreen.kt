@@ -90,7 +90,7 @@ import com.hodowo.viewmodel.ManualsSection
 import com.hodowo.viewmodel.RecentManual
 import com.hodowo.viewmodel.relativeTimeLabel
 
-/** Light orange of the "Market" action (tertiary-fixed in the Stitch mockup). */
+/** Light orange of the "Market" action (tertiary-fixed in the mockup). */
 private val TertiaryFixed = Color(0xFFFFDDB8)
 
 /**
