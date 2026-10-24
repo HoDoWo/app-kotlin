@@ -17,9 +17,15 @@
   "issue": 15,
   "title": "Implement guide rating"
  },
+ "PVTI_lADOFCkyKM4Bl88jzg-8Ihk": {
+  "c": 0.0,
+  "done": true,
+  "issue": 56,
+  "title": "Profile and saved appliances: Firestore schema + UI"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-70zc": {
   "c": 0.0,
-  "done": false,
+  "done": true,
   "issue": 37,
   "title": "Implement Favourites and Recent scanned Page"
  },
@@ -142,12 +148,6 @@
   "done": true,
   "issue": 55,
   "title": "JWT interceptor + token check in backend"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-8Ihk": {
-  "c": 2.0,
-  "done": false,
-  "issue": 56,
-  "title": "Profile and saved appliances: Firestore schema + UI"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-7-CQ": {
   "c": 0.0,
