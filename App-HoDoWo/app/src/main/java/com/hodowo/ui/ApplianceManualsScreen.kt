@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.hodowo.ui.components.AppTopBar
 import com.hodowo.viewmodel.Appliance
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.ManualGuide
@@ -55,8 +56,8 @@ fun ApplianceManualsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Appliance", fontWeight = FontWeight.Bold) },
+            AppTopBar(
+                subtitle = "APPLIANCE",
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
