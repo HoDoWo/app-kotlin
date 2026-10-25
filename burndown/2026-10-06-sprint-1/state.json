@@ -1,7 +1,7 @@
 {
  "PVTI_lADOFCkyKM4Bl88jzhDZwPo": {
   "c": 0.0,
-  "done": true,
+  "done": false,
   "issue": 153,
   "title": "Dummy issue to trigger burndown generation"
  },
