@@ -62,3 +62,4 @@ timestamp,issue,title,type,delta_hours
 2026-10-25T15:05:21+00:00,12,Create Project Documentation - Sprint 1,completado,-2.0
 2026-10-25T11:59:46+00:00,71,Plan Sprint 2,completado,-4.0
 2026-10-25T22:17:14+00:00,153,Dummy issue to trigger burndown generation,estimation,1.0
+2026-10-25T22:18:28+00:00,153,Dummy issue to trigger burndown generation,completed,-1.0
