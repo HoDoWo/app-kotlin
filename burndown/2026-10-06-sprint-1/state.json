@@ -162,8 +162,8 @@
   "title": "Identification result card with confirmation and manual selection"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-7rNU": {
-  "c": 2.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 12,
   "title": "Create Project Documentation - Sprint 1"
  },
@@ -174,8 +174,8 @@
   "title": "Error codes"
  },
  "PVTI_lADOFCkyKM4Bl88jzg_M0PY": {
-  "c": 4.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 71,
   "title": "Plan Sprint 2"
  },

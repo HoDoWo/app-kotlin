@@ -59,3 +59,5 @@ timestamp,issue,title,type,delta_hours
 2026-10-24T08:07:32+00:00,56,Profile and saved appliances: Firestore schema + UI,completado,-2.0
 2026-10-24T11:35:57+00:00,51,Auth and profile,completado,-12.0
 2026-10-24T15:20:58+00:00,15,Implement guide rating,retirado,-4.0
+2026-10-25T15:05:21+00:00,12,Create Project Documentation - Sprint 1,completado,-2.0
+2026-10-25T11:59:46+00:00,71,Plan Sprint 2,completado,-4.0
