@@ -1,31 +1,31 @@
 # Earned Value – HoDoWo
 
-Status on **2026-10-24** (generated 2026-10-24 09:34 UTC).
+Status on **2026-10-25** (generated 2026-10-25 09:50 UTC).
 
 | KPI | Name | Formula | Sprint 1 | Cumulative | Hours (cumulative) |
 |---|---|---|---:|---:|---:|
-| **PV** | Planned Value | % planned × BAC | 2,499 € | 2,499 € | 111.3 h |
-| **EV** | Earned Value | % completed × BAC | 2,582 € | 2,582 € | 115.0 h |
+| **PV** | Planned Value | % planned × BAC | 2,624 € | 2,624 € | 116.9 h |
+| **EV** | Earned Value | % completed × BAC | 2,851 € | 2,851 € | 127.0 h |
 | **AC** | Actual Cost | hours spent × rate + services | 2,458 € | 2,458 € | 118.7 h |
 | **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 2,874 € | 9,879 € | 440.0 h |
-| **EAC** | Estimate at Completion | BAC / CPI | 2,735 € | 9,403 € | 418.8 h |
-| **ETC** | Estimate to Complete | EAC − AC | 278 € | 6,945 € | 300.1 h |
-| **VAC** | Variance at Completion | BAC − EAC | 139 € | 476 € | 21.2 h |
-| **CPI** | Cost Performance Index | EV / AC | 1.05 | 1.05 | – |
-| **SPI** | Schedule Performance Index | EV / PV | 1.03 | 1.03 | – |
+| **EAC** | Estimate at Completion | BAC / CPI | 2,477 € | 8,514 € | 379.2 h |
+| **ETC** | Estimate to Complete | EAC − AC | 19 € | 6,057 € | 260.5 h |
+| **VAC** | Variance at Completion | BAC − EAC | 397 € | 1,365 € | 60.8 h |
+| **CPI** | Cost Performance Index | EV / AC | 1.16 | 1.16 | – |
+| **SPI** | Schedule Performance Index | EV / PV | 1.09 | 1.09 | – |
 
 ## Reading
 
-- CPI 1.05: under budget (the completed work cost less than planned)
-- SPI 1.03: ahead of or on schedule
-- VAC 476 €: saving money
-- Sprint 1: budget 2,874 € (its share of the BAC), EAC 2,735 € with the current CPI, so VAC 139 € (saving money).
+- CPI 1.16: under budget (the completed work cost less than planned)
+- SPI 1.09: ahead of or on schedule
+- VAC 1,365 €: saving money
+- Sprint 1: budget 2,874 € (its share of the BAC), EAC 2,477 € with the current CPI, so VAC 397 € (saving money).
 
 ## Inputs
 
 - BAC: 9,879 € (total cost estimated in Sprint 0), 440 h planned for the whole project.
-- % planned: 111.3 h of the Sprint 0 baseline by 2026-10-24 → 25.3%.
-- % completed: 115.0 h estimated on the items in Done → 26.1%.
+- % planned: 116.9 h of the Sprint 0 baseline by 2026-10-25 → 26.6%.
+- % completed: 127.0 h estimated on the items in Done → 28.9%.
 - AC: 118.7 h spent × 20 €/h + 84 € of services.
 - Hypothetical costs: the team uses free tiers and pays nothing. Each service counts with the price planned in Sprint 0 from the date it is used.
 - Not counted (outside Sprint 1, Sprint 2, Sprint 3): 14 items, 43 h estimated, 29 h spent.
@@ -46,11 +46,9 @@ Status on **2026-10-24** (generated 2026-10-24 09:34 UTC).
 
 ## Sprint 1 (2026-10-06 → 2026-10-27)
 
-- Items: 43, estimated 137.0 h, completed 115.0 h, spent 118.7 h.
+- Items: 42, estimated 133.0 h, completed 127.0 h, spent 118.7 h.
 - Open items:
   - #12 Create Project Documentation - Sprint 1 – In Progress (2 h estimated, 0 h spent)
-  - #15 Implement guide rating – In Progress (4 h estimated, 0 h spent)
   - #71 Plan Sprint 2 – In Progress (4 h estimated, 0 h spent)
-  - #51 Auth and profile – Todo (12 h estimated, 0 h spent)
 
 ![PV, EV and AC over time](ev.svg)
