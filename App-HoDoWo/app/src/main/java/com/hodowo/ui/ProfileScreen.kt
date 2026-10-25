@@ -27,6 +27,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.hodowo.data.AuthManager
+import com.hodowo.ui.components.AppTopBar
+import com.hodowo.ui.components.NotificationIconButton
+import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.ManualGuide
 import java.text.SimpleDateFormat
@@ -149,33 +152,24 @@ fun ProfileScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Surface(
-                            modifier = Modifier.size(40.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerLow
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.Build, "Howdowo Logo", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-                            }
-                        }
-                        Column {
-                            Text("Howdowo", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                            Text("PROFILE", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                },
+            AppTopBar(
+                subtitle = "PROFILE",
                 actions = {
-                    IconButton(onClick = { Toast.makeText(context, "No new notifications", Toast.LENGTH_SHORT).show() }) {
-                        Icon(Icons.Default.Notifications, "Notifications", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    IconButton(onClick = { editNameInput = defaultName; showEditProfileDialog = true }) {
-                        ProfileAvatar(name = defaultName, size = 32, photoUrl = photoUrl)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f))
+                    NotificationIconButton(
+                        onClick = {
+                            Toast.makeText(context, "No new notifications", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                    ProfileAvatar(
+                        name = defaultName,
+                        size = 34,
+                        photoUrl = photoUrl,
+                        onClick = {
+                            editNameInput = defaultName
+                            showEditProfileDialog = true
+                        }
+                    )
+                }
             )
         }
     ) { innerPadding ->
@@ -590,39 +584,6 @@ private data class MarketListingData(
     val isPrimaryInquiries: Boolean,
     val icon: ImageVector
 )
-
-/** Avatar that shows the uploaded photo, or the first letter of the name as fallback. */
-@Composable
-fun ProfileAvatar(
-    name: String,
-    modifier: Modifier = Modifier,
-    size: Int = 40,
-    photoUrl: String? = null
-) {
-    Surface(
-        modifier = modifier.size(size.dp),
-        shape = CircleShape,
-        color = MaterialTheme.colorScheme.primaryContainer
-    ) {
-        if (!photoUrl.isNullOrBlank()) {
-            AsyncImage(
-                model = photoUrl,
-                contentDescription = "Profile photo",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            Box(contentAlignment = Alignment.Center) {
-                Text(
-                    text = name.take(1).uppercase(),
-                    style = if (size > 40) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun ApplianceCard(

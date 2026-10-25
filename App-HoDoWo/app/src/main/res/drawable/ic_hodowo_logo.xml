@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Purple rounded-square background -->
+    <path
+        android:fillColor="#534AB7"
+        android:pathData="M20,0H88A20,20 0 0 1 108,20V88A20,20 0 0 1 88,108H20A20,20 0 0 1 0,88V20A20,20 0 0 1 20,0Z" />
+
+    <!-- White card -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M27,17H81A10,10 0 0 1 91,27V81A10,10 0 0 1 81,91H27A10,10 0 0 1 17,81V27A10,10 0 0 1 27,17Z" />
+
+    <!-- Two status dots -->
+    <path
+        android:fillColor="#534AB7"
+        android:pathData="M30.2,28m-3.9,0a3.9,3.9 0 1,0 7.8,0a3.9,3.9 0 1,0 -7.8,0" />
+    <path
+        android:fillColor="#534AB7"
+        android:pathData="M43.2,28m-3.9,0a3.9,3.9 0 1,0 7.8,0a3.9,3.9 0 1,0 -7.8,0" />
+
+    <!-- Purple lens circle -->
+    <path
+        android:fillColor="#534AB7"
+        android:pathData="M54,62.5m-21.5,0a21.5,21.5 0 1,0 43,0a21.5,21.5 0 1,0 -43,0" />
+
+    <!-- Golden sparkle -->
+    <path
+        android:fillColor="#FAC774"
+        android:pathData="M54,51Q55.2,61 65.5,62.5Q55.2,64 54,74Q52.8,64 42.5,62.5Q52.8,61 54,51Z" />
+</vector>
