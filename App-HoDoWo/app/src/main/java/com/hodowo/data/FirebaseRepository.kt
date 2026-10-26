@@ -1,14 +1,19 @@
 package com.hodowo.data
 
+import android.net.Uri
 import android.util.Log
 import com.google.android.gms.tasks.Task
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.storage.FirebaseStorage
 import com.hodowo.viewmodel.Appliance
 import com.hodowo.viewmodel.FeedbackReport
 import com.hodowo.viewmodel.ManualGuide
 import com.hodowo.viewmodel.ManualStep
 import com.hodowo.viewmodel.Message
+import com.hodowo.viewmodel.UserAppliance
+import com.hodowo.viewmodel.UserProfile
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -23,11 +28,12 @@ class FirebaseRepository(
     /**
      * Saves an AI manual guide response under the user's collection.
      */
-    suspend fun saveManualGuide(userId: String, messageId: Long, guide: ManualGuide) {
+    suspend fun saveManualGuide(userId: String, messageId: Long, guide: ManualGuide, applianceId: String? = null) {
         try {
             val data = hashMapOf(
                 "messageId" to messageId,
                 "manualId" to (guide.manualId ?: ""),
+                "applianceId" to (applianceId ?: ""),
                 "applianceName" to guide.applianceName,
                 "issueTitle" to guide.issueTitle,
                 "overview" to guide.overview,
@@ -101,6 +107,26 @@ class FirebaseRepository(
             Log.d(TAG, "Removed bookmark $messageId for user $userId")
         } catch (e: Exception) {
             Log.w(TAG, "Failed to remove bookmark: ${e.message}")
+        }
+    }
+
+    /**
+     * Removes a bookmark by manual ID (e.g. from Profile screen).
+     */
+    suspend fun removeBookmarkByManualId(userId: String, manualId: String) {
+        try {
+            val snapshot = firestore.collection("users")
+                .document(userId)
+                .collection("bookmarks")
+                .whereEqualTo("manualId", manualId)
+                .get()
+                .await()
+            for (doc in snapshot.documents) {
+                doc.reference.delete().await()
+            }
+            Log.d(TAG, "Removed bookmark by manualId $manualId for user $userId")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to remove bookmark by manualId: ${e.message}")
         }
     }
 
@@ -221,6 +247,230 @@ class FirebaseRepository(
         } catch (e: Exception) {
             Log.w(TAG, "Failed to persist chat messages to Firebase: ${e.message}")
         }
+    }
+
+    /**
+     * Saves or updates the user profile in Firestore under users/{userId}.
+     */
+    suspend fun saveUserProfile(profile: UserProfile) {
+        try {
+            val data = hashMapOf(
+                "uid" to profile.uid,
+                "displayName" to profile.displayName,
+                "email" to profile.email,
+                "photoUrl" to (profile.photoUrl ?: ""),
+                "memberSince" to profile.memberSince,
+                "updatedAt" to System.currentTimeMillis()
+            )
+            firestore.collection("users")
+                .document(profile.uid)
+                .set(data, SetOptions.merge())
+                .await()
+            Log.d(TAG, "Saved profile for user ${profile.uid}")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to save user profile: ${e.message}")
+        }
+    }
+
+    /**
+     * Retrieves the user profile from Firestore under users/{userId}.
+     */
+    suspend fun getUserProfile(userId: String): UserProfile? {
+        return try {
+            val doc = firestore.collection("users")
+                .document(userId)
+                .get()
+                .await()
+            if (!doc.exists()) return null
+            UserProfile(
+                uid = doc.getString("uid") ?: userId,
+                displayName = doc.getString("displayName") ?: "",
+                email = doc.getString("email") ?: "",
+                photoUrl = doc.getString("photoUrl"),
+                memberSince = doc.getLong("memberSince") ?: System.currentTimeMillis()
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get user profile: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * Saves an appliance registered by the user under users/{userId}/appliances/{applianceId}.
+     */
+    suspend fun saveAppliance(userId: String, appliance: UserAppliance) {
+        try {
+            val data = hashMapOf(
+                "id" to appliance.id,
+                "name" to appliance.name,
+                "brand" to (appliance.brand ?: ""),
+                "model" to (appliance.model ?: ""),
+                "category" to (appliance.category ?: ""),
+                "manualCount" to appliance.manualCount,
+                "subtitle" to (appliance.subtitle ?: ""),
+                "createdAt" to appliance.createdAt
+            )
+            firestore.collection("users")
+                .document(userId)
+                .collection("appliances")
+                .document(appliance.id)
+                .set(data, SetOptions.merge())
+                .await()
+            Log.d(TAG, "Saved appliance ${appliance.name} for user $userId")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to save appliance: ${e.message}")
+        }
+    }
+
+    /**
+     * Fetches all registered appliances for the user under users/{userId}/appliances.
+     */
+    suspend fun getAppliances(userId: String): List<UserAppliance> {
+        return try {
+            val snapshot = firestore.collection("users")
+                .document(userId)
+                .collection("appliances")
+                .get()
+                .await()
+            snapshot.documents.mapNotNull { doc ->
+                UserAppliance(
+                    id = doc.getString("id") ?: doc.id,
+                    name = doc.getString("name") ?: "Appliance",
+                    brand = doc.getString("brand")?.takeIf { it.isNotBlank() },
+                    model = doc.getString("model")?.takeIf { it.isNotBlank() },
+                    category = doc.getString("category")?.takeIf { it.isNotBlank() },
+                    manualCount = doc.getLong("manualCount")?.toInt() ?: 1,
+                    subtitle = doc.getString("subtitle") ?: "Registered appliance",
+                    createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to get appliances: ${e.message}")
+            emptyList()
+        }
+    }
+
+    /**
+     * Deletes an appliance from users/{userId}/appliances/{applianceId}.
+     */
+    suspend fun deleteAppliance(userId: String, applianceId: String) {
+        try {
+            firestore.collection("users")
+                .document(userId)
+                .collection("appliances")
+                .document(applianceId)
+                .delete()
+                .await()
+            Log.d(TAG, "Deleted appliance $applianceId for user $userId")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to delete appliance: ${e.message}")
+        }
+    }
+
+    /**
+     * Creates users/{uid} ONLY if it doesn't exist, so a returning user never gets
+     * their photo / name / memberSince overwritten on login.
+     */
+    suspend fun ensureUserProfile(uid: String, email: String, displayName: String): UserProfile {
+        return try {
+            getUserProfile(uid) ?: UserProfile(
+                uid = uid,
+                displayName = displayName,
+                email = email,
+                photoUrl = null,
+                memberSince = System.currentTimeMillis()
+            ).also { saveUserProfile(it) }
+        } catch (e: Exception) {
+            Log.w(TAG, "ensureUserProfile failed: ${e.message}")
+            UserProfile(uid, displayName, email, null, System.currentTimeMillis())
+        }
+    }
+
+    /** Partial update of users/{uid}: only the fields you pass are written. */
+    suspend fun updateProfileFields(userId: String, displayName: String? = null, photoUrl: String? = null): Boolean {
+        return try {
+            val data = hashMapOf<String, Any>("updatedAt" to System.currentTimeMillis())
+            displayName?.let { data["displayName"] = it }
+            photoUrl?.let { data["photoUrl"] = it }
+            firestore.collection("users").document(userId).set(data, SetOptions.merge()).await()
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to update profile: ${e.message}")
+            false
+        }
+    }
+
+    /** Uploads the picked image to Storage (users/{uid}/profile.jpg) and returns its download URL, or null. */
+    suspend fun uploadProfilePhoto(userId: String, uri: Uri): String? {
+        return try {
+            val ref = FirebaseStorage.getInstance().reference.child("users/$userId/profile.jpg")
+            ref.putFile(uri).await()
+            ref.downloadUrl.await().toString()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to upload profile photo: ${e.message}")
+            null
+        }
+    }
+
+    /**
+     * All guides related to one appliance. Looks in users/{uid}/manuals and /bookmarks and matches by
+     * stored applianceId (new saves) or by fuzzy appliance name / model (existing data).
+     */
+    suspend fun getManualsForAppliance(
+        userId: String,
+        applianceId: String,
+        name: String,
+        brand: String?,
+        model: String?
+    ): List<ManualGuide> {
+        return try {
+            val docs = listOf("manuals", "bookmarks").flatMap { col ->
+                firestore.collection("users").document(userId).collection(col).get().await().documents
+            }
+            docs.filter { doc ->
+                val storedId = doc.getString("applianceId")
+                (!storedId.isNullOrBlank() && storedId == applianceId) ||
+                        sameAppliance(doc.getString("applianceName").orEmpty(), name, brand, model)
+            }
+                .sortedByDescending { it.getLong("timestamp") ?: 0L }
+                .map { it.toManualGuide() }
+                .distinctBy { g -> g.manualId?.takeIf { it.isNotBlank() } ?: (g.applianceName + g.issueTitle) }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to fetch manuals for appliance: ${e.message}")
+            emptyList()
+        }
+    }
+
+    private fun norm(s: String?) = s.orEmpty().lowercase().replace(Regex("[^a-z0-9]"), "")
+
+    private fun sameAppliance(manualName: String, name: String, brand: String?, model: String?): Boolean {
+        val m = norm(manualName)
+        if (m.isEmpty()) return false
+        val n = norm(name)
+        val full = norm("$brand $name")
+        val mod = norm(model)
+        return m == n || m == full ||
+                (minOf(m.length, n.length) >= 4 && (m.contains(n) || n.contains(m))) ||
+                (mod.length >= 4 && m.contains(mod))
+    }
+
+    private fun DocumentSnapshot.toManualGuide(): ManualGuide {
+        val stepsList = (get("steps") as? List<*>)?.mapNotNull { item ->
+            val map = item as? Map<*, *> ?: return@mapNotNull null
+            ManualStep(
+                number = (map["number"] as? Number)?.toInt() ?: 1,
+                title = map["title"] as? String ?: "",
+                description = map["description"] as? String ?: ""
+            )
+        } ?: emptyList()
+        return ManualGuide(
+            applianceName = getString("applianceName") ?: "Appliance",
+            issueTitle = getString("issueTitle") ?: "Repair Guide",
+            overview = getString("overview") ?: "",
+            steps = stepsList,
+            imageUrl = getString("imageUrl"),
+            manualId = getString("manualId")
+        )
     }
 }
 

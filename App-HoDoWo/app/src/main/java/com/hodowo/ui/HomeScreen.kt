@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -29,9 +28,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DocumentScanner
 import androidx.compose.material.icons.outlined.Kitchen
@@ -74,6 +70,9 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.hodowo.ui.components.AppTopBar
+import com.hodowo.ui.components.NotificationIconButton
+import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.ui.theme.OnSurfaceVariant
 import com.hodowo.ui.theme.OutlineVariant
 import com.hodowo.ui.theme.Primary
@@ -90,7 +89,7 @@ import com.hodowo.viewmodel.ManualsSection
 import com.hodowo.viewmodel.RecentManual
 import com.hodowo.viewmodel.relativeTimeLabel
 
-/** Light orange of the "Market" action (tertiary-fixed in the Stitch mockup). */
+/** Light orange of the "Market" action (tertiary-fixed in the mockup). */
 private val TertiaryFixed = Color(0xFFFFDDB8)
 
 /**
@@ -133,7 +132,17 @@ fun HomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
     ) {
-        HomeHeader(onOpenProfile = onOpenProfile)
+        AppTopBar(
+            subtitle = "HOME",
+            actions = {
+                NotificationIconButton(
+                    onClick = {
+                        Toast.makeText(context, "No notifications yet", Toast.LENGTH_SHORT).show()
+                    }
+                )
+                ProfileAvatar(name = "", size = 34, onClick = onOpenProfile)
+            }
+        )
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -281,89 +290,6 @@ private fun SwitchOption(label: String, selected: Boolean, onClick: () -> Unit) 
             color = if (selected) Color.White else OnSurfaceVariant,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
-    }
-}
-
-@Composable
-private fun HomeHeader(onOpenProfile: () -> Unit) {
-    val context = LocalContext.current
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-        shadowElevation = 1.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .height(60.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Surface(color = Primary, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(38.dp)) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Psychology,
-                            contentDescription = "Howdowo Logo",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-                Column {
-                    Text(
-                        text = "Howdowo",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Primary,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.2).sp
-                    )
-                    Text(
-                        text = "HOME",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = OnSurfaceVariant,
-                        letterSpacing = 1.2.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = { Toast.makeText(context, "No notifications yet", Toast.LENGTH_SHORT).show() }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Notifications",
-                        tint = OnSurfaceVariant,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Surface(
-                    shape = CircleShape,
-                    color = SecondaryContainer,
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onOpenProfile)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Profile",
-                            tint = Primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-        }
     }
 }
 

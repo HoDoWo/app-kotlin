@@ -45,7 +45,8 @@ object AiServiceProvider {
                     aiService = create(context),
                     firebaseRepository = firebaseRepository,
                     authManager = authManager,
-                    chatHistory = FileChatHistoryStore(File(context.filesDir, "chat_history"))
+                    chatHistory = FileChatHistoryStore(File(context.filesDir, "chat_history")),
+                    profilePhotoStore = ProfilePhotoStore(context.applicationContext)
                 )
             }
         }

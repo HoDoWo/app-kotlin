@@ -5,11 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hodowo.data.AuthManager
 import com.hodowo.data.FirebaseRepository
+import com.hodowo.data.ProfilePhotoStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.update
@@ -106,6 +110,44 @@ data class ChatSession(
 )
 
 /**
+ * User registered / owned appliance entity stored in Firestore under users/{userId}/appliances/{applianceId}.
+ */
+data class UserAppliance(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val name: String,
+    val brand: String? = null,
+    val model: String? = null,
+    val category: String? = null,
+    val manualCount: Int = 1,
+    val subtitle: String? = null,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * User profile entity stored in Firestore under users/{userId}.
+ */
+data class UserProfile(
+    val uid: String,
+    val displayName: String,
+    val email: String,
+    val photoUrl: String? = null,
+    val memberSince: Long = System.currentTimeMillis()
+)
+
+/**
+ * State for the appliance manuals screen: one appliance plus every guide related to it.
+ */
+data class ApplianceManualsUiState(
+    val id: String,
+    val name: String,
+    val brand: String?,
+    val model: String?,
+    val isRegistered: Boolean,
+    val manuals: List<ManualGuide> = emptyList(),
+    val loading: Boolean = true
+)
+
+/**
  * Agent streaming events.
  */
 sealed class ChatStreamEvent {
@@ -130,6 +172,8 @@ data class ChatUiState(
     val currentChatId: String = "session_${System.currentTimeMillis()}",
     val chatSessions: List<ChatSession> = emptyList(),
     val bookmarkedGuides: List<ManualGuide> = emptyList(),
+    val userAppliances: List<UserAppliance> = emptyList(),
+    val userProfile: UserProfile? = null,
     val selectedImageUri: Uri? = null,
 
     /**
@@ -411,11 +455,22 @@ class ChatViewModel(
     val panelCropper: PanelCropper = PanelCropper.None,
     /** Keeps the chats on the phone for the history menu; null keeps them only in memory. */
     private val chatHistory: ChatHistoryStore? = null,
+    /** Keeps the profile photo on the phone when Firebase Storage is unavailable. */
+    private val profilePhotoStore: ProfilePhotoStore? = null,
     private val clock: () -> Long = System::currentTimeMillis
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
+
+    private val _isUploadingPhoto = MutableStateFlow(false)
+    val isUploadingPhoto: StateFlow<Boolean> = _isUploadingPhoto.asStateFlow()
+
+    private val _userMessages = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val userMessages: SharedFlow<String> = _userMessages.asSharedFlow()
+
+    private val _applianceManuals = MutableStateFlow<ApplianceManualsUiState?>(null)
+    val applianceManuals: StateFlow<ApplianceManualsUiState?> = _applianceManuals.asStateFlow()
 
     private var messageId = 0L
     private var lastImageUri: Uri? = null
@@ -433,9 +488,11 @@ class ChatViewModel(
     private var historyUser: String = userId
 
     init {
-        // Load initial bookmarked manuals from Firebase if user is logged in
+        // Load initial bookmarked manuals, appliances & user profile from Firebase if user is logged in
         refreshBookmarks()
         refreshChatHistory()
+        refreshAppliances()
+        refreshUserProfile()
     }
 
     /** Reloads the chat history of the current user (e.g. after signing in). */
@@ -593,6 +650,189 @@ class ChatViewModel(
             val list = firebaseRepository?.getBookmarks(userId) ?: emptyList()
             _uiState.value = _uiState.value.copy(bookmarkedGuides = list)
         }
+    }
+
+    fun refreshAppliances() {
+        val userId = authManager?.currentUserId ?: return
+        viewModelScope.launch {
+            val list = firebaseRepository?.getAppliances(userId) ?: emptyList()
+            _uiState.value = _uiState.value.copy(userAppliances = list)
+        }
+    }
+
+    fun refreshUserProfile() {
+        val userId = authManager?.currentUserId ?: return
+        viewModelScope.launch {
+            val profile = firebaseRepository?.getUserProfile(userId)
+            val localPhoto = profilePhotoStore?.currentUrl()
+            if (profile != null) {
+                // The phone keeps the photo when Firebase Storage is not configured.
+                val withPhoto = if (profile.photoUrl.isNullOrBlank() && localPhoto != null) {
+                    profile.copy(photoUrl = localPhoto)
+                } else {
+                    profile
+                }
+                _uiState.value = _uiState.value.copy(userProfile = withPhoto)
+            } else if (localPhoto != null) {
+                _uiState.value = _uiState.value.copy(
+                    userProfile = UserProfile(userId, "", "", localPhoto)
+                )
+            }
+        }
+    }
+
+    fun addAppliance(
+        name: String,
+        brand: String? = null,
+        model: String? = null,
+        category: String? = null,
+        room: String? = null,
+        subtitle: String? = null
+    ) {
+        val cleanName = name.trim()
+        if (cleanName.isBlank()) return
+        val userId = authManager?.currentUserId ?: "guest"
+        val appliance = UserAppliance(
+            name = cleanName,
+            brand = brand?.trim()?.ifEmpty { null },
+            model = model?.trim()?.ifEmpty { null },
+            category = category?.trim()?.ifEmpty { null },
+            subtitle = subtitle?.trim() ?: listOfNotNull(room?.trim()?.ifEmpty { null }, "Registered appliance").joinToString(" • "),
+            manualCount = 1
+        )
+        _uiState.value = _uiState.value.copy(
+            userAppliances = _uiState.value.userAppliances + appliance
+        )
+        viewModelScope.launch {
+            firebaseRepository?.saveAppliance(userId, appliance)
+            refreshAppliances()
+        }
+    }
+
+    fun deleteAppliance(applianceId: String) {
+        val userId = authManager?.currentUserId ?: "guest"
+        _uiState.value = _uiState.value.copy(
+            userAppliances = _uiState.value.userAppliances.filterNot { it.id == applianceId }
+        )
+        viewModelScope.launch {
+            firebaseRepository?.deleteAppliance(userId, applianceId)
+            refreshAppliances()
+        }
+    }
+
+    fun updateUserDisplayName(displayName: String) {
+        val cleanName = displayName.trim()
+        if (cleanName.isBlank()) return
+        val uid = currentUid() ?: return
+        // Update UI immediately, preserving the current photo / memberSince.
+        _uiState.update { state ->
+            state.copy(
+                userProfile = state.userProfile?.copy(displayName = cleanName)
+                    ?: UserProfile(uid, cleanName, authManager?.currentUser?.value?.email.orEmpty())
+            )
+        }
+        viewModelScope.launch {
+            try {
+                authManager?.updateProfile(cleanName)
+            } catch (_: Exception) {}
+            if (firebaseRepository?.updateProfileFields(uid, displayName = cleanName) != true) {
+                _userMessages.emit("Couldn't save your name. Check your connection.")
+            }
+        }
+    }
+
+    /** Uploads the picked image, stores its URL in users/{uid}.photoUrl and refreshes the UI. */
+    fun updateProfilePhoto(uri: Uri) {
+        val uid = currentUid() ?: return
+        viewModelScope.launch {
+            _isUploadingPhoto.value = true
+            val cloudUrl = firebaseRepository?.uploadProfilePhoto(uid, uri)
+            val savedUrl = if (
+                cloudUrl != null &&
+                firebaseRepository?.updateProfileFields(uid, photoUrl = cloudUrl) == true
+            ) {
+                cloudUrl
+            } else {
+                // Firebase Storage is not configured: keep the photo on this phone.
+                profilePhotoStore?.save(uri)
+            }
+            if (savedUrl != null) {
+                _uiState.update { state ->
+                    state.copy(
+                        userProfile = state.userProfile?.copy(photoUrl = savedUrl)
+                            ?: UserProfile(uid, "", "", savedUrl)
+                    )
+                }
+                _userMessages.emit(
+                    if (cloudUrl != null) "Profile photo updated"
+                    else "Profile photo saved on this device"
+                )
+            } else {
+                _userMessages.emit("Couldn't upload the photo. Try again.")
+            }
+            _isUploadingPhoto.value = false
+        }
+    }
+
+    /** Called when an owned appliance is tapped; the screen then navigates to ApplianceManualsScreen. */
+    fun openApplianceManuals(id: String, name: String, brand: String?, model: String?, isRegistered: Boolean) {
+        _applianceManuals.value = ApplianceManualsUiState(id, name, brand, model, isRegistered)
+        viewModelScope.launch {
+            val uid = currentUid()
+            val manuals = if (uid == null) emptyList()
+            else firebaseRepository?.getManualsForAppliance(uid, id, name, brand, model) ?: emptyList()
+            _applianceManuals.update { cur ->
+                if (cur?.id == id) cur.copy(manuals = manuals, loading = false) else cur
+            }
+        }
+    }
+
+    fun updateAppliance(id: String, name: String, brand: String, model: String) {
+        val uid = currentUid() ?: return
+        val existing = _uiState.value.userAppliances.firstOrNull { it.id == id } ?: return
+        val updated = existing.copy(
+            name = name,
+            brand = brand.ifBlank { null },
+            model = model.ifBlank { null }
+        )
+        viewModelScope.launch {
+            firebaseRepository?.saveAppliance(uid, updated)
+            _uiState.update { it.copy(userAppliances = firebaseRepository?.getAppliances(uid) ?: it.userAppliances) }
+            openApplianceManuals(id, updated.name, updated.brand, updated.model, true) // reload screen
+        }
+    }
+
+    /** Signed-in (or anonymous) Firebase uid, or null when there is no user yet. */
+    private fun currentUid(): String? = authManager?.currentUser?.value?.uid
+
+    fun removeBookmark(guide: ManualGuide) {
+        val userId = authManager?.currentUserId ?: "guest"
+        val manualId = guide.manualId
+        _uiState.value = _uiState.value.copy(
+            bookmarkedGuides = _uiState.value.bookmarkedGuides.filterNot {
+                (manualId != null && it.manualId == manualId) ||
+                (it.issueTitle == guide.issueTitle && it.applianceName == guide.applianceName)
+            },
+            messages = _uiState.value.messages.map { msg ->
+                if ((manualId != null && msg.manualGuide?.manualId == manualId) ||
+                    (msg.manualGuide?.issueTitle == guide.issueTitle && msg.manualGuide?.applianceName == guide.applianceName)) {
+                    msg.copy(isBookmarked = false)
+                } else msg
+            }
+        )
+        viewModelScope.launch {
+            if (manualId != null) {
+                firebaseRepository?.removeBookmarkByManualId(userId, manualId)
+                try {
+                    aiService.setBookmark(manualId, false)
+                } catch (_: Exception) {}
+            }
+            refreshBookmarks()
+        }
+    }
+
+    fun selectApplianceForChat(appliance: Appliance) {
+        _uiState.value = _uiState.value.copy(appliance = appliance)
     }
 
     /**
