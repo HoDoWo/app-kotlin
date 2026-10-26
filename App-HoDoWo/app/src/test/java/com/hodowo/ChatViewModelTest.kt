@@ -11,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -52,6 +53,7 @@ class ChatViewModelTest {
         service = FakeAiService()
         cropper = FakePanelCropper()
         authManager = mockk(relaxed = true)
+        every { authManager.currentUser } returns MutableStateFlow(null)
         firebaseRepository = mockk(relaxed = true)
 
         // Correct parameter order matching ChatViewModel constructor

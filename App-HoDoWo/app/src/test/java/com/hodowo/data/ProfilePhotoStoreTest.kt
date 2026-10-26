@@ -10,7 +10,6 @@ import io.mockk.unmockkStatic
 import org.junit.After
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Rule
@@ -27,12 +26,12 @@ class ProfilePhotoStoreTest {
     private val contentResolver: ContentResolver = mockk(relaxed = true)
     private val context: Context = mockk(relaxed = true)
     private val source: Uri = mockk()
-    private lateinit var photo: File
+    private lateinit var dir: File
 
     @Before
     fun setUp() {
         every { context.contentResolver } returns contentResolver
-        photo = File(tempFolder.root, "photos/profile_photo.jpg")
+        dir = File(tempFolder.root, "photos")
 
         // Uri.fromFile is an Android stub in unit tests: return a fake file:// URL.
         mockkStatic(Uri::class)
@@ -47,62 +46,71 @@ class ProfilePhotoStoreTest {
         unmockkStatic(Uri::class)
     }
 
+    private fun urlOf(name: String) = "file://${File(dir, name).absolutePath}"
+
     @Test
     fun currentUrlIsNullWhenNoPhotoIsSaved() {
-        val store = ProfilePhotoStore(context, photo)
+        val store = ProfilePhotoStore(context, dir)
 
-        assertNull(store.currentUrl())
-    }
-
-    @Test
-    fun currentUrlReturnsFileUrlWhenPhotoExists() {
-        photo.parentFile?.mkdirs()
-        photo.writeBytes(byteArrayOf(1, 2, 3))
-        val store = ProfilePhotoStore(context, photo)
-
-        assertEquals("file://${photo.absolutePath}", store.currentUrl())
+        assertNull(store.currentUrl("u1"))
     }
 
     @Test
     fun saveCopiesThePickedImageAndReturnsItsUrl() {
         val bytes = byteArrayOf(10, 20, 30, 40)
         every { contentResolver.openInputStream(source) } returns ByteArrayInputStream(bytes)
-        val store = ProfilePhotoStore(context, photo)
+        val store = ProfilePhotoStore(context, dir)
 
-        val url = store.save(source)
+        val url = store.save("u1", source)
 
-        assertEquals("file://${photo.absolutePath}", url)
-        assertArrayEquals(bytes, photo.readBytes())
+        assertEquals(urlOf("profile_photo_u1.jpg"), url)
+        assertEquals(url, store.currentUrl("u1"))
+        assertArrayEquals(bytes, File(dir, "profile_photo_u1.jpg").readBytes())
+    }
+
+    @Test
+    fun eachUserHasTheirOwnPhoto() {
+        every { contentResolver.openInputStream(source) } returns ByteArrayInputStream(byteArrayOf(1))
+        val store = ProfilePhotoStore(context, dir)
+
+        store.save("u1", source)
+
+        assertNull(store.currentUrl("u2"))
+    }
+
+    @Test
+    fun unsafeCharactersAreRemovedFromTheFileName() {
+        every { contentResolver.openInputStream(source) } returns ByteArrayInputStream(byteArrayOf(1))
+        val store = ProfilePhotoStore(context, dir)
+
+        assertEquals(urlOf("profile_photo_u1_a-b.jpg"), store.save("../u1_a-b", source))
     }
 
     @Test
     fun saveReturnsNullWhenTheImageCannotBeOpened() {
         every { contentResolver.openInputStream(source) } returns null
-        val store = ProfilePhotoStore(context, photo)
+        val store = ProfilePhotoStore(context, dir)
 
-        assertNull(store.save(source))
-        assertFalse(photo.exists())
+        assertNull(store.save("u1", source))
     }
 
     @Test
     fun saveReturnsNullWhenReadingFails() {
         every { contentResolver.openInputStream(source) } throws SecurityException("no permission")
-        val store = ProfilePhotoStore(context, photo)
+        val store = ProfilePhotoStore(context, dir)
 
-        assertNull(store.save(source))
+        assertNull(store.save("u1", source))
     }
 
     @Test
-    fun defaultFileIsInsideTheAppFilesDir() {
+    fun defaultFolderIsTheAppFilesDir() {
         every { context.filesDir } returns tempFolder.root
         every { contentResolver.openInputStream(source) } returns ByteArrayInputStream(byteArrayOf(7))
         val store = ProfilePhotoStore(context)
 
-        store.save(source)
-
         assertEquals(
-            "file://${File(tempFolder.root, "profile_photo.jpg").absolutePath}",
-            store.currentUrl()
+            "file://${File(tempFolder.root, "profile_photo_u1.jpg").absolutePath}",
+            store.save("u1", source)
         )
     }
 }

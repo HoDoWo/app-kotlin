@@ -424,8 +424,12 @@ fun ProfileScreen(
                 Button(
                     enabled = newApplianceName.isNotBlank(),
                     onClick = {
-                        viewModel?.addAppliance(name = newApplianceName.trim(), brand = newApplianceBrand.trim(), room = newApplianceRoom.trim())
-                        Toast.makeText(context, "Appliance registered to your profile!", Toast.LENGTH_SHORT).show()
+                        val saved = viewModel?.addAppliance(name = newApplianceName.trim(), brand = newApplianceBrand.trim(), room = newApplianceRoom.trim()) == true
+                        Toast.makeText(
+                            context,
+                            if (saved) "Appliance registered to your profile!" else "Sign in to keep your appliances",
+                            Toast.LENGTH_SHORT
+                        ).show()
                         showAddApplianceDialog = false
                     }
                 ) { Text("Register") }

@@ -293,10 +293,12 @@ class FirebaseRepositoryProfileTest {
         every { appliances.document("a1") } returns applianceDoc
         every { applianceDoc.set(capture(data), any()) } returns successTask<Void?>(null)
 
-        repository.saveAppliance(
+        val written = repository.saveAppliance(
             "u1",
             UserAppliance(id = "a1", name = "Washer", brand = "Bosch", model = null, createdAt = 5L)
         )
+
+        assertTrue(written)
 
         val saved = data.captured as Map<*, *>
         assertEquals("a1", saved["id"])
@@ -310,16 +312,18 @@ class FirebaseRepositoryProfileTest {
     }
 
     @Test
-    fun saveApplianceIgnoresErrors() = runTest {
+    fun saveApplianceReturnsFalseOnError() = runTest {
         val appliances = subCollection("appliances")
         val applianceDoc = mockk<DocumentReference>(relaxed = true)
         every { appliances.document("a1") } returns applianceDoc
         every { applianceDoc.set(any(), any()) } returns failureTask()
 
-        repository.saveAppliance(
+        val saved = repository.saveAppliance(
             "u1",
             UserAppliance(id = "a1", name = "Washer", model = "X1", category = "Laundry", subtitle = "Kitchen")
         )
+
+        assertFalse(saved)
     }
 
     @Test
@@ -418,10 +422,10 @@ class FirebaseRepositoryProfileTest {
 
         val manualsCollection = subCollection("manuals")
         every { manualsCollection.get() } returns
-            successTask(query(byId, byExactName, other, noName, noId1))
+                successTask(query(byId, byExactName, other, noName, noId1))
         val bookmarksCollection = subCollection("bookmarks")
         every { bookmarksCollection.get() } returns
-            successTask(query(byBrandAndName, byContainedName, byModel, duplicate, noId2))
+                successTask(query(byBrandAndName, byContainedName, byModel, duplicate, noId2))
 
         val guides = repository.getManualsForAppliance("u1", "a1", "Washer", "Bosch", "WAX32")
 

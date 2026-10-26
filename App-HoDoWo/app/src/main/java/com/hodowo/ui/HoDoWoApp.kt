@@ -24,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +68,7 @@ fun HoDoWoApp(
     val context = LocalContext.current
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
+    val chatState by chatViewModel.uiState.collectAsState()
     var showAuthDialog by remember { mutableStateOf(false) }
     var showApplianceManuals by remember { mutableStateOf(false) }
 
@@ -133,7 +135,8 @@ fun HoDoWoApp(
                                 chatViewModel.sendTextMessage(
                                     "I need help with \"${guide.issueTitle}\" on my ${guide.applianceName}."
                                 )
-                            }
+                            },
+                            profilePhotoUrl = chatState.userProfile?.photoUrl
                         )
                     }
                     AppNavTab.AI_CHAT -> {
