@@ -1,9 +1,14 @@
 name: Generate Gantt Comparison Chart
 
 on:
-  workflow_dispatch: # Allows manual trigger from the Actions tab
+  workflow_dispatch:
+    inputs:
+      sprint:
+        description: "Sprint to generate ('all', 'Sprint 1', 'Sprint 2', etc.)"
+        required: false
+        default: "all"
   schedule:
-    - cron: '0 0 * * 1' # Runs every Monday at midnight (optional)
+    - cron: '0 0 * * 1' # Runs every Monday at midnight
 
 jobs:
   build-chart:
@@ -16,6 +21,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          token: ${{ secrets.PROJECT_TOKEN || github.token }}
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -27,9 +33,11 @@ jobs:
 
       - name: Run Gantt Generator Script
         env:
-          # GITHUB_TOKEN cannot read organization Projects: use the same PAT as Burndown
-          GH_TOKEN: ${{ secrets.PROJECT_TOKEN }}
+          GH_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
+          OWNER: HoDoWo
+          PROJECT_NUMBER: 1
           REPOSITORY: ${{ github.repository }}
+          TARGET_SPRINT: ${{ github.event.inputs.sprint || 'all' }}
         run: python scripts/generate_gantt.py
 
       - name: Commit and push updated chart branch
