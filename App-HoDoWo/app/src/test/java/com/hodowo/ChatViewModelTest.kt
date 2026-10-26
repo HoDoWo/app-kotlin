@@ -825,6 +825,149 @@ class ChatViewModelTest {
     }
 
     /** Fake service: no network, results and failures are set by each test. */
+    // ---------- regenerate / edit ----------
+
+    @Test
+    fun regenerateAsksTheSameQuestionAndReplacesTheAnswer() = runTest(dispatcher) {
+        viewModel.sendTextMessage("Why does it leak?")
+        advanceUntilIdle()
+        val questionId = viewModel.uiState.value.messages[0].id
+
+        viewModel.regenerateMessage(questionId)
+        advanceUntilIdle()
+
+        val messages = viewModel.uiState.value.messages
+        assertEquals(2, messages.size)
+        assertEquals("Why does it leak?", messages[0].text)
+        assertEquals("fake answer", messages[1].text)
+        assertEquals(listOf("Why does it leak?", "Why does it leak?"), service.questions)
+        assertFalse(viewModel.uiState.value.isSending)
+    }
+
+    @Test
+    fun regenerateRemovesTheMessagesAfterTheQuestion() = runTest(dispatcher) {
+        viewModel.sendTextMessage("First")
+        advanceUntilIdle()
+        viewModel.sendTextMessage("Second")
+        advanceUntilIdle()
+        val firstId = viewModel.uiState.value.messages[0].id
+
+        viewModel.regenerateMessage(firstId)
+        advanceUntilIdle()
+
+        val messages = viewModel.uiState.value.messages
+        assertEquals(listOf("First", "fake answer"), messages.map { it.text })
+    }
+
+    @Test
+    fun editSendsTheNewTextInsteadOfTheOldQuestion() = runTest(dispatcher) {
+        viewModel.sendTextMessage("How to set 18 minutes?")
+        advanceUntilIdle()
+        val questionId = viewModel.uiState.value.messages[0].id
+
+        viewModel.editMessage(questionId, "  How to set 15 minutes?  ")
+        advanceUntilIdle()
+
+        val messages = viewModel.uiState.value.messages
+        assertEquals(2, messages.size)
+        assertEquals("How to set 15 minutes?", messages[0].text)
+        assertTrue(messages[0].isUser)
+        assertEquals("How to set 15 minutes?", service.questions.last())
+    }
+
+    @Test
+    fun editWithBlankTextChangesNothing() = runTest(dispatcher) {
+        viewModel.sendTextMessage("Question")
+        advanceUntilIdle()
+        val before = viewModel.uiState.value.messages
+
+        viewModel.editMessage(before[0].id, "   ")
+        advanceUntilIdle()
+
+        assertEquals(before, viewModel.uiState.value.messages)
+        assertEquals(1, service.questions.size)
+    }
+
+    @Test
+    fun onlyQuestionsCanBeAskedAgain() = runTest(dispatcher) {
+        viewModel.sendTextMessage("Question")
+        advanceUntilIdle()
+        val before = viewModel.uiState.value.messages
+
+        viewModel.regenerateMessage(before[1].id) // the answer
+        viewModel.regenerateMessage(9_999L) // not in the chat
+        advanceUntilIdle()
+
+        assertEquals(before, viewModel.uiState.value.messages)
+        assertEquals(1, service.questions.size)
+    }
+
+    @Test
+    fun nothingIsAskedAgainWhileAnAnswerArrives() = runTest(dispatcher) {
+        service.stream = flow {
+            delay(1_000)
+            emit("slow answer")
+        }
+        viewModel.sendTextMessage("Question")
+        runCurrent()
+        val before = viewModel.uiState.value.messages
+
+        viewModel.regenerateMessage(before[0].id)
+        viewModel.editMessage(before[0].id, "Other")
+
+        assertEquals(before, viewModel.uiState.value.messages)
+        assertTrue(viewModel.uiState.value.isSending)
+        advanceUntilIdle()
+    }
+
+    @Test
+    fun regeneratingAPhotoAnalyzesItAgain() = runTest(dispatcher) {
+        val photo = mockk<Uri>()
+        viewModel.analyzeImage(photo)
+        advanceUntilIdle()
+        val photoMessageId = viewModel.uiState.value.messages[0].id
+
+        viewModel.regenerateMessage(photoMessageId)
+        advanceUntilIdle()
+
+        val messages = viewModel.uiState.value.messages
+        assertEquals(2, messages.size)
+        assertEquals(photo, messages[0].imageUri)
+        assertEquals(2, service.identifyCount)
+    }
+
+    @Test
+    fun askingAgainKeepsTheQuestionPhotoAndNotThePickedOne() = runTest(dispatcher) {
+        val questionPhoto = mockk<Uri>()
+        val pickedPhoto = mockk<Uri>()
+        viewModel.sendTextMessage("What is this knob?", attachedImageUri = questionPhoto)
+        advanceUntilIdle()
+        viewModel.setSelectedImage(pickedPhoto)
+
+        viewModel.editMessage(viewModel.uiState.value.messages[0].id, "What does this knob do?")
+        advanceUntilIdle()
+
+        val question = viewModel.uiState.value.messages[0]
+        assertEquals("What does this knob do?", question.text)
+        assertEquals(questionPhoto, question.imageUri)
+        // The photo waiting in the input bar stays there for the next message.
+        assertEquals(pickedPhoto, viewModel.uiState.value.selectedImageUri)
+    }
+
+    @Test
+    fun regeneratingATextQuestionWithoutPhotoDoesNotAttachThePickedOne() = runTest(dispatcher) {
+        viewModel.sendTextMessage("Question")
+        advanceUntilIdle()
+        val picked = mockk<Uri>()
+        viewModel.setSelectedImage(picked)
+
+        viewModel.regenerateMessage(viewModel.uiState.value.messages[0].id)
+        advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.messages[0].imageUri)
+        assertEquals(picked, viewModel.uiState.value.selectedImageUri)
+    }
+
     private class FakeAiService : HoDoWoAiService {
 
         var appliance = Appliance("Dishwasher", "Bosch", "X1", 0.5f)
@@ -848,7 +991,12 @@ class ChatViewModelTest {
         var streamEvents: Flow<ChatStreamEvent>? = null
         val sentFeedback = mutableListOf<FeedbackReport>()
 
+        /** Every question the chat asked, in order. */
+        val questions = mutableListOf<String>()
+        var identifyCount = 0
+
         override suspend fun identifyAppliance(uri: Uri): Appliance {
+            identifyCount++
             identifyError?.let { throw it }
             return appliance
         }
@@ -857,6 +1005,7 @@ class ChatViewModelTest {
             question: String,
             appliance: Appliance?
         ): String {
+            questions += question
             askError?.let { throw it }
             lastAppliance = appliance
             return "fake answer"

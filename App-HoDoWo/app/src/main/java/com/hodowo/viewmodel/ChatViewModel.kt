@@ -888,11 +888,51 @@ class ChatViewModel(
     }
 
     /**
-     * Sends user message (with optional attached image).
+     * Asks the question [messageId] again: the question and everything after it
+     * are removed and the question is sent once more, so it gets a new answer.
      */
-    fun sendTextMessage(text: String, attachedImageUri: Uri? = null) {
+    fun regenerateMessage(messageId: Long) {
+        val question = takeBackQuestion(messageId) ?: return
+        val photo = question.imageUri
+        if (question.text.isNullOrBlank() && photo != null) {
+            analyzeImage(photo)
+        } else {
+            sendTextMessage(question.text.orEmpty(), attachedImageUri = photo, useSelectedImage = false)
+        }
+    }
+
+    /**
+     * Replaces the question [messageId] with [newText] and asks it again.
+     * The old answer and anything after it are removed; the photo is kept.
+     */
+    fun editMessage(messageId: Long, newText: String) {
+        if (newText.isBlank()) return
+        val question = takeBackQuestion(messageId) ?: return
+        sendTextMessage(newText, attachedImageUri = question.imageUri, useSelectedImage = false)
+    }
+
+    /**
+     * Removes the user message [messageId] and every message after it, and
+     * returns it. Returns null (and changes nothing) while an answer is still
+     * arriving or when [messageId] is not a question of this chat.
+     */
+    private fun takeBackQuestion(messageId: Long): Message? {
+        val state = _uiState.value
+        if (state.isSending || state.isAnalyzing) return null
+        val index = state.messages.indexOfFirst { it.id == messageId && it.isUser }
+        if (index < 0) return null
+        _uiState.update { it.copy(messages = it.messages.take(index), error = null) }
+        return state.messages[index]
+    }
+
+    /**
+     * Sends user message (with optional attached image).
+     * With [useSelectedImage] false, the photo picked in the input bar is not attached
+     * (used when a question is asked again).
+     */
+    fun sendTextMessage(text: String, attachedImageUri: Uri? = null, useSelectedImage: Boolean = true) {
         val cleanText = text.trim()
-        val imageToAttach = attachedImageUri ?: _uiState.value.selectedImageUri
+        val imageToAttach = attachedImageUri ?: _uiState.value.selectedImageUri.takeIf { useSelectedImage }
 
         if (cleanText.isEmpty() && imageToAttach == null) {
             return
@@ -911,8 +951,10 @@ class ChatViewModel(
                 } else null
             }
 
-        // Clear selected image preview
-        _uiState.value = _uiState.value.copy(selectedImageUri = null)
+        // Clear selected image preview (it was attached to this message)
+        if (useSelectedImage) {
+            _uiState.value = _uiState.value.copy(selectedImageUri = null)
+        }
 
         addMessage(
             Message(
