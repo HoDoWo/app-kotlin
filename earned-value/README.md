@@ -1,6 +1,6 @@
 # Earned Value – HoDoWo
 
-Status on **2026-10-26** (generated 2026-10-26 08:27 UTC).
+Status on **2026-10-26** (generated 2026-10-26 11:09 UTC).
 
 | KPI | Name | Formula | Sprint 1 | Cumulative | Hours (cumulative) |
 |---|---|---|---:|---:|---:|
