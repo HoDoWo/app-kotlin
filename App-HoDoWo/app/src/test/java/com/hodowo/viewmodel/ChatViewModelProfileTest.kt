@@ -54,8 +54,9 @@ class ChatViewModelProfileTest {
         coEvery { repository.getAppliances(any()) } returns emptyList()
         coEvery { repository.getUserProfile(any()) } returns null
         coEvery { repository.updateProfileFields(any(), any(), any()) } returns true
+        coEvery { repository.saveAppliance(any(), any()) } returns true
         coEvery { repository.getManualsForAppliance(any(), any(), any(), any(), any()) } returns emptyList()
-        every { photoStore.currentUrl() } returns null
+        every { photoStore.currentUrl(any()) } returns null
     }
 
     @After
@@ -72,12 +73,14 @@ class ChatViewModelProfileTest {
 
     private fun TestScope.createViewModel(
         auth: AuthManager? = authManager,
-        store: ProfilePhotoStore? = photoStore
+        store: ProfilePhotoStore? = photoStore,
+        history: ChatHistoryStore? = null
     ): ChatViewModel {
         val viewModel = ChatViewModel(
             aiService = service,
             firebaseRepository = repository,
             authManager = auth,
+            chatHistory = history,
             profilePhotoStore = store
         )
         advanceUntilIdle()
@@ -97,10 +100,11 @@ class ChatViewModelProfileTest {
 
     @Test
     fun initLoadsAppliancesAndProfile() = runTest(dispatcher) {
+        signIn()
         val profile = UserProfile("u1", "Anna", "anna@mail.com", "http://photo", 1L)
         coEvery { repository.getAppliances("u1") } returns listOf(washer)
         coEvery { repository.getUserProfile("u1") } returns profile
-        every { photoStore.currentUrl() } returns "file://local.jpg"
+        every { photoStore.currentUrl("u1") } returns "file://local.jpg"
 
         val viewModel = createViewModel()
 
@@ -111,8 +115,9 @@ class ChatViewModelProfileTest {
 
     @Test
     fun profileWithoutPhotoUsesThePhotoKeptOnThePhone() = runTest(dispatcher) {
+        signIn()
         coEvery { repository.getUserProfile("u1") } returns UserProfile("u1", "Anna", "anna@mail.com", "", 1L)
-        every { photoStore.currentUrl() } returns "file://local.jpg"
+        every { photoStore.currentUrl("u1") } returns "file://local.jpg"
 
         val viewModel = createViewModel()
 
@@ -122,7 +127,8 @@ class ChatViewModelProfileTest {
 
     @Test
     fun missingProfileWithLocalPhotoCreatesProfileWithThatPhoto() = runTest(dispatcher) {
-        every { photoStore.currentUrl() } returns "file://local.jpg"
+        signIn()
+        every { photoStore.currentUrl("u1") } returns "file://local.jpg"
 
         val viewModel = createViewModel()
 
@@ -133,9 +139,21 @@ class ChatViewModelProfileTest {
 
     @Test
     fun missingProfileWithoutLocalPhotoLeavesProfileEmpty() = runTest(dispatcher) {
+        signIn()
         val viewModel = createViewModel()
 
         assertNull(viewModel.uiState.value.userProfile)
+    }
+
+    @Test
+    fun guestHasNoProfileEvenIfAPhotoIsOnThePhone() = runTest(dispatcher) {
+        every { photoStore.currentUrl(any()) } returns "file://local.jpg"
+
+        val viewModel = createViewModel()
+
+        assertNull(viewModel.uiState.value.userProfile)
+        coVerify(exactly = 0) { repository.getUserProfile(any()) }
+        coVerify(exactly = 0) { repository.getAppliances(any()) }
     }
 
     @Test
@@ -154,7 +172,7 @@ class ChatViewModelProfileTest {
     fun addApplianceIgnoresBlankName() = runTest(dispatcher) {
         val viewModel = createViewModel()
 
-        viewModel.addAppliance("   ")
+        assertFalse(viewModel.addAppliance("   "))
         advanceUntilIdle()
 
         assertTrue(viewModel.uiState.value.userAppliances.isEmpty())
@@ -163,9 +181,12 @@ class ChatViewModelProfileTest {
 
     @Test
     fun addApplianceShowsItRightAwayAndSavesIt() = runTest(dispatcher) {
+        signIn()
         val viewModel = createViewModel()
 
-        viewModel.addAppliance("  Washer ", brand = " Bosch ", model = " ", category = "Laundry", room = " Kitchen ")
+        assertTrue(
+            viewModel.addAppliance("  Washer ", brand = " Bosch ", model = " ", category = "Laundry", room = " Kitchen ")
+        )
 
         val added = viewModel.uiState.value.userAppliances.single()
         assertEquals("Washer", added.name)
@@ -201,19 +222,35 @@ class ChatViewModelProfileTest {
     }
 
     @Test
-    fun addApplianceWithoutAuthManagerSavesForGuest() = runTest(dispatcher) {
-        val viewModel = createViewModel(auth = null)
+    fun guestApplianceIsShownButNotSaved() = runTest(dispatcher) {
+        val viewModel = createViewModel()
 
-        viewModel.addAppliance("Oven")
+        assertFalse(viewModel.addAppliance("Oven"))
         advanceUntilIdle()
 
-        coVerify { repository.saveAppliance("guest", any()) }
-        // Without a user the list is not reloaded, so the new appliance stays.
+        coVerify(exactly = 0) { repository.saveAppliance(any(), any()) }
         assertEquals("Oven", viewModel.uiState.value.userAppliances.single().name)
     }
 
     @Test
+    fun failedSaveKeepsTheApplianceAndWarns() = runTest(dispatcher) {
+        signIn()
+        coEvery { repository.saveAppliance(any(), any()) } returns false
+        val viewModel = createViewModel()
+        val messages = messagesOf(viewModel)
+
+        assertTrue(viewModel.addAppliance("Oven"))
+        advanceUntilIdle()
+
+        assertEquals("Oven", viewModel.uiState.value.userAppliances.single().name)
+        assertEquals(listOf("Couldn't save the appliance. Check your connection."), messages)
+        // Not reloaded from Firestore, which would hide the new appliance.
+        coVerify(exactly = 1) { repository.getAppliances("u1") }
+    }
+
+    @Test
     fun deleteApplianceRemovesItAndDeletesIt() = runTest(dispatcher) {
+        signIn()
         coEvery { repository.getAppliances("u1") } returns listOf(washer)
         val viewModel = createViewModel()
 
@@ -226,13 +263,116 @@ class ChatViewModelProfileTest {
     }
 
     @Test
-    fun deleteApplianceWithoutAuthManagerDeletesForGuest() = runTest(dispatcher) {
-        val viewModel = createViewModel(auth = null)
+    fun guestDeleteOnlyRemovesTheApplianceFromTheScreen() = runTest(dispatcher) {
+        val viewModel = createViewModel()
+        viewModel.addAppliance("Oven")
+        val oven = viewModel.uiState.value.userAppliances.single()
 
-        viewModel.deleteAppliance("a1")
+        viewModel.deleteAppliance(oven.id)
         advanceUntilIdle()
 
-        coVerify { repository.deleteAppliance("guest", "a1") }
+        assertTrue(viewModel.uiState.value.userAppliances.isEmpty())
+        coVerify(exactly = 0) { repository.deleteAppliance(any(), any()) }
+    }
+
+    // ---------- sign in / sign out ----------
+
+    @Test
+    fun signOutShowsTheGuestAgain() = runTest(dispatcher) {
+        signIn()
+        val bookmark = ManualGuide("Washer", "E18", "Clean filter", manualId = "m1")
+        coEvery { repository.getBookmarks("u1") } returns listOf(bookmark)
+        coEvery { repository.getAppliances("u1") } returns listOf(washer)
+        coEvery { repository.getUserProfile("u1") } returns UserProfile("u1", "Anna", "anna@mail.com", "http://photo", 1L)
+        val history = UserChatStore(mapOf("u1" to listOf(savedChat("chat-1"))))
+        val viewModel = createViewModel(history = history)
+        viewModel.openApplianceManuals("a1", "Washer", null, null, isRegistered = true)
+        viewModel.selectApplianceForChat(Appliance("Washer", "Bosch", "X1", 0.9f))
+
+        assertEquals("http://photo", viewModel.uiState.value.userProfile?.photoUrl)
+        assertEquals(listOf("chat-1"), viewModel.uiState.value.chatSessions.map { it.id })
+
+        // Sign out: Firebase has no user any more.
+        every { authManager.currentUserId } returns "anonymous"
+        signedInUser.value = null
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertNull(state.userProfile)
+        assertTrue(state.userAppliances.isEmpty())
+        assertTrue(state.bookmarkedGuides.isEmpty())
+        assertTrue(state.chatSessions.isEmpty())
+        assertTrue(state.messages.isEmpty())
+        assertNull(state.appliance)
+        assertNull(viewModel.applianceManuals.value)
+    }
+
+    @Test
+    fun signingInAsAnotherUserLoadsTheirData() = runTest(dispatcher) {
+        signIn()
+        coEvery { repository.getUserProfile("u1") } returns UserProfile("u1", "Anna", "anna@mail.com", "http://anna", 1L)
+        coEvery { repository.getUserProfile("u2") } returns UserProfile("u2", "Marco", "marco@mail.com", null, 2L)
+        coEvery { repository.getAppliances("u2") } returns listOf(washer)
+        val history = UserChatStore(
+            mapOf("u1" to listOf(savedChat("chat-anna")), "u2" to listOf(savedChat("chat-marco")))
+        )
+        every { authManager.currentUserId } returns "u1"
+        val viewModel = createViewModel(history = history)
+
+        every { authManager.currentUserId } returns "u2"
+        signIn("u2")
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals("Marco", state.userProfile?.displayName)
+        // Marco has no photo: Anna's photo must not stay on screen.
+        assertNull(state.userProfile?.photoUrl)
+        assertEquals(listOf(washer), state.userAppliances)
+        assertEquals(listOf("chat-marco"), state.chatSessions.map { it.id })
+    }
+
+    @Test
+    fun openingAChatFromTheHistoryKeepsProfileAndAppliances() = runTest(dispatcher) {
+        signIn()
+        val profile = UserProfile("u1", "Anna", "anna@mail.com", "http://photo", 1L)
+        coEvery { repository.getUserProfile("u1") } returns profile
+        coEvery { repository.getAppliances("u1") } returns listOf(washer)
+        val history = UserChatStore(mapOf("u1" to listOf(savedChat("chat-1"))))
+        val viewModel = createViewModel(history = history)
+
+        viewModel.openChat("chat-1")
+
+        val state = viewModel.uiState.value
+        assertEquals("chat-1", state.currentChatId)
+        assertEquals(profile, state.userProfile)
+        assertEquals(listOf(washer), state.userAppliances)
+        assertEquals("Washer", state.appliance?.name)
+    }
+
+    @Test
+    fun startingANewChatKeepsProfileAndAppliances() = runTest(dispatcher) {
+        signIn()
+        val profile = UserProfile("u1", "Anna", "anna@mail.com", "http://photo", 1L)
+        coEvery { repository.getUserProfile("u1") } returns profile
+        coEvery { repository.getAppliances("u1") } returns listOf(washer)
+        val viewModel = createViewModel()
+
+        viewModel.startNewChat()
+
+        assertEquals(profile, viewModel.uiState.value.userProfile)
+        assertEquals(listOf(washer), viewModel.uiState.value.userAppliances)
+    }
+
+    @Test
+    fun sameUserEmittedAgainDoesNotResetTheScreen() = runTest(dispatcher) {
+        signIn()
+        val viewModel = createViewModel()
+        viewModel.selectApplianceForChat(Appliance("Washer", "Bosch", "X1", 0.9f))
+
+        signIn() // New FirebaseUser object, same uid.
+        advanceUntilIdle()
+
+        assertEquals("Washer", viewModel.uiState.value.appliance?.name)
     }
 
     // ---------- updateUserDisplayName ----------
@@ -332,7 +472,7 @@ class ChatViewModelProfileTest {
         signIn()
         val uri = mockk<Uri>()
         coEvery { repository.uploadProfilePhoto("u1", uri) } returns null
-        every { photoStore.save(uri) } returns "file://local.jpg"
+        every { photoStore.save("u1", uri) } returns "file://local.jpg"
         val viewModel = createViewModel()
         val messages = messagesOf(viewModel)
 
@@ -400,7 +540,7 @@ class ChatViewModelProfileTest {
     fun openingAnotherApplianceIgnoresTheOldResult() = runTest(dispatcher) {
         signIn()
         coEvery { repository.getManualsForAppliance("u1", "a1", any(), any(), any()) } returns
-            listOf(ManualGuide("Washer", "E18", "Old"))
+                listOf(ManualGuide("Washer", "E18", "Old"))
         val viewModel = createViewModel()
 
         viewModel.openApplianceManuals("a1", "Washer", null, null, isRegistered = true)
@@ -506,6 +646,29 @@ class ChatViewModelProfileTest {
         viewModel.selectApplianceForChat(appliance)
 
         assertEquals(appliance, viewModel.uiState.value.appliance)
+    }
+
+    private fun savedChat(id: String) = SavedChat(
+        id = id,
+        title = "Question $id",
+        applianceName = "Washer",
+        lastUpdated = 1L,
+        messages = listOf(Message(id = 1L, text = "Question $id", isUser = true))
+    )
+
+    /** Chat history kept per user, like the file store on the phone. */
+    private class UserChatStore(initial: Map<String, List<SavedChat>>) : ChatHistoryStore {
+        private val chats = initial.toMutableMap()
+
+        override suspend fun load(userId: String): List<SavedChat> = chats[userId].orEmpty()
+
+        override suspend fun save(userId: String, chat: SavedChat) {
+            chats[userId] = chats[userId].orEmpty().filterNot { it.id == chat.id } + chat
+        }
+
+        override suspend fun delete(userId: String, chatId: String) {
+            chats[userId] = chats[userId].orEmpty().filterNot { it.id == chatId }
+        }
     }
 
     /** AI service that only records bookmark changes. */

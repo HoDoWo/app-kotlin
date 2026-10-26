@@ -123,7 +123,12 @@ fun ChatScreen(
                         )
                     }
                     NotificationIconButton()
-                    ProfileAvatar(name = "", size = 34, onClick = onOpenAuth)
+                    ProfileAvatar(
+                        name = "",
+                        size = 34,
+                        onClick = onOpenAuth,
+                        photoUrl = state.userProfile?.photoUrl
+                    )
                 }
             )
 

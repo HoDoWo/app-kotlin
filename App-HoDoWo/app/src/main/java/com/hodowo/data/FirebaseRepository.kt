@@ -297,9 +297,10 @@ class FirebaseRepository(
 
     /**
      * Saves an appliance registered by the user under users/{userId}/appliances/{applianceId}.
+     * Returns false when Firestore refuses or cannot reach the write.
      */
-    suspend fun saveAppliance(userId: String, appliance: UserAppliance) {
-        try {
+    suspend fun saveAppliance(userId: String, appliance: UserAppliance): Boolean {
+        return try {
             val data = hashMapOf(
                 "id" to appliance.id,
                 "name" to appliance.name,
@@ -317,8 +318,10 @@ class FirebaseRepository(
                 .set(data, SetOptions.merge())
                 .await()
             Log.d(TAG, "Saved appliance ${appliance.name} for user $userId")
+            true
         } catch (e: Exception) {
             Log.w(TAG, "Failed to save appliance: ${e.message}")
+            false
         }
     }
 
