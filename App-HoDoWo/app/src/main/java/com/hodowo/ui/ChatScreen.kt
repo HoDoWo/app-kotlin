@@ -76,6 +76,8 @@ fun ChatScreen(
     var inputText by remember { mutableStateOf("") }
     var dislikeTargetId by remember { mutableStateOf<Long?>(null) }
     var dislikeComment by remember { mutableStateOf("") }
+    var editingMessage by remember { mutableStateOf<Message?>(null) }
+    var editText by remember { mutableStateOf("") }
 
     var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
     var showHistory by remember { mutableStateOf(false) }
@@ -167,12 +169,30 @@ fun ChatScreen(
                 }
 
                 // Message Items
+                val lastQuestionId = state.messages.lastOrNull { it.isUser }?.id
                 items(
                     items = state.messages,
                     key = { it.id }
                 ) { message ->
                     if (message.isUser) {
-                        UserMessageItem(message = message)
+                        // Only the last question can be asked again, and not while an answer arrives.
+                        val canResend = message.id == lastQuestionId && !state.isSending && !state.isAnalyzing
+                        UserMessageItem(
+                            message = message,
+                            onRegenerate = if (canResend) {
+                                { viewModel.regenerateMessage(message.id) }
+                            } else {
+                                null
+                            },
+                            onEdit = if (canResend && !message.text.isNullOrBlank()) {
+                                {
+                                    editText = message.text.orEmpty()
+                                    editingMessage = message
+                                }
+                            } else {
+                                null
+                            }
+                        )
                     } else {
                         AiMessageItem(
                             message = message,
@@ -293,6 +313,38 @@ fun ChatScreen(
                 showHistory = false
             },
             onDismiss = { showHistory = false }
+        )
+    }
+
+    // Edit the last question and ask it again
+    editingMessage?.let { target ->
+        AlertDialog(
+            onDismissRequest = { editingMessage = null },
+            title = { Text("Edit message") },
+            text = {
+                OutlinedTextField(
+                    value = editText,
+                    onValueChange = { editText = it },
+                    maxLines = 6,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = editText.isNotBlank(),
+                    onClick = {
+                        viewModel.editMessage(target.id, editText)
+                        editingMessage = null
+                    }
+                ) {
+                    Text("Send")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingMessage = null }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 
