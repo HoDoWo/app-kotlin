@@ -1,0 +1,33 @@
+timestamp,issue,title,type,delta_hours
+2026-10-28T00:00:00+00:00,13,Sprint 2 documentation,initial,4.0
+2026-10-28T00:00:00+00:00,30,Diagnosis to suggested spare part,initial,5.0
+2026-10-28T00:00:00+00:00,31,Marketplace Firestore schema and ER diagram,initial,4.0
+2026-10-28T00:00:00+00:00,32,Security rules for marketplace and forum collections,initial,3.0
+2026-10-28T00:00:00+00:00,33,"Curated CSV seed: partners, products, parts and compatibility",initial,3.0
+2026-10-28T00:00:00+00:00,34,Composite indexes for search and ranking,initial,2.0
+2026-10-28T00:00:00+00:00,35,Second-hand listing CRUD and ownership,initial,7.0
+2026-10-28T00:00:00+00:00,36,Listing image upload and compression,initial,4.0
+2026-10-28T00:00:00+00:00,37,Spare parts search and filter API,initial,7.0
+2026-10-28T00:00:00+00:00,38,Part detail and compatibility resolution API,initial,5.0
+2026-10-28T00:00:00+00:00,39,Official partner product API with partner-only writes,initial,8.0
+2026-10-28T00:00:00+00:00,24,Zyte API configuration and partner catalogue ingestion,initial,6.0
+2026-10-28T00:00:00+00:00,40,"Unified product search: new, second-hand and spare parts",initial,10.0
+2026-10-28T00:00:00+00:00,41,"Partner tiers, sponsored ranking and 'for me' ordering",initial,6.0
+2026-10-28T00:00:00+00:00,42,Cart API,initial,5.0
+2026-10-28T00:00:00+00:00,43,"Stripe test-mode checkout, confirmation and order history API",initial,12.0
+2026-10-28T00:00:00+00:00,44,"Forum API: categories, threads and replies",initial,7.0
+2026-10-28T00:00:00+00:00,138,Marketplace tab and entry points,initial,4.0
+2026-10-28T00:00:00+00:00,140,"Product detail page (new, second-hand and part variants)",initial,7.0
+2026-10-28T00:00:00+00:00,139,Product search page with new / second-hand / parts filters,initial,9.0
+2026-10-28T00:00:00+00:00,141,Ads / sponsored partners page,initial,5.0
+2026-10-28T00:00:00+00:00,143,Payment section (Stripe test checkout UI),initial,7.0
+2026-10-28T00:00:00+00:00,142,Cart page and cart state,initial,6.0
+2026-10-28T00:00:00+00:00,144,Order confirmation and purchase history screens,initial,4.0
+2026-10-28T00:00:00+00:00,145,"Post-to-sell form (photos, details and validation)",initial,10.0
+2026-10-28T00:00:00+00:00,146,"My listings: edit, mark as sold and delete",initial,4.0
+2026-10-28T00:00:00+00:00,147,Search suggestions and recent searches,initial,4.0
+2026-10-28T00:00:00+00:00,148,"Parts catalogue UI (list, filters and detail)",initial,8.0
+2026-10-28T00:00:00+00:00,149,Error resolution card: suggested spare part CTA,initial,3.0
+2026-10-28T00:00:00+00:00,150,"Forum UI: categories, threads and composer",initial,9.0
+2026-10-28T00:00:00+00:00,122,"Mockups: marketplace, ads and cart pages",initial,6.0
+2026-10-28T00:00:00+00:00,45,Marketplace end-to-end tests (API and device),initial,6.0

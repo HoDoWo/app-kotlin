@@ -1,0 +1,242 @@
+{
+ "PVTI_lADOFCkyKM4Bl88jzg-7q-U": {
+  "c": 0.0,
+  "done": false,
+  "issue": 17,
+  "title": "Forum about concrete home appliances"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7rNk": {
+  "c": 4.0,
+  "done": false,
+  "issue": 13,
+  "title": "Sprint 2 documentation"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeXsE": {
+  "c": 0.0,
+  "done": false,
+  "issue": 25,
+  "title": "Marketplace: data model and seed data"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeXzk": {
+  "c": 0.0,
+  "done": false,
+  "issue": 26,
+  "title": "Marketplace catalogue and search API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeX7o": {
+  "c": 0.0,
+  "done": false,
+  "issue": 108,
+  "title": "Parts catalogue and diagnosis link (app)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeYCk": {
+  "c": 5.0,
+  "done": false,
+  "issue": 30,
+  "title": "Diagnosis to suggested spare part"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeYMc": {
+  "c": 0.0,
+  "done": false,
+  "issue": 27,
+  "title": "Second-hand listings API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeYWk": {
+  "c": 0.0,
+  "done": false,
+  "issue": 111,
+  "title": "Marketplace app screens"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeYdY": {
+  "c": 0.0,
+  "done": false,
+  "issue": 28,
+  "title": "Cart, checkout and purchase records"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeYkc": {
+  "c": 0.0,
+  "done": false,
+  "issue": 29,
+  "title": "Search ranking: partner sponsorship and personalisation"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Kg": {
+  "c": 4.0,
+  "done": false,
+  "issue": 31,
+  "title": "Marketplace Firestore schema and ER diagram"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Lk": {
+  "c": 3.0,
+  "done": false,
+  "issue": 32,
+  "title": "Security rules for marketplace and forum collections"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4M0": {
+  "c": 3.0,
+  "done": false,
+  "issue": 33,
+  "title": "Curated CSV seed: partners, products, parts and compatibility"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Nw": {
+  "c": 2.0,
+  "done": false,
+  "issue": 34,
+  "title": "Composite indexes for search and ranking"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Os": {
+  "c": 7.0,
+  "done": false,
+  "issue": 35,
+  "title": "Second-hand listing CRUD and ownership"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Pw": {
+  "c": 4.0,
+  "done": false,
+  "issue": 36,
+  "title": "Listing image upload and compression"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Q0": {
+  "c": 7.0,
+  "done": false,
+  "issue": 37,
+  "title": "Spare parts search and filter API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Rk": {
+  "c": 5.0,
+  "done": false,
+  "issue": 38,
+  "title": "Part detail and compatibility resolution API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4SE": {
+  "c": 8.0,
+  "done": false,
+  "issue": 39,
+  "title": "Official partner product API with partner-only writes"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4S4": {
+  "c": 6.0,
+  "done": false,
+  "issue": 24,
+  "title": "Zyte API configuration and partner catalogue ingestion"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4UQ": {
+  "c": 10.0,
+  "done": false,
+  "issue": 40,
+  "title": "Unified product search: new, second-hand and spare parts"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4WQ": {
+  "c": 6.0,
+  "done": false,
+  "issue": 41,
+  "title": "Partner tiers, sponsored ranking and 'for me' ordering"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Ws": {
+  "c": 5.0,
+  "done": false,
+  "issue": 42,
+  "title": "Cart API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4YQ": {
+  "c": 12.0,
+  "done": false,
+  "issue": 43,
+  "title": "Stripe test-mode checkout, confirmation and order history API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Ys": {
+  "c": 7.0,
+  "done": false,
+  "issue": 44,
+  "title": "Forum API: categories, threads and replies"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4b0": {
+  "c": 4.0,
+  "done": false,
+  "issue": 138,
+  "title": "Marketplace tab and entry points"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4c4": {
+  "c": 7.0,
+  "done": false,
+  "issue": 140,
+  "title": "Product detail page (new, second-hand and part variants)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4dE": {
+  "c": 9.0,
+  "done": false,
+  "issue": 139,
+  "title": "Product search page with new / second-hand / parts filters"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4eY": {
+  "c": 5.0,
+  "done": false,
+  "issue": 141,
+  "title": "Ads / sponsored partners page"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4eo": {
+  "c": 7.0,
+  "done": false,
+  "issue": 143,
+  "title": "Payment section (Stripe test checkout UI)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4fI": {
+  "c": 6.0,
+  "done": false,
+  "issue": 142,
+  "title": "Cart page and cart state"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4gU": {
+  "c": 4.0,
+  "done": false,
+  "issue": 144,
+  "title": "Order confirmation and purchase history screens"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4iY": {
+  "c": 10.0,
+  "done": false,
+  "issue": 145,
+  "title": "Post-to-sell form (photos, details and validation)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4ik": {
+  "c": 4.0,
+  "done": false,
+  "issue": 146,
+  "title": "My listings: edit, mark as sold and delete"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4iw": {
+  "c": 4.0,
+  "done": false,
+  "issue": 147,
+  "title": "Search suggestions and recent searches"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4kI": {
+  "c": 8.0,
+  "done": false,
+  "issue": 148,
+  "title": "Parts catalogue UI (list, filters and detail)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4l4": {
+  "c": 3.0,
+  "done": false,
+  "issue": 149,
+  "title": "Error resolution card: suggested spare part CTA"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4mc": {
+  "c": 9.0,
+  "done": false,
+  "issue": 150,
+  "title": "Forum UI: categories, threads and composer"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW9jY": {
+  "c": 6.0,
+  "done": false,
+  "issue": 122,
+  "title": "Mockups: marketplace, ads and cart pages"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW9lE": {
+  "c": 6.0,
+  "done": false,
+  "issue": 45,
+  "title": "Marketplace end-to-end tests (API and device)"
+ }
+}
