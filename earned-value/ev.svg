@@ -4,28 +4,28 @@
 <line x1="70" y1="370.0" x2="870" y2="370.0" stroke="#eee"/>
 <text x="62" y="374.0" text-anchor="end">0 €</text>
 <line x1="70" y1="308.0" x2="870" y2="308.0" stroke="#eee"/>
-<text x="62" y="312.0" text-anchor="end">719 €</text>
+<text x="62" y="312.0" text-anchor="end">748 €</text>
 <line x1="70" y1="246.0" x2="870" y2="246.0" stroke="#eee"/>
-<text x="62" y="250.0" text-anchor="end">1,439 €</text>
+<text x="62" y="250.0" text-anchor="end">1,497 €</text>
 <line x1="70" y1="184.0" x2="870" y2="184.0" stroke="#eee"/>
-<text x="62" y="188.0" text-anchor="end">2,158 €</text>
+<text x="62" y="188.0" text-anchor="end">2,245 €</text>
 <line x1="70" y1="122.0" x2="870" y2="122.0" stroke="#eee"/>
-<text x="62" y="126.0" text-anchor="end">2,877 €</text>
+<text x="62" y="126.0" text-anchor="end">2,994 €</text>
 <line x1="70" y1="60.0" x2="870" y2="60.0" stroke="#eee"/>
-<text x="62" y="64.0" text-anchor="end">3,597 €</text>
+<text x="62" y="64.0" text-anchor="end">3,742 €</text>
 <line x1="70.0" y1="60" x2="70.0" y2="370" stroke="#ddd" stroke-dasharray="3 3"/>
 <text x="74.0" y="388" fill="#777">Sprint 1</text>
 <line x1="305.9" y1="60" x2="305.9" y2="370" stroke="#ddd" stroke-dasharray="3 3"/>
 <text x="309.9" y="388" fill="#777">Sprint 2</text>
 <line x1="654.6" y1="60" x2="654.6" y2="370" stroke="#ddd" stroke-dasharray="3 3"/>
 <text x="658.6" y="388" fill="#777">Sprint 3</text>
-<polyline points="234.1,186.9 244.4,176.1 254.6,165.4 264.9,154.6 275.1,143.8 285.4,133.1 295.6,122.3 305.9,111.4 316.2,100.4" fill="none" stroke="#8250df" stroke-width="3"/>
-<circle cx="316.2" cy="100.4" r="4" fill="#8250df"/>
+<polyline points="234.1,194.0 244.4,183.7 254.6,173.3 264.9,163.0 275.1,152.6 285.4,142.3 295.6,131.9 305.9,121.4 316.2,110.9 326.4,100.4" fill="none" stroke="#8250df" stroke-width="3"/>
+<circle cx="326.4" cy="100.4" r="4" fill="#8250df"/>
 <text x="690" y="26" fill="#8250df" font-weight="bold">● PV</text>
-<polyline points="234.1,176.5 244.4,176.5 254.6,176.5 264.9,147.4 275.1,124.2 285.4,110.7 295.6,112.6 305.9,112.6 316.2,112.6" fill="none" stroke="#2da44e" stroke-width="3"/>
-<circle cx="316.2" cy="112.6" r="4" fill="#2da44e"/>
+<polyline points="234.1,184.0 244.4,184.0 254.6,184.0 264.9,156.1 275.1,133.8 285.4,120.8 295.6,122.6 305.9,122.6 316.2,122.6 326.4,122.6" fill="none" stroke="#2da44e" stroke-width="3"/>
+<circle cx="326.4" cy="122.6" r="4" fill="#2da44e"/>
 <text x="750" y="26" fill="#2da44e" font-weight="bold">● EV</text>
-<polyline points="234.1,166.8 244.4,166.8 254.6,166.8 264.9,158.2 275.1,158.2 285.4,147.8 295.6,147.8 305.9,147.8 316.2,147.8" fill="none" stroke="#cf222e" stroke-width="3"/>
-<circle cx="316.2" cy="147.8" r="4" fill="#cf222e"/>
+<polyline points="234.1,174.7 244.4,174.7 254.6,174.7 264.9,166.4 275.1,166.4 285.4,156.5 295.6,156.5 305.9,156.5 316.2,156.5 326.4,156.5" fill="none" stroke="#cf222e" stroke-width="3"/>
+<circle cx="326.4" cy="156.5" r="4" fill="#cf222e"/>
 <text x="810" y="26" fill="#cf222e" font-weight="bold">● AC</text>
 </svg>
