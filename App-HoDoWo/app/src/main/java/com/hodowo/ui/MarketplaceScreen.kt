@@ -102,10 +102,14 @@ fun PostProductScreen(
     var pickupZip by rememberSaveable { mutableStateOf("") }
     var shippingPrice by rememberSaveable { mutableStateOf("") }
     var images by remember { mutableStateOf(emptyList<android.net.Uri>()) }
+    var diagnosticImages by remember { mutableStateOf(emptyList<android.net.Uri>()) }
     val message by viewModel.message.collectAsState()
     val submitting by viewModel.isSubmitting.collectAsState()
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) {
         images = it.take(8)
+    }
+    val diagnosticPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) {
+        diagnosticImages = it.take(8)
     }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("Sell an appliance or part")
@@ -144,6 +148,9 @@ fun PostProductScreen(
             }
         }
         OutlinedButton(onClick = { picker.launch("image/*") }) { Text("Add photos (${images.size}/8)") }
+        OutlinedButton(onClick = { diagnosticPicker.launch("image/*") }) {
+            Text("Add diagnostic media (${diagnosticImages.size}/8)")
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = pickup, onClick = { pickup = !pickup }, label = { Text("Local pickup") })
             FilterChip(selected = shipping, onClick = { shipping = !shipping }, label = { Text("Courier shipping") })
@@ -172,7 +179,7 @@ fun PostProductScreen(
             onClick = {
                 viewModel.submit(
                     userId, title, description, category, brand, model, partNumber, listingKind,
-                    condition, price, images,
+                    condition, price, images, diagnosticImages,
                     buildList { if (pickup) add("pickup"); if (shipping) add("shipping") },
                     pickupZip, shippingPrice.toIntOrNull(), onPublished
                 )

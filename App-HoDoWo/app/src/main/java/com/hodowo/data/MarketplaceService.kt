@@ -46,6 +46,7 @@ class MarketplaceService(
         condition: String,
         price: Double,
         imageUrls: List<String>,
+        diagnosticMediaUrls: List<String>,
         handoverMethods: List<String>,
         pickupZip: String,
         shippingPriceCents: Int?
@@ -61,6 +62,7 @@ class MarketplaceService(
             .put("condition", condition)
             .put("price", price)
             .put("image_urls", JSONArray(imageUrls))
+            .put("diagnostic_media_urls", JSONArray(diagnosticMediaUrls))
             .put("handover_methods", JSONArray(handoverMethods))
             .put("pickup_zip", pickupZip.ifBlank { JSONObject.NULL })
             .put("shipping_price_cents", shippingPriceCents ?: JSONObject.NULL)

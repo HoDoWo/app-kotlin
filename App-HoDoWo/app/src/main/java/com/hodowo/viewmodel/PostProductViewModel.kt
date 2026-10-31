@@ -30,6 +30,7 @@ class PostProductViewModel(
         condition: String,
         priceText: String,
         imageUris: List<android.net.Uri>,
+        diagnosticMediaUris: List<android.net.Uri>,
         handoverMethods: List<String>,
         pickupZip: String,
         shippingPriceCents: Int?,
@@ -37,7 +38,8 @@ class PostProductViewModel(
     ) {
         val price = priceText.toDoubleOrNull()
         if (title.length < 3 || description.length < 30 || category.isBlank() || price == null || price <= 0 ||
-            imageUris.isEmpty() || imageUris.size > 8 || handoverMethods.isEmpty() ||
+            imageUris.isEmpty() || imageUris.size > 8 || diagnosticMediaUris.size > 8 ||
+            handoverMethods.isEmpty() ||
             (handoverMethods.contains("pickup") && pickupZip.isBlank())
         ) {
             _message.value = "Add the required details, 1–8 photos, a valid price, and a handover method."
@@ -48,9 +50,10 @@ class PostProductViewModel(
             _message.value = null
             runCatching {
                 val urls = imageUris.map { repository.uploadMarketplaceImage(userId, it) }
+                val diagnosticUrls = diagnosticMediaUris.map { repository.uploadMarketplaceImage(userId, it) }
                 service.createListing(
                     title, description, category, brand, model, partNumber, listingKind,
-                    condition, price, urls, handoverMethods, pickupZip, shippingPriceCents
+                    condition, price, urls, diagnosticUrls, handoverMethods, pickupZip, shippingPriceCents
                 )
             }.onSuccess {
                 _message.value = "Listing published"
