@@ -41,9 +41,14 @@ class MarketplaceService(
         category: String,
         brand: String,
         model: String,
+        partNumber: String,
+        listingKind: String,
         condition: String,
         price: Double,
-        imageUrls: List<String>
+        imageUrls: List<String>,
+        handoverMethods: List<String>,
+        pickupZip: String,
+        shippingPriceCents: Int?
     ): MarketplaceProduct {
         val body = JSONObject()
             .put("title", title)
@@ -51,9 +56,14 @@ class MarketplaceService(
             .put("category", category)
             .put("brand", brand.ifBlank { JSONObject.NULL })
             .put("model", model.ifBlank { JSONObject.NULL })
+            .put("part_number", partNumber.ifBlank { JSONObject.NULL })
+            .put("listing_kind", listingKind)
             .put("condition", condition)
             .put("price", price)
             .put("image_urls", JSONArray(imageUrls))
+            .put("handover_methods", JSONArray(handoverMethods))
+            .put("pickup_zip", pickupZip.ifBlank { JSONObject.NULL })
+            .put("shipping_price_cents", shippingPriceCents ?: JSONObject.NULL)
             .put("quantity", 1)
         return parseProduct(request("/api/marketplace/listings", body.toString()))
     }

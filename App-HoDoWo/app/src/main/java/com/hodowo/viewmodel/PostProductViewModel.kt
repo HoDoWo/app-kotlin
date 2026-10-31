@@ -25,14 +25,22 @@ class PostProductViewModel(
         category: String,
         brand: String,
         model: String,
+        partNumber: String,
+        listingKind: String,
         condition: String,
         priceText: String,
         imageUris: List<android.net.Uri>,
+        handoverMethods: List<String>,
+        pickupZip: String,
+        shippingPriceCents: Int?,
         onSuccess: () -> Unit
     ) {
         val price = priceText.toDoubleOrNull()
-        if (title.length < 3 || description.length < 10 || category.isBlank() || price == null || price <= 0 || imageUris.isEmpty()) {
-            _message.value = "Add a title, description, category, valid price, and at least one photo."
+        if (title.length < 3 || description.length < 30 || category.isBlank() || price == null || price <= 0 ||
+            imageUris.isEmpty() || imageUris.size > 8 || handoverMethods.isEmpty() ||
+            (handoverMethods.contains("pickup") && pickupZip.isBlank())
+        ) {
+            _message.value = "Add the required details, 1–8 photos, a valid price, and a handover method."
             return
         }
         viewModelScope.launch {
@@ -40,7 +48,10 @@ class PostProductViewModel(
             _message.value = null
             runCatching {
                 val urls = imageUris.map { repository.uploadMarketplaceImage(userId, it) }
-                service.createListing(title, description, category, brand, model, condition, price, urls)
+                service.createListing(
+                    title, description, category, brand, model, partNumber, listingKind,
+                    condition, price, urls, handoverMethods, pickupZip, shippingPriceCents
+                )
             }.onSuccess {
                 _message.value = "Listing published"
                 onSuccess()
