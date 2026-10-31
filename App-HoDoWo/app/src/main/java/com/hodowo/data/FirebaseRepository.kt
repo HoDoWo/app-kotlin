@@ -415,6 +415,14 @@ class FirebaseRepository(
         }
     }
 
+    suspend fun uploadMarketplaceImage(userId: String, uri: Uri): String {
+        require(userId.isNotBlank()) { "authenticated user uid is required" }
+        val ref = FirebaseStorage.getInstance().reference
+            .child("marketplace/$userId/${System.currentTimeMillis()}-${uri.lastPathSegment ?: "photo"}")
+        ref.putFile(uri).await()
+        return ref.downloadUrl.await().toString()
+    }
+
     /**
      * All guides related to one appliance. Looks in users/{uid}/manuals and /bookmarks and matches by
      * stored applianceId (new saves) or by fuzzy appliance name / model (existing data).
