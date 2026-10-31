@@ -47,6 +47,8 @@ import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SecondaryContainer
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.HomeViewModel
+import com.hodowo.viewmodel.MarketplaceViewModel
+import com.hodowo.viewmodel.PostProductViewModel
 
 /**
  * Root composable of the application.
@@ -66,11 +68,14 @@ fun HoDoWoApp(
     authManager: AuthManager = AiServiceProvider.authManager
 ) {
     val context = LocalContext.current
+    val marketplaceViewModel: MarketplaceViewModel = viewModel(factory = AiServiceProvider.marketplaceViewModelFactory())
+    val postProductViewModel: PostProductViewModel = viewModel(factory = AiServiceProvider.postProductViewModelFactory())
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     val chatState by chatViewModel.uiState.collectAsState()
     var showAuthDialog by remember { mutableStateOf(false) }
     var showApplianceManuals by remember { mutableStateOf(false) }
+    var showPostProduct by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -170,7 +175,21 @@ fun HoDoWoApp(
                             )
                         }
                     }
-                    AppNavTab.MARKET, AppNavTab.AR_CORE -> {
+                    AppNavTab.MARKET -> {
+                        if (showPostProduct) {
+                            PostProductScreen(
+                                viewModel = postProductViewModel,
+                                userId = authManager.currentUserId,
+                                onPublished = { showPostProduct = false }
+                            )
+                        } else {
+                            MarketplaceScreen(
+                                viewModel = marketplaceViewModel,
+                                onPostProduct = { showPostProduct = true }
+                            )
+                        }
+                    }
+                    AppNavTab.AR_CORE -> {
                         NotImplementedScreen(
                             tabName = currentTab.label,
                             icon = currentTab.icon,

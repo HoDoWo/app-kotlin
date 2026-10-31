@@ -9,6 +9,8 @@ import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.DemoHoDoWoAiService
 import com.hodowo.viewmodel.HoDoWoAiService
 import com.hodowo.viewmodel.HomeViewModel
+import com.hodowo.viewmodel.MarketplaceViewModel
+import com.hodowo.viewmodel.PostProductViewModel
 import com.hodowo.viewmodel.greetingName
 import java.io.File
 
@@ -66,6 +68,26 @@ object AiServiceProvider {
                     },
                     cache = FileManualsCache(File(context.filesDir, "home_cache")),
                     userId = { authManager.currentUserId }
+                )
+            }
+
+        }
+
+    fun marketplaceViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                MarketplaceViewModel(
+                    MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token)
+                )
+            }
+        }
+
+    fun postProductViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                PostProductViewModel(
+                    MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
+                    firebaseRepository
                 )
             }
         }
