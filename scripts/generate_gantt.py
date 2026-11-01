@@ -19,7 +19,6 @@ import requests
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
 
-
 def parse_args():
     parser = argparse.ArgumentParser(description="Generate Gantt comparison charts.")
     parser.add_argument("--token", default=os.getenv("GH_TOKEN") or os.getenv("GITHUB_TOKEN"),
@@ -62,11 +61,19 @@ query($owner: String!, $num: Int!, $cursor: String) {
               repository { nameWithOwner }
             }
           }
-          fieldValues(first: 30) {
+          fieldValues(first: 100) {
             nodes {
               __typename
               ... on ProjectV2ItemFieldDateValue {
                 date
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldTextValue {
+                text
+                field { ... on ProjectV2FieldCommon { name } }
+              }
+              ... on ProjectV2ItemFieldNumberValue {
+                number
                 field { ... on ProjectV2FieldCommon { name } }
               }
               ... on ProjectV2ItemFieldSingleSelectValue {
@@ -114,11 +121,19 @@ query($owner: String!, $repo: String!, $cursor: String) {
                 repository { nameWithOwner }
               }
             }
-            fieldValues(first: 30) {
+            fieldValues(first: 100) {
               nodes {
                 __typename
                 ... on ProjectV2ItemFieldDateValue {
                   date
+                  field { ... on ProjectV2FieldCommon { name } }
+                }
+                ... on ProjectV2ItemFieldTextValue {
+                  text
+                  field { ... on ProjectV2FieldCommon { name } }
+                }
+                ... on ProjectV2ItemFieldNumberValue {
+                  number
                   field { ... on ProjectV2FieldCommon { name } }
                 }
                 ... on ProjectV2ItemFieldSingleSelectValue {
@@ -192,7 +207,7 @@ def fetch_items(token, owner, project_number, repository):
         projects = (repo_data or {}).get("projectsV2", {}).get("nodes", [])
         if not projects:
             raise SystemExit("No GitHub Projects v2 visible for this repository or organization: "
-                            "check token permissions (read:project) and project number.")
+                             "check token permissions (read:project) and project number.")
         proj = projects[0]
         project_title = proj.get("title", project_title)
         page = proj["items"]
@@ -332,6 +347,7 @@ def main():
         
         # Extract fields with stripped names and normalized lower-case keys
         fields = {}
+        item_sprint = None
         for fv in (item.get("fieldValues") or {}).get("nodes", []):
             if not fv or not fv.get("field"):
                 continue
@@ -340,15 +356,23 @@ def main():
                 continue
             if "date" in fv:
                 fields[name] = fv["date"]
+            elif "text" in fv:
+                fields[name] = fv["text"]
+            elif "number" in fv:
+                fields[name] = fv["number"]
             elif "title" in fv:
                 fields[name] = fv["title"]
+                if "sprint" in name or "iteration" in name:
+                    item_sprint = fv["title"]
             elif "name" in fv:
                 fields[name] = fv["name"]
+                if "sprint" in name or "iteration" in name:
+                    item_sprint = fv["name"]
                 
-        sprint = fields.get("sprint", "Backlog")
+        sprint = item_sprint or fields.get("sprint") or fields.get("iteration") or "Backlog"
         status = fields.get("status", "")
         
-        # Resilient field name resolution (matching with or without leading spaces, case-insensitive)
+        # Resilient field name resolution
         est_start = (fields.get("estimated start date") or
                      fields.get("estimated start") or
                      fields.get("planned start date") or

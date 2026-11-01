@@ -15,7 +15,10 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -493,6 +496,35 @@ class ChatViewModel(
         refreshChatHistory()
         refreshAppliances()
         refreshUserProfile()
+        observeSignedInUser()
+    }
+
+    /**
+     * Sign in / sign out from any screen: forget the data of the previous user
+     * and load the data of the new one (or of the guest).
+     */
+    private fun observeSignedInUser() {
+        val auth = authManager ?: return
+        viewModelScope.launch {
+            auth.currentUser
+                .map { it?.uid }
+                .distinctUntilChanged()
+                .drop(1) // The current user was loaded above.
+                .collect { onUserChanged() }
+        }
+    }
+
+    /** Clears every per-user state and reloads it for the user now signed in. */
+    private fun onUserChanged() {
+        // The open chat is already saved for the previous user after each answer.
+        savedChats = emptyList()
+        lastImageUri = null
+        _applianceManuals.value = null
+        _uiState.value = ChatUiState(currentChatId = "chat_${clock()}")
+        refreshBookmarks()
+        refreshChatHistory()
+        refreshAppliances()
+        refreshUserProfile()
     }
 
     /** Reloads the chat history of the current user (e.g. after signing in). */
@@ -537,7 +569,10 @@ class ChatViewModel(
             appliance = chat.applianceName?.let { Appliance(name = it, brand = null, model = null, confidence = 1f) },
             currentChatId = chat.id,
             chatSessions = _uiState.value.chatSessions,
-            bookmarkedGuides = current.bookmarkedGuides
+            bookmarkedGuides = current.bookmarkedGuides,
+            // The profile and the registered appliances belong to the user, not to the chat.
+            userAppliances = current.userAppliances,
+            userProfile = current.userProfile
         )
     }
 
@@ -592,7 +627,9 @@ class ChatViewModel(
         _uiState.value = ChatUiState(
             currentChatId = "chat_${clock()}",
             chatSessions = current.chatSessions,
-            bookmarkedGuides = current.bookmarkedGuides
+            bookmarkedGuides = current.bookmarkedGuides,
+            userAppliances = current.userAppliances,
+            userProfile = current.userProfile
         )
     }
 
@@ -653,34 +690,46 @@ class ChatViewModel(
     }
 
     fun refreshAppliances() {
-        val userId = authManager?.currentUserId ?: return
+        val userId = currentUid()
+        if (userId == null) {
+            // Guest: appliances are kept only on screen until the app is closed.
+            return
+        }
         viewModelScope.launch {
             val list = firebaseRepository?.getAppliances(userId) ?: emptyList()
-            _uiState.value = _uiState.value.copy(userAppliances = list)
-        }
-    }
-
-    fun refreshUserProfile() {
-        val userId = authManager?.currentUserId ?: return
-        viewModelScope.launch {
-            val profile = firebaseRepository?.getUserProfile(userId)
-            val localPhoto = profilePhotoStore?.currentUrl()
-            if (profile != null) {
-                // The phone keeps the photo when Firebase Storage is not configured.
-                val withPhoto = if (profile.photoUrl.isNullOrBlank() && localPhoto != null) {
-                    profile.copy(photoUrl = localPhoto)
-                } else {
-                    profile
-                }
-                _uiState.value = _uiState.value.copy(userProfile = withPhoto)
-            } else if (localPhoto != null) {
-                _uiState.value = _uiState.value.copy(
-                    userProfile = UserProfile(userId, "", "", localPhoto)
-                )
+            if (currentUid() == userId) {
+                _uiState.update { it.copy(userAppliances = list) }
             }
         }
     }
 
+    fun refreshUserProfile() {
+        val userId = currentUid()
+        if (userId == null) {
+            // Guest: no photo and no name, so the screens show the default avatar.
+            _uiState.update { it.copy(userProfile = null) }
+            return
+        }
+        viewModelScope.launch {
+            val profile = firebaseRepository?.getUserProfile(userId)
+            // The phone keeps the photo when Firebase Storage is not configured.
+            val localPhoto = profilePhotoStore?.currentUrl(userId)
+            val shown = when {
+                profile == null -> localPhoto?.let { UserProfile(userId, "", "", it) }
+                profile.photoUrl.isNullOrBlank() && localPhoto != null -> profile.copy(photoUrl = localPhoto)
+                else -> profile
+            }
+            if (currentUid() == userId) {
+                _uiState.update { it.copy(userProfile = shown) }
+            }
+        }
+    }
+
+    /**
+     * Adds an appliance to the profile.
+     * Returns true when it is saved to the user's account, false when there is no
+     * signed-in user (it is then shown only until the app is closed) or the name is blank.
+     */
     fun addAppliance(
         name: String,
         brand: String? = null,
@@ -688,10 +737,9 @@ class ChatViewModel(
         category: String? = null,
         room: String? = null,
         subtitle: String? = null
-    ) {
+    ): Boolean {
         val cleanName = name.trim()
-        if (cleanName.isBlank()) return
-        val userId = authManager?.currentUserId ?: "guest"
+        if (cleanName.isBlank()) return false
         val appliance = UserAppliance(
             name = cleanName,
             brand = brand?.trim()?.ifEmpty { null },
@@ -700,20 +748,24 @@ class ChatViewModel(
             subtitle = subtitle?.trim() ?: listOfNotNull(room?.trim()?.ifEmpty { null }, "Registered appliance").joinToString(" • "),
             manualCount = 1
         )
-        _uiState.value = _uiState.value.copy(
-            userAppliances = _uiState.value.userAppliances + appliance
-        )
+        _uiState.update { it.copy(userAppliances = it.userAppliances + appliance) }
+        val userId = currentUid() ?: return false
         viewModelScope.launch {
-            firebaseRepository?.saveAppliance(userId, appliance)
-            refreshAppliances()
+            if (firebaseRepository?.saveAppliance(userId, appliance) == true) {
+                refreshAppliances()
+            } else {
+                // Keep it on screen instead of losing it silently.
+                _userMessages.emit("Couldn't save the appliance. Check your connection.")
+            }
         }
+        return true
     }
 
     fun deleteAppliance(applianceId: String) {
-        val userId = authManager?.currentUserId ?: "guest"
-        _uiState.value = _uiState.value.copy(
-            userAppliances = _uiState.value.userAppliances.filterNot { it.id == applianceId }
-        )
+        _uiState.update { state ->
+            state.copy(userAppliances = state.userAppliances.filterNot { it.id == applianceId })
+        }
+        val userId = currentUid() ?: return
         viewModelScope.launch {
             firebaseRepository?.deleteAppliance(userId, applianceId)
             refreshAppliances()
@@ -754,7 +806,7 @@ class ChatViewModel(
                 cloudUrl
             } else {
                 // Firebase Storage is not configured: keep the photo on this phone.
-                profilePhotoStore?.save(uri)
+                profilePhotoStore?.save(uid, uri)
             }
             if (savedUrl != null) {
                 _uiState.update { state ->
@@ -811,7 +863,7 @@ class ChatViewModel(
         _uiState.value = _uiState.value.copy(
             bookmarkedGuides = _uiState.value.bookmarkedGuides.filterNot {
                 (manualId != null && it.manualId == manualId) ||
-                (it.issueTitle == guide.issueTitle && it.applianceName == guide.applianceName)
+                        (it.issueTitle == guide.issueTitle && it.applianceName == guide.applianceName)
             },
             messages = _uiState.value.messages.map { msg ->
                 if ((manualId != null && msg.manualGuide?.manualId == manualId) ||
@@ -836,11 +888,51 @@ class ChatViewModel(
     }
 
     /**
-     * Sends user message (with optional attached image).
+     * Asks the question [messageId] again: the question and everything after it
+     * are removed and the question is sent once more, so it gets a new answer.
      */
-    fun sendTextMessage(text: String, attachedImageUri: Uri? = null) {
+    fun regenerateMessage(messageId: Long) {
+        val question = takeBackQuestion(messageId) ?: return
+        val photo = question.imageUri
+        if (question.text.isNullOrBlank() && photo != null) {
+            analyzeImage(photo)
+        } else {
+            sendTextMessage(question.text.orEmpty(), attachedImageUri = photo, useSelectedImage = false)
+        }
+    }
+
+    /**
+     * Replaces the question [messageId] with [newText] and asks it again.
+     * The old answer and anything after it are removed; the photo is kept.
+     */
+    fun editMessage(messageId: Long, newText: String) {
+        if (newText.isBlank()) return
+        val question = takeBackQuestion(messageId) ?: return
+        sendTextMessage(newText, attachedImageUri = question.imageUri, useSelectedImage = false)
+    }
+
+    /**
+     * Removes the user message [messageId] and every message after it, and
+     * returns it. Returns null (and changes nothing) while an answer is still
+     * arriving or when [messageId] is not a question of this chat.
+     */
+    private fun takeBackQuestion(messageId: Long): Message? {
+        val state = _uiState.value
+        if (state.isSending || state.isAnalyzing) return null
+        val index = state.messages.indexOfFirst { it.id == messageId && it.isUser }
+        if (index < 0) return null
+        _uiState.update { it.copy(messages = it.messages.take(index), error = null) }
+        return state.messages[index]
+    }
+
+    /**
+     * Sends user message (with optional attached image).
+     * With [useSelectedImage] false, the photo picked in the input bar is not attached
+     * (used when a question is asked again).
+     */
+    fun sendTextMessage(text: String, attachedImageUri: Uri? = null, useSelectedImage: Boolean = true) {
         val cleanText = text.trim()
-        val imageToAttach = attachedImageUri ?: _uiState.value.selectedImageUri
+        val imageToAttach = attachedImageUri ?: _uiState.value.selectedImageUri.takeIf { useSelectedImage }
 
         if (cleanText.isEmpty() && imageToAttach == null) {
             return
@@ -859,8 +951,10 @@ class ChatViewModel(
                 } else null
             }
 
-        // Clear selected image preview
-        _uiState.value = _uiState.value.copy(selectedImageUri = null)
+        // Clear selected image preview (it was attached to this message)
+        if (useSelectedImage) {
+            _uiState.value = _uiState.value.copy(selectedImageUri = null)
+        }
 
         addMessage(
             Message(

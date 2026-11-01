@@ -5,8 +5,11 @@ import com.google.android.gms.tasks.Task
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.UserProfileChangeRequest
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkConstructor
+import io.mockk.unmockkConstructor
 import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
@@ -205,5 +208,41 @@ class AuthManagerTest {
         every { firebaseAuth.currentUser } returns null
         val loggedOutAuthManager = AuthManager(firebaseAuth)
         assertTrue(loggedOutAuthManager.isAnonymous)
+    }
+
+    @Test
+    fun updateProfileReturnsNullWhenNoUserIsSignedIn() = runTest {
+        val firebaseAuth: FirebaseAuth = mockk(relaxed = true)
+        every { firebaseAuth.currentUser } returns null
+        val authManager = AuthManager(firebaseAuth)
+
+        assertNull(authManager.updateProfile("Anna"))
+    }
+
+    @Test
+    fun updateProfileSendsTrimmedNameAndRefreshesCurrentUser() = runTest {
+        val request: UserProfileChangeRequest = mockk()
+        mockkConstructor(UserProfileChangeRequest.Builder::class)
+        try {
+            val nameSlot = slot<String>()
+            every {
+                anyConstructed<UserProfileChangeRequest.Builder>().setDisplayName(capture(nameSlot))
+            } answers { self as UserProfileChangeRequest.Builder }
+            every { anyConstructed<UserProfileChangeRequest.Builder>().build() } returns request
+
+            val firebaseAuth: FirebaseAuth = mockk(relaxed = true)
+            every { firebaseAuth.currentUser } returns mockUser
+            every { mockUser.updateProfile(request) } returns createSuccessTask<Void?>(null)
+            val authManager = AuthManager(firebaseAuth)
+
+            val updated = authManager.updateProfile("  Anna  ")
+
+            assertEquals("Anna", nameSlot.captured)
+            assertEquals(mockUser, updated)
+            assertEquals(mockUser, authManager.currentUser.value)
+            verify { mockUser.updateProfile(request) }
+        } finally {
+            unmockkConstructor(UserProfileChangeRequest.Builder::class)
+        }
     }
 }

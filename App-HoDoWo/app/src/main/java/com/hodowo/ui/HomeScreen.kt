@@ -108,7 +108,9 @@ fun HomeScreen(
     onOpenArCore: () -> Unit,
     onOpenMarket: () -> Unit,
     onOpenProfile: () -> Unit,
-    onAskAboutManual: (ManualGuide) -> Unit
+    onAskAboutManual: (ManualGuide) -> Unit,
+    /** Photo of the signed-in user for the top bar; null shows the default avatar. */
+    profilePhotoUrl: String? = null
 ) {
     val state by viewModel.uiState.collectAsState()
     var openedManual by remember { mutableStateOf<RecentManual?>(null) }
@@ -140,7 +142,7 @@ fun HomeScreen(
                         Toast.makeText(context, "No notifications yet", Toast.LENGTH_SHORT).show()
                     }
                 )
-                ProfileAvatar(name = "", size = 34, onClick = onOpenProfile)
+                ProfileAvatar(name = "", size = 34, onClick = onOpenProfile, photoUrl = profilePhotoUrl)
             }
         )
 

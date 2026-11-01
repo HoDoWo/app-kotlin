@@ -154,12 +154,16 @@ fun ApplianceManualsScreen(
             } else {
                 OutlinedButton(
                     onClick = {
-                        viewModel.addAppliance(
+                        val saved = viewModel.addAppliance(
                             name = ap.name,
                             brand = ap.brand.orEmpty(),
                             room = ""
                         )
-                        Toast.makeText(context, "Saved to your appliances", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            if (saved) "Saved to your appliances" else "Sign in to keep your appliances",
+                            Toast.LENGTH_SHORT
+                        ).show()
                         onBack()
                     },
                     modifier = Modifier.fillMaxWidth()

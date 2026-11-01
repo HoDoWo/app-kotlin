@@ -16,6 +16,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 
 /**
  * Keeps each user's chats in a JSON file in [directory] (the app's private
@@ -23,11 +24,19 @@ import java.io.IOException
  *
  * Only the newest [MAX_CHATS] chats and the last [MAX_MESSAGES] messages of
  * each chat are kept, so the file stays small.
+ *
+ * Photos picked from the gallery come as `content://` links that the app may
+ * read only while it is running. With [openImage], every photo of a saved chat
+ * is copied into [directory]/images, so the history still shows it after a restart.
  */
 class FileChatHistoryStore(
     private val directory: File,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    /** Opens a photo of a message; null keeps only the link to the photo. */
+    private val openImage: ((Uri) -> InputStream?)? = null
 ) : ChatHistoryStore {
+
+    private val imagesDir = File(directory, "images")
 
     private val mutex = Mutex()
 
@@ -38,8 +47,10 @@ class FileChatHistoryStore(
     override suspend fun save(userId: String, chat: SavedChat) {
         mutex.withLock {
             withContext(ioDispatcher) {
-                val chats = read(userId).upsert(chat).take(MAX_CHATS)
+                val all = read(userId).upsert(keepImages(userId, chat))
+                val chats = all.take(MAX_CHATS)
                 writeAtomically(fileOf(userId), ChatJson.toJson(chats).toString())
+                all.drop(MAX_CHATS).forEach { deleteImages(userId, it.id) }
             }
         }
     }
@@ -49,6 +60,7 @@ class FileChatHistoryStore(
             withContext(ioDispatcher) {
                 val chats = read(userId).filterNot { it.id == chatId }
                 writeAtomically(fileOf(userId), ChatJson.toJson(chats).toString())
+                deleteImages(userId, chatId)
             }
         }
     }
@@ -65,6 +77,46 @@ class FileChatHistoryStore(
             emptyList()
         }
     }
+
+    /** Copies the photos of [chat] into [imagesDir] and points the messages to the copies. */
+    private fun keepImages(userId: String, chat: SavedChat): SavedChat {
+        if (openImage == null || chat.messages.none { it.imageUri != null }) return chat
+        return chat.copy(
+            messages = chat.messages.map { message ->
+                val uri = message.imageUri ?: return@map message
+                val copy = File(imagesDir, imagePrefix(userId, chat.id) + message.id + ".jpg")
+                if (copy.isFile || copyImage(uri, copy)) {
+                    message.copy(imageUri = Uri.fromFile(copy))
+                } else {
+                    message // The photo cannot be read: keep the original link.
+                }
+            }
+        )
+    }
+
+    private fun copyImage(uri: Uri, target: File): Boolean = try {
+        val input = openImage?.invoke(uri)
+        if (input == null) {
+            false
+        } else {
+            imagesDir.mkdirs()
+            val temp = File(imagesDir, target.name + ".tmp")
+            input.use { source -> temp.outputStream().use { source.copyTo(it) } }
+            temp.renameTo(target) || run { temp.delete(); false }
+        }
+    } catch (_: IOException) {
+        false
+    } catch (_: SecurityException) {
+        false
+    }
+
+    private fun deleteImages(userId: String, chatId: String) {
+        val prefix = imagePrefix(userId, chatId)
+        imagesDir.listFiles { file -> file.name.startsWith(prefix) }?.forEach { it.delete() }
+    }
+
+    private fun imagePrefix(userId: String, chatId: String): String =
+        userId.replace(UNSAFE_CHARACTERS, "_") + "__" + chatId.replace(UNSAFE_CHARACTERS, "_") + "__"
 
     private fun fileOf(userId: String): File =
         File(directory, "chats_" + userId.replace(UNSAFE_CHARACTERS, "_") + ".json")
