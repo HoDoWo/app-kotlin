@@ -31,3 +31,5 @@ timestamp,issue,title,type,delta_hours
 2026-10-28T00:00:00+00:00,150,"Forum UI: categories, threads and composer",initial,9.0
 2026-10-28T00:00:00+00:00,122,"Mockups: marketplace, ads and cart pages",initial,6.0
 2026-10-28T00:00:00+00:00,45,Marketplace end-to-end tests (API and device),initial,6.0
+2026-11-02T19:34:45+00:00,42,Cart API,completed,-5.0
+2026-11-02T21:21:59+00:00,147,Search suggestions and recent searches,removed,-4.0

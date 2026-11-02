@@ -117,7 +117,7 @@
   "c": 6.0,
   "done": false,
   "issue": 24,
-  "title": "Zyte API configuration and partner catalogue ingestion"
+  "title": "Partner catalogue import from CSV/JSON feeds"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4UQ": {
   "c": 10.0,
@@ -132,8 +132,8 @@
   "title": "Partner tiers, sponsored ranking and 'for me' ordering"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Ws": {
-  "c": 5.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 42,
   "title": "Cart API"
  },
@@ -202,12 +202,6 @@
   "done": false,
   "issue": 146,
   "title": "My listings: edit, mark as sold and delete"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4iw": {
-  "c": 4.0,
-  "done": false,
-  "issue": 147,
-  "title": "Search suggestions and recent searches"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4kI": {
   "c": 8.0,
