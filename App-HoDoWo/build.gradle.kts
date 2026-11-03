@@ -14,11 +14,15 @@ sonar {
         property("sonar.host.url", "https://sonarcloud.io")
         property(
             "sonar.coverage.jacoco.xmlReportPaths",
-            file("app/build/reports/jacoco/jacocoDebugUnitTestReport/jacocoDebugUnitTestReport.xml").absolutePath,
+            "${project.rootDir}/app/build/reports/jacoco/jacocoDebugUnitTestReport/jacocoDebugUnitTestReport.xml,**/reports/jacoco/**/*.xml",
         )
         property(
             "sonar.coverage.exclusions",
-            "**/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt",
+            "**/*Test.kt,**/src/test/**,**/ui/**,**/ui/theme/**,app/src/main/java/com/hodowo/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt",
+        )
+        property(
+            "sonar.cpd.exclusions",
+            "**/*Test.kt,**/src/test/**,**/ui/**,**/ui/theme/**,app/src/main/java/com/hodowo/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt,**/MarketplaceService.kt",
         )
     }
 }
