@@ -42,7 +42,7 @@ import com.hodowo.viewmodel.ManualGuide
 import java.util.Locale
 
 /**
- * AI Diagnostic Response Box matching the HTML mock.
+ * AI Diagnostic Response Box matching the HTML mock with enlarged typography.
  */
 @Composable
 fun ManualGuideCard(
@@ -63,11 +63,11 @@ fun ManualGuideCard(
             .border(1.dp, SurfaceContainerHigh.copy(alpha = 0.7f), RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp))
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Header Badge & Title
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -75,32 +75,34 @@ fun ManualGuideCard(
                 ) {
                     Text(
                         text = guide.applianceName.uppercase(Locale.getDefault()),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 1.sp
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        fontSize = 13.sp
                     )
 
                     // Bookmark Button
                     IconButton(
                         onClick = onToggleBookmark,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
                             imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
                             contentDescription = "Bookmark",
                             tint = if (isBookmarked) Primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
                 }
 
                 Text(
                     text = guide.issueTitle,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 22.sp
+                    lineHeight = 26.sp,
+                    fontSize = 20.sp
                 )
             }
 
@@ -109,37 +111,40 @@ fun ManualGuideCard(
             // Diagnostic Overview
             Text(
                 text = guide.overview,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
-                lineHeight = 20.sp
+                lineHeight = 24.sp,
+                fontSize = 16.sp
             )
 
             // Step-by-Step Instructions
             if (guide.steps.isNotEmpty()) {
                 Text(
                     text = "Follow these repair steps:",
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 17.sp
                 )
 
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     guide.steps.forEach { step ->
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.Top
                         ) {
                             Surface(
                                 shape = CircleShape,
                                 color = Primary,
-                                modifier = Modifier.size(24.dp).padding(top = 1.dp)
+                                modifier = Modifier.size(28.dp).padding(top = 1.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
                                         text = "${step.number}",
-                                        style = MaterialTheme.typography.labelSmall,
+                                        style = MaterialTheme.typography.labelMedium,
                                         color = Color.White,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
                                     )
                                 }
                             }
@@ -155,7 +160,8 @@ fun ManualGuideCard(
                                     },
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    lineHeight = 20.sp
+                                    lineHeight = 23.sp,
+                                    fontSize = 15.sp
                                 )
                             }
                         }
@@ -171,13 +177,12 @@ fun ManualGuideCard(
                         .crossfade(true)
                         .build(),
                     contentDescription = "Step-by-step visual diagram",
-                    // Whole image, full width: the height follows the image's own proportions.
                     contentScale = ContentScale.FillWidth,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
                         .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(12.dp))
-                        .clickable { onImageClick(url) } // Makes the image trigger full screen
+                        .clickable { onImageClick(url) }
                 )
             }
 
@@ -191,8 +196,9 @@ fun ManualGuideCard(
             ) {
                 Text(
                     text = "Was this manual helpful?",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.9f),
+                    fontSize = 13.sp
                 )
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

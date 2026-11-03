@@ -56,9 +56,10 @@ fun UserMessageItem(
                 message.text?.let {
                     Text(
                         text = it,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontSize = 16.sp,
                         color = Color.White,
-                        lineHeight = 20.sp
+                        lineHeight = 23.sp
                     )
                 }
 

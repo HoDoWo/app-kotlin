@@ -251,7 +251,8 @@ private fun SectionHeader(section: ManualsSection, onSelect: (ManualsSection) ->
         Text(
             text = section.title,
             style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
                 .weight(1f)
@@ -287,10 +288,11 @@ private fun SwitchOption(label: String, selected: Boolean, onClick: () -> Unit) 
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
             color = if (selected) Color.White else OnSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
         )
     }
 }
@@ -302,12 +304,14 @@ private fun Greeting(userName: String) {
             text = "Hello $userName 👋",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
+            fontSize = 28.sp,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "What do you need today?",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
+            fontSize = 16.sp,
             color = OnSurfaceVariant
         )
     }
@@ -333,7 +337,13 @@ private fun HomeSearchBar(onSearch: (String) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
-        placeholder = { Text("Search appliance, issue, or error code...") },
+        textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+        placeholder = {
+            Text(
+                "Search appliance, issue, or error code...",
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp)
+            )
+        },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = OnSurfaceVariant) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { submit() }),
@@ -400,27 +410,28 @@ private fun QuickActionButton(
         color = SurfaceContainerLowest,
         shadowElevation = 1.dp,
         border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.2f)),
-        modifier = modifier.height(96.dp)
+        modifier = modifier.height(100.dp)
     ) {
         Column(
             modifier = Modifier.padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Surface(shape = CircleShape, color = iconBackground, modifier = Modifier.size(40.dp)) {
+            Surface(shape = CircleShape, color = iconBackground, modifier = Modifier.size(42.dp)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(22.dp))
+                    Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(24.dp))
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
             subtitle?.let {
-                Text(text = it, style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                Text(text = it, style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
             }
         }
     }
@@ -434,17 +445,24 @@ private fun HelpfulTipCard(tip: String) {
         border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.3f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text = "💡", fontSize = 22.sp)
+        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(text = "💡", fontSize = 24.sp)
             Column {
                 Text(
                     text = "Helpful Tip",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(text = tip, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = tip,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontSize = 16.sp,
+                    lineHeight = 23.sp,
+                    color = OnSurfaceVariant
+                )
             }
         }
     }
@@ -469,7 +487,7 @@ private fun RecentManualCard(
         border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.2f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -483,7 +501,7 @@ private fun RecentManualCard(
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(Icons.Outlined.Schedule, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = label, style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                        Text(text = label, style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
                     }
                 }
             }
@@ -492,14 +510,17 @@ private fun RecentManualCard(
                 Text(
                     text = guide.issueTitle,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 if (guide.overview.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = guide.overview,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
                         color = OnSurfaceVariant,
                         maxLines = 3,
                         overflow = TextOverflow.Ellipsis
@@ -519,11 +540,11 @@ private fun PopularityLabel(searches: Int, saves: Int) {
         Spacer(modifier = Modifier.width(8.dp))
         Icon(Icons.Default.Search, contentDescription = "Searches", tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(2.dp))
-        Text(text = "$searches", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+        Text(text = "$searches", style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
         Spacer(modifier = Modifier.width(8.dp))
         Icon(Icons.Default.Bookmark, contentDescription = "Saves", tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
         Spacer(modifier = Modifier.width(2.dp))
-        Text(text = "$saves", style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+        Text(text = "$saves", style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
     }
 }
 
@@ -542,12 +563,13 @@ private fun ApplianceChip(name: String, highlighted: Boolean, modifier: Modifier
     ) {
         Text(
             text = name,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
             color = if (highlighted) Primary else Secondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
         )
     }
 }
@@ -558,7 +580,6 @@ private fun GuideImage(url: String, onClick: () -> Unit) {
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current).data(imageData(url)).crossfade(true).build(),
         contentDescription = "Guide image, tap to enlarge",
-        // Whole image, full width: the height follows the image's own proportions.
         contentScale = ContentScale.FillWidth,
         modifier = Modifier
             .fillMaxWidth()
@@ -578,7 +599,8 @@ private fun EmptyPopularCard() {
     ) {
         Text(
             text = "No popular guides yet: they appear when users search and save guides.",
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 15.sp,
             color = OnSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(20.dp)
@@ -598,12 +620,13 @@ private fun OfflineRow(onRetry: () -> Unit) {
     ) {
         Text(
             text = "You're offline: showing the saved copy.",
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 14.sp,
             color = OnSurfaceVariant,
             modifier = Modifier.weight(1f)
         )
         OutlinedButton(onClick = onRetry, shape = RoundedCornerShape(12.dp)) {
-            Text("Retry")
+            Text("Retry", fontSize = 14.sp)
         }
     }
 }
@@ -623,22 +646,24 @@ private fun EmptyManualsCard(onDiagnose: () -> Unit) {
             Text(
                 text = "No manuals yet",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Take a photo of an appliance and ask what you need: your guides will appear here.",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 15.sp,
                 color = OnSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Button(
                 onClick = onDiagnose,
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Diagnose an issue")
+                Text("Diagnose an issue", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -655,12 +680,13 @@ private fun ManualsErrorRow(onRetry: () -> Unit) {
     ) {
         Text(
             text = "Couldn't load the manuals.",
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 14.sp,
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.weight(1f)
         )
         OutlinedButton(onClick = onRetry, shape = RoundedCornerShape(12.dp)) {
-            Text("Retry")
+            Text("Retry", fontSize = 14.sp)
         }
     }
 }
@@ -686,7 +712,7 @@ private fun ManualDetailDialog(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -699,23 +725,34 @@ private fun ManualDetailDialog(
                     }
                 }
 
-                Text(text = guide.issueTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    text = guide.issueTitle,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp
+                )
                 if (guide.overview.isNotBlank()) {
-                    Text(text = guide.overview, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
+                    Text(
+                        text = guide.overview,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontSize = 16.sp,
+                        lineHeight = 23.sp,
+                        color = OnSurfaceVariant
+                    )
                 }
                 guide.imageUrl?.let { url -> GuideImage(url = url, onClick = { onImageClick(url) }) }
 
                 guide.steps.forEach { step ->
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Surface(shape = CircleShape, color = Primary, modifier = Modifier.size(26.dp)) {
+                        Surface(shape = CircleShape, color = Primary, modifier = Modifier.size(28.dp)) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text(text = "${step.number}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(text = "${step.number}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         }
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = step.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text(text = step.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                             if (step.description.isNotBlank()) {
-                                Text(text = step.description, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+                                Text(text = step.description, style = MaterialTheme.typography.bodyMedium, fontSize = 15.sp, color = OnSurfaceVariant)
                             }
                         }
                     }
@@ -724,7 +761,8 @@ private fun ManualDetailDialog(
                 guide.warnings.forEach { warning ->
                     Text(
                         text = "⚠️ $warning",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
@@ -735,7 +773,7 @@ private fun ManualDetailDialog(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Ask about this in the chat")
+                    Text("Ask about this in the chat", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

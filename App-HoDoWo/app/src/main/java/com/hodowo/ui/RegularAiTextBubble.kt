@@ -65,7 +65,8 @@ fun RegularAiTextBubble(
                     )
                     Text(
                         text = currentStepText ?: "Thinking...",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontSize = 16.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Medium
                     )
@@ -74,9 +75,10 @@ fun RegularAiTextBubble(
                 val textToDisplay = if (message.isStreaming) (message.text ?: "") + " ▍" else (message.text ?: "")
                 Text(
                     text = textToDisplay,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 20.sp
+                    lineHeight = 23.sp
                 )
             }
 
