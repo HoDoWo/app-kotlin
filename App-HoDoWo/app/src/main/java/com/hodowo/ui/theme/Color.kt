@@ -14,6 +14,8 @@ val Secondary = Color(0xFF565E74)
 val OnSecondary = Color(0xFFFFFFFF)
 val SecondaryContainer = Color(0xFFDAE2FD)
 val OnSecondaryContainer = Color(0xFF5C647A)
+val SecondaryFixed = Color(0xFFDAE2FD)
+val SecondaryFixedDim = Color(0xFFBEC6E0)
 
 val Tertiary = Color(0xFF825100)
 val OnTertiary = Color(0xFFFFFFFF)
