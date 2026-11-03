@@ -7,6 +7,8 @@ val Primary = Color(0xFF583AE2)
 val OnPrimary = Color(0xFFFFFFFF)
 val PrimaryContainer = Color(0xFF7258FC)
 val OnPrimaryContainer = Color(0xFFFFFBFF)
+val PrimaryFixed = Color(0xFFE5DEFF)
+val PrimaryFixedDim = Color(0xFFC8BFFF)
 
 val Secondary = Color(0xFF565E74)
 val OnSecondary = Color(0xFFFFFFFF)
@@ -17,6 +19,9 @@ val Tertiary = Color(0xFF825100)
 val OnTertiary = Color(0xFFFFFFFF)
 val TertiaryContainer = Color(0xFFA36700)
 val OnTertiaryContainer = Color(0xFFFFFBFF)
+val TertiaryFixed = Color(0xFFFFDDB8)
+val TertiaryFixedDim = Color(0xFFFFB95F)
+val OnTertiaryFixed = Color(0xFF2A1700)
 
 val Surface = Color(0xFFF8F9FF)
 val OnSurface = Color(0xFF0B1C30)
@@ -31,6 +36,9 @@ val SurfaceContainerHighest = Color(0xFFD3E4FE)
 
 val Background = Color(0xFFF8F9FF)
 val OnBackground = Color(0xFF0B1C30)
+
+val InverseSurface = Color(0xFF213145)
+val InverseOnSurface = Color(0xFFEAF1FF)
 
 val Error = Color(0xFFBA1A1A)
 val OnError = Color(0xFFFFFFFF)

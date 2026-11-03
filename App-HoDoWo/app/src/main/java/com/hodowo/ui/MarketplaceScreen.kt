@@ -8,17 +8,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,57 +32,18 @@ fun MarketplaceScreen(
     viewModel: MarketplaceViewModel,
     onPostProduct: () -> Unit
 ) {
-    val products by viewModel.products.collectAsState()
-    val loading by viewModel.isLoading.collectAsState()
-    val error by viewModel.error.collectAsState()
-    var query by remember { mutableStateOf("") }
-    var type by remember { mutableStateOf("all") }
-
-    LaunchedEffect(type) { viewModel.search(query, type) }
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Marketplace")
-            Button(onClick = onPostProduct) { Text("Post to sell") }
-        }
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it; viewModel.search(it, type) },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Search parts, model numbers…") },
-            singleLine = true
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("all" to "All", "new" to "New", "used" to "Second-hand", "part" to "Parts").forEach { (value, label) ->
-                FilterChip(selected = type == value, onClick = { type = value }, label = { Text(label) })
-            }
-        }
-        if (loading) CircularProgressIndicator()
-        error?.let { Text(it) }
-        if (!loading && error == null && products.isEmpty()) Text("No products match these filters.")
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(products, key = { it.id }) { ProductCard(it) }
-        }
-    }
-}
-
-@Composable
-private fun ProductCard(product: MarketplaceProduct) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(if (product.sponsored) "Sponsored partner" else product.type.replaceFirstChar { it.uppercase() })
-            Text(product.title)
-            Text(product.description)
-            Text("${product.price} · ${product.partnerName ?: product.sellerName}")
-            OutlinedButton(onClick = { }) { Text("Add to cart") }
-        }
-    }
+    ProductSearchAndFiltersScreen(
+        viewModel = viewModel,
+        onBack = onPostProduct
+    )
 }
 
 @Composable
 fun PostProductScreen(
     viewModel: PostProductViewModel,
     userId: String,
-    onPublished: () -> Unit
+    onPublished: () -> Unit,
+    onBack: () -> Unit = onPublished
 ) {
     var title by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
@@ -112,7 +69,10 @@ fun PostProductScreen(
         diagnosticImages = it.take(8)
     }
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Sell an appliance or part")
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Sell an appliance or part")
+            OutlinedButton(onClick = onBack) { Text("Cancel") }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = listingKind == "appliance", onClick = { listingKind = "appliance" }, label = { Text("Appliance") })
             FilterChip(selected = listingKind == "part", onClick = { listingKind = "part" }, label = { Text("Replacement part") })
