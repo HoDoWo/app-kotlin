@@ -40,6 +40,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hodowo.data.AiServiceProvider
 import com.hodowo.data.AuthManager
+import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.ui.components.AppNavTab
 import com.hodowo.ui.components.BottomNavBar
 import com.hodowo.ui.components.NewChatButton
@@ -77,6 +78,7 @@ fun HoDoWoApp(
     var showApplianceManuals by remember { mutableStateOf(false) }
     var showPostProduct by remember { mutableStateOf(false) }
     var showMarketplaceSearch by remember { mutableStateOf(false) }
+    var selectedMarketProductId by remember { mutableStateOf<String?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -177,7 +179,16 @@ fun HoDoWoApp(
                         }
                     }
                     AppNavTab.MARKET -> {
-                        if (showPostProduct) {
+                        val productId = selectedMarketProductId
+                        if (productId != null) {
+                            ProductDetailScreen(
+                                viewModel = viewModel(
+                                    key = productId,
+                                    factory = AiServiceProvider.productDetailViewModelFactory(productId)
+                                ),
+                                onBack = { selectedMarketProductId = null }
+                            )
+                        } else if (showPostProduct) {
                             PostProductScreen(
                                 viewModel = postProductViewModel,
                                 userId = authManager.currentUserId,
@@ -209,8 +220,9 @@ fun HoDoWoApp(
                     }
                 }
 
-                // The chat has its own "+" in the header; every other section gets this button.
-                if (currentTab != AppNavTab.AI_CHAT) {
+                // The chat has its own "+" in the header. Product Detail has its own sticky
+                // add-to-cart/buy bar at the bottom, which this button would overlap.
+                if (currentTab != AppNavTab.AI_CHAT && selectedMarketProductId == null) {
                     NewChatButton(
                         onClick = { startNewChat() },
                         modifier = Modifier
@@ -227,6 +239,7 @@ fun HoDoWoApp(
                     showApplianceManuals = false
                     showMarketplaceSearch = false
                     showPostProduct = false
+                    selectedMarketProductId = null
                     currentTab = it
                 }
             )

@@ -11,6 +11,7 @@ import com.hodowo.viewmodel.HoDoWoAiService
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
 import com.hodowo.viewmodel.PostProductViewModel
+import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.greetingName
 import java.io.File
 
@@ -21,6 +22,7 @@ object AiServiceProvider {
 
     val authManager by lazy { AuthManager() }
     val firebaseRepository by lazy { FirebaseRepository() }
+    val cartRepository by lazy { InMemoryCartRepository() }
 
     fun create(context: Context): HoDoWoAiService {
         val backendUrl = BuildConfig.BACKEND_URL
@@ -38,6 +40,16 @@ object AiServiceProvider {
             tokenProvider = { tokens.token() }
         )
     }
+
+    /**
+     * The marketplace service.
+     *
+     * Unlike [create], this does not switch on [BuildConfig.BACKEND_URL]: that URL only
+     * means the AI chat backend is deployed, not that its marketplace routes exist yet
+     * (Backend#38, Backend#40 are not shipped). [RemoteMarketplaceService] is ready to use
+     * once they are: switch the line below when that happens.
+     */
+    fun marketplaceService(): MarketplaceService = DemoMarketplaceService()
 
     /** Factory that builds [ChatViewModel] with the service and Firebase repos. */
     fun chatViewModelFactory(context: Context): ViewModelProvider.Factory =
@@ -88,6 +100,18 @@ object AiServiceProvider {
                 PostProductViewModel(
                     MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
                     firebaseRepository
+                )
+            }
+        }
+
+    /** Factory that builds [ProductDetailViewModel] for the given product id. */
+    fun productDetailViewModelFactory(productId: String): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                ProductDetailViewModel(
+                    productId = productId,
+                    marketplaceService = marketplaceService(),
+                    cartRepository = cartRepository
                 )
             }
         }
