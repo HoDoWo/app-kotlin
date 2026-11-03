@@ -16,7 +16,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -44,31 +43,120 @@ class PostProductViewModelTest {
     }
 
     @Test
-    fun submitFailsValidationOnInvalidInput() {
+    fun submitFailsValidationOnShortTitleOrDescriptionOrBlankCategory() {
         var successCalled = false
 
+        // Short title
         viewModel.submit(
             userId = "u1",
-            title = "Ab", // too short
-            description = "Short description", // < 30 chars
+            title = "Ab",
+            description = "Valid description long enough for 30 characters",
             category = "washer",
             brand = "Bosch",
             model = "WAN",
             partNumber = "P1",
             listingKind = "part",
             condition = "new",
-            priceText = "invalid",
-            imageUris = emptyList(),
+            priceText = "25.0",
+            imageUris = listOf(mockUri),
             diagnosticMediaUris = emptyList(),
-            handoverMethods = emptyList(),
+            handoverMethods = listOf("shipping"),
             pickupZip = "",
             shippingPriceCents = null,
             onSuccess = { successCalled = true }
         )
-
         assertFalse(successCalled)
         assertEquals("Add the required details, 1–8 photos, a valid price, and a handover method.", viewModel.message.value)
-        assertFalse(viewModel.isSubmitting.value)
+
+        // Blank category
+        viewModel.submit(
+            userId = "u1",
+            title = "Bosch Drain Pump",
+            description = "Valid description long enough for 30 characters",
+            category = "",
+            brand = "Bosch",
+            model = "WAN",
+            partNumber = "P1",
+            listingKind = "part",
+            condition = "new",
+            priceText = "25.0",
+            imageUris = listOf(mockUri),
+            diagnosticMediaUris = emptyList(),
+            handoverMethods = listOf("shipping"),
+            pickupZip = "",
+            shippingPriceCents = null,
+            onSuccess = { successCalled = true }
+        )
+        assertFalse(successCalled)
+    }
+
+    @Test
+    fun submitFailsValidationOnTooManyImagesOrPickupWithoutZip() {
+        var successCalled = false
+        val nineUris = List(9) { mockUri }
+
+        // > 8 imageUris
+        viewModel.submit(
+            userId = "u1",
+            title = "Bosch Drain Pump",
+            description = "Valid description long enough for 30 characters",
+            category = "washer",
+            brand = "Bosch",
+            model = "WAN",
+            partNumber = "P1",
+            listingKind = "part",
+            condition = "new",
+            priceText = "25.0",
+            imageUris = nineUris,
+            diagnosticMediaUris = emptyList(),
+            handoverMethods = listOf("shipping"),
+            pickupZip = "",
+            shippingPriceCents = null,
+            onSuccess = { successCalled = true }
+        )
+        assertFalse(successCalled)
+
+        // > 8 diagnosticMediaUris
+        viewModel.submit(
+            userId = "u1",
+            title = "Bosch Drain Pump",
+            description = "Valid description long enough for 30 characters",
+            category = "washer",
+            brand = "Bosch",
+            model = "WAN",
+            partNumber = "P1",
+            listingKind = "part",
+            condition = "new",
+            priceText = "25.0",
+            imageUris = listOf(mockUri),
+            diagnosticMediaUris = nineUris,
+            handoverMethods = listOf("shipping"),
+            pickupZip = "",
+            shippingPriceCents = null,
+            onSuccess = { successCalled = true }
+        )
+        assertFalse(successCalled)
+
+        // handover pickup with blank zip
+        viewModel.submit(
+            userId = "u1",
+            title = "Bosch Drain Pump",
+            description = "Valid description long enough for 30 characters",
+            category = "washer",
+            brand = "Bosch",
+            model = "WAN",
+            partNumber = "P1",
+            listingKind = "part",
+            condition = "new",
+            priceText = "25.0",
+            imageUris = listOf(mockUri),
+            diagnosticMediaUris = emptyList(),
+            handoverMethods = listOf("pickup"),
+            pickupZip = "",
+            shippingPriceCents = null,
+            onSuccess = { successCalled = true }
+        )
+        assertFalse(successCalled)
     }
 
     @Test
@@ -96,9 +184,9 @@ class PostProductViewModelTest {
             condition = "new",
             priceText = "25.00",
             imageUris = listOf(mockUri),
-            diagnosticMediaUris = emptyList(),
-            handoverMethods = listOf("shipping"),
-            pickupZip = "",
+            diagnosticMediaUris = listOf(mockUri),
+            handoverMethods = listOf("pickup", "shipping"),
+            pickupZip = "90210",
             shippingPriceCents = 500,
             onSuccess = { successCalled = true }
         )

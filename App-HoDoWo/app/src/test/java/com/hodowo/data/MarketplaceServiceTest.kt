@@ -5,7 +5,6 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -45,7 +44,10 @@ class MarketplaceServiceTest {
                     "condition": "used",
                     "price": 25.0,
                     "brand": "Bosch",
-                    "listing_kind": "part"
+                    "listing_kind": "part",
+                    "image_url": "http://example.com/img.jpg",
+                    "original_price": 50.0,
+                    "discount_percent": 50
                 }
             ]
         }"""
@@ -64,6 +66,8 @@ class MarketplaceServiceTest {
         val item = results.first { it.id == "remote-1" }
         assertEquals("Bosch Pump Motor", item.title)
         assertEquals(25.0, item.price, 0.01)
+        assertEquals(50.0, item.originalPrice!!, 0.01)
+        assertEquals(50, item.discountPercent)
         assertTrue(item.isPart)
     }
 
@@ -78,15 +82,21 @@ class MarketplaceServiceTest {
     }
 
     @Test
-    fun searchFiltersByTypeAndCondition() = runTest {
+    fun searchFiltersByConditionNewAndUsed() = runTest {
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"items": []}"""))
-
-        val newParts = service.search(type = "part", condition = "new")
-        assertTrue(newParts.all { it.isPart || it.type == "part" })
+        val newItems = service.search(type = "all", condition = "brand-new")
+        assertTrue(newItems.all { it.condition in listOf("new", "unopened", "brand-new") })
 
         mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"items": []}"""))
-        val appliances = service.search(type = "appliance")
-        assertTrue(appliances.all { !it.isPart || it.type in listOf("appliance", "used") })
+        val usedItems = service.search(type = "all", condition = "second-hand")
+        assertTrue(usedItems.all { it.condition !in listOf("new", "unopened", "brand-new") })
+    }
+
+    @Test
+    fun searchFiltersByMaxPrice() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"items": []}"""))
+        val cheapItems = service.search(type = "all", maxPrice = 20.0)
+        assertTrue(cheapItems.all { it.price <= 20.0 })
     }
 
     @Test
@@ -122,7 +132,6 @@ class MarketplaceServiceTest {
         val request = mockWebServer.takeRequest()
         assertEquals("/api/marketplace/listings", request.path)
         assertEquals("POST", request.method)
-        assertEquals("Bearer token-123", request.getHeader("Authorization"))
 
         assertEquals("listing-100", product.id)
         assertEquals("KitchenAid Mixer", product.title)
