@@ -1,6 +1,7 @@
 package com.hodowo.viewmodel
 
 import com.hodowo.data.CartRepository
+import com.hodowo.data.DemoMarketplaceService
 import com.hodowo.data.MarketplaceService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -220,6 +221,23 @@ class ProductDetailViewModelTest {
     }
 
     // ---------- consumeCartMessage ----------
+
+    // ---------- default dependencies ----------
+
+    @Test
+    fun withoutExplicitDependenciesItUsesTheDemoServiceAndInMemoryCart() = runTest(dispatcher) {
+        val vm = ProductDetailViewModel(productId = DemoMarketplaceService.NEW_PRODUCT.id)
+
+        vm.load()
+        advanceUntilIdle()
+
+        assertEquals(DemoMarketplaceService.NEW_PRODUCT, vm.uiState.value.product)
+
+        vm.onAddToCartClicked()
+        advanceUntilIdle()
+
+        assertEquals("Added to cart", vm.uiState.value.cartMessage)
+    }
 
     @Test
     fun consumingTheCartMessageClearsIt() = runTest(dispatcher) {

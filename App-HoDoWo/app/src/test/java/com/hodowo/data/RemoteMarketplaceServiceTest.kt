@@ -140,4 +140,11 @@ class RemoteMarketplaceServiceTest {
 
         service.recommendedDemoIds()
     }
+
+    @Test
+    fun aPayloadWithoutResultsGivesAnEmptyList() = runTest {
+        server.enqueue(json("{}"))
+
+        assertEquals(emptyList<String>(), service.recommendedDemoIds())
+    }
 }
