@@ -1,4 +1,16 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzhDW4YQ": {
+  "c": 12.0,
+  "done": false,
+  "issue": 43,
+  "title": "Stripe test-mode checkout, confirmation and order history API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Ws": {
+  "c": 5.0,
+  "done": false,
+  "issue": 42,
+  "title": "Cart API"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-7q-U": {
   "c": 0.0,
   "done": false,
@@ -131,18 +143,6 @@
   "issue": 41,
   "title": "Partner tiers, sponsored ranking and 'for me' ordering"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4Ws": {
-  "c": 0.0,
-  "done": true,
-  "issue": 42,
-  "title": "Cart API"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4YQ": {
-  "c": 12.0,
-  "done": false,
-  "issue": 43,
-  "title": "Stripe test-mode checkout, confirmation and order history API"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Ys": {
   "c": 7.0,
   "done": false,
@@ -156,8 +156,8 @@
   "title": "Marketplace tab and entry points"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4c4": {
-  "c": 7.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 140,
   "title": "Product detail page (new, second-hand and part variants)"
  },
