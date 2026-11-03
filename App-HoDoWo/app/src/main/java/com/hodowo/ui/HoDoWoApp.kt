@@ -76,6 +76,7 @@ fun HoDoWoApp(
     var showAuthDialog by remember { mutableStateOf(false) }
     var showApplianceManuals by remember { mutableStateOf(false) }
     var showPostProduct by remember { mutableStateOf(false) }
+    var showMarketplaceSearch by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -180,12 +181,22 @@ fun HoDoWoApp(
                             PostProductScreen(
                                 viewModel = postProductViewModel,
                                 userId = authManager.currentUserId,
-                                onPublished = { showPostProduct = false }
+                                onPublished = { showPostProduct = false },
+                                onBack = { showPostProduct = false }
+                            )
+                        } else if (showMarketplaceSearch) {
+                            ProductSearchAndFiltersScreen(
+                                viewModel = marketplaceViewModel,
+                                onBack = { showMarketplaceSearch = false },
+                                onCartClick = { }
                             )
                         } else {
-                            MarketplaceScreen(
+                            MarketplaceHomeScreen(
                                 viewModel = marketplaceViewModel,
-                                onPostProduct = { showPostProduct = true }
+                                onOpenSearch = { showMarketplaceSearch = true },
+                                onPostProduct = { showPostProduct = true },
+                                onOpenProfile = { currentTab = AppNavTab.PROFILE },
+                                onCartClick = { }
                             )
                         }
                     }
@@ -214,6 +225,8 @@ fun HoDoWoApp(
                 currentTab = currentTab,
                 onTabSelected = {
                     showApplianceManuals = false
+                    showMarketplaceSearch = false
+                    showPostProduct = false
                     currentTab = it
                 }
             )
