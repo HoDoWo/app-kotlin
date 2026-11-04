@@ -9,8 +9,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.ArrowBack
@@ -77,7 +78,7 @@ fun ProductSearchScreen(
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.surface)
         ) {
-            // Active filter chips rail (horizontal scroll)
+            // Active filter chips rail (horizontal scroll) - matches HTML diagnostic filter rails
             val activeChips = mutableListOf<String>()
             if (viewModel.filters.query.isNotBlank()) activeChips.add(viewModel.filters.query)
             viewModel.filters.type?.let { activeChips.add(it.label) }
@@ -86,6 +87,28 @@ fun ProductSearchScreen(
             viewModel.filters.brand?.let { activeChips.add(it) }
             viewModel.filters.minPrice?.let { activeChips.add("$${it}") }
             viewModel.filters.maxPrice?.let { activeChips.add("max $${it}") }
+
+            // Diagnostic context chips (Fits / Under $50) matching HTML mockup
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                DiagnosticChip(
+                    label = "Fits: Bosch Serie 4",
+                    icon = "verified",
+                    active = true,
+                    onClose = {}
+                )
+                DiagnosticChip(
+                    label = "Under $50",
+                    icon = "close",
+                    active = false,
+                    onClose = {}
+                )
+            }
 
             if (activeChips.isNotEmpty()) {
                 Row(
@@ -120,7 +143,6 @@ fun ProductSearchScreen(
                 is ProductUiState.Loading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(color = Primary)
                     }
@@ -148,7 +170,6 @@ fun ProductSearchScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(16.dp),
-                                        contentAlignment = Alignment.Center
                                     ) {
                                         CircularProgressIndicator(color = Primary)
                                     }
@@ -167,7 +188,6 @@ fun ProductSearchScreen(
     if (filterSheetExpanded) {
         Box(
             modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
         ) {
             Box(
                 modifier = Modifier
@@ -175,7 +195,6 @@ fun ProductSearchScreen(
                     .padding(horizontal = 32.dp)
                     .background(MaterialTheme.colorScheme.surface)
                     .clip(RoundedCornerShape(24.dp)),
-                contentAlignment = Alignment.Center
             ) {
                 Column(
                     modifier = Modifier
@@ -210,10 +229,7 @@ fun ProductSearchScreen(
                             FilterChip(
                                 selected = viewModel.filters.category == cat,
                                 onClick = { viewModel.onCategorySelected(cat) },
-                                label = { Text(cat) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    containerColor = if (viewModel.filters.category == cat) Primary else SurfaceContainerLow
-                                )
+                                label = { Text(cat) }
                             )
                         }
                     }
@@ -238,10 +254,7 @@ fun ProductSearchScreen(
                             FilterChip(
                                 selected = viewModel.filters.brand == brand,
                                 onClick = { viewModel.onBrandSelected(brand) },
-                                label = { Text(brand) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    containerColor = if (viewModel.filters.brand == brand) Primary else SurfaceContainerLow
-                                )
+                                label = { Text(brand) }
                             )
                         }
                     }
@@ -319,7 +332,6 @@ fun ProductSearchScreen(
                     }
                 }
 
-                // Close on background tap
                 Box(modifier = Modifier.fillMaxSize().clickable { filterSheetExpanded = false })
             }
         }
@@ -339,6 +351,9 @@ private fun ProductTopBar(
 ) {
     TopAppBar(
         modifier = Modifier.fillMaxWidth(),
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+        ),
         title = {
             Text(
                 text = "Product Search & Filters",
@@ -458,6 +473,9 @@ private fun ProductTopBar(
                         contentDescription = "Shopping Cart",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Box(
+                        modifier = Modifier.size(4.dp).background(Color(0xFF26008C)).clip(CircleShape),
+                    )
                 }
             }
         }
@@ -470,9 +488,62 @@ private fun RemovableFilterChip(label: String, onRemove: () -> Unit) {
     FilterChip(
         selected = true,
         onClick = { onRemove() },
-        label = { Text(label) },
-        colors = FilterChipDefaults.filterChipColors(containerColor = SurfaceContainer)
+        label = { Text(label) }
     )
+}
+
+/** Diagnostic chip matching HTML: Fits: Bosch Serie 4 / Under $50 */
+@Composable
+private fun DiagnosticChip(
+    label: String,
+    icon: String,
+    active: Boolean,
+    onClose: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(50.dp),
+        color = if (active) Primary else SurfaceContainer,
+        shadowElevation = if (active) 2.dp else 0.dp,
+        modifier = Modifier.height(40.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Box(
+                modifier = Modifier.size(16.dp).clip(CircleShape),
+            ) {
+                if (active) {
+                    Text(
+                        text = "✓",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFFDDB8)
+                        ),
+                        modifier = Modifier.size(10.dp)
+                    )
+                }
+            }
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (active) Color(0xFFFFDDB8) else OnSurface
+                )
+            )
+            if (!active) {
+                IconButton(onClick = onClose) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        tint = OnSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
+    }
 }
 
 /** Segmented chip selector for item type (Whole Appliances / Replacement Parts / All). */
@@ -557,7 +628,6 @@ private fun TypeChip(
                     .size(20.dp)
                     .clip(RoundedCornerShape(50.dp))
                     .background(if (selected) SurfaceContainerHigh else Color.Transparent),
-                contentAlignment = Alignment.Center
             ) {
                 Box(
                     modifier = Modifier
@@ -667,7 +737,6 @@ private fun ConditionChip(
                         BorderStroke(1.dp, if (selected) Primary else OutlineVariant.copy(alpha = 0.5f)),
                         RoundedCornerShape(50.dp)
                     ),
-                contentAlignment = Alignment.Center
             ) {
                 if (selected) {
                     Text(
@@ -751,7 +820,6 @@ private fun ProductCard(
                     // Type badge
                     Box(
                         modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
-                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = if (product.type == ProductType.REPLACEMENT_PART) "OEM" else "Part",
@@ -964,7 +1032,6 @@ private fun DistanceChip(distanceKm: Double) {
             .padding(vertical = 4.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(SurfaceContainerHigh),
-        contentAlignment = Alignment.Center
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
