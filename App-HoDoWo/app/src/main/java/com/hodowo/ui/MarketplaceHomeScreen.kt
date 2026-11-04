@@ -50,6 +50,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -68,6 +69,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.hodowo.data.MarketplaceProduct
+import com.hodowo.ui.components.AppTopBar
+import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.ui.theme.OnPrimary
 import com.hodowo.ui.theme.OnSecondary
 import com.hodowo.ui.theme.OnSurface
@@ -87,23 +90,28 @@ import com.hodowo.ui.theme.TertiaryContainer
 import com.hodowo.ui.theme.TertiaryFixed
 import com.hodowo.viewmodel.MarketplaceViewModel
 
-private const val HOWDOWO_LOGO_URL =
-    "https://lh3.googleusercontent.com/aida/AEtjO1XsOVlnd3V8h5W3NBXcBlUX7s_TtVSBUqZiQk0md72g-5tYm_NjHZH6tHqBKiG8hBd7_1_0Rb5ELWIlfKIgqF_jmeJilMvO85OZBMLOEZ2afjAG1h-9gk0CONWEY0OExONd9GKE0bPQkRUqUgu6rhYj-AtZghm0QodTATINxvgNCqFt2G7uX5aynqcTid1kmB65ZJO_0mSm7eq950JPsE4zUhn2RokAwCbOg7ad8_k"
-
-private const val USER_AVATAR_URL =
-    "https://lh3.googleusercontent.com/aida-public/AB6AXuDjlPZXnInLRJdH2jOuSMDEjrep3aCsDUum5m9S3_WmGvgZ_l6Sp71tcSxpcD9JTGbXgfb9-DcvBItwWOwyyQ-tK2U9PVOu1yjLvOQTyhKya5xAxdYS5TaRrb5CvtCH7V_MX8SnaL2DWHiguBqgzZKFXqL01DXBuEgmLkmLbUQHEq6xgq3ICz3iafT7-o0Hk-umT2WmJPiQZbAdUUOnnH2AZDGcMcB_INd4p09p0jE"
-
 @Composable
 fun MarketplaceHomeScreen(
     viewModel: MarketplaceViewModel,
     onOpenSearch: () -> Unit,
     onPostProduct: () -> Unit,
     onOpenProfile: () -> Unit = {},
-    onCartClick: () -> Unit = {}
+    onCartClick: () -> Unit = {},
+    /** Photo of the signed-in user, as on the Home top bar. */
+    profilePhotoUrl: String? = null
 ) {
     val context = LocalContext.current
     val products by viewModel.products.collectAsState()
     val cartCount by viewModel.cartCount.collectAsState()
+
+    // Feedback of "add to cart" comes from the backend: added, already sold, out of stock...
+    val cartMessage by viewModel.cartMessage.collectAsState()
+    LaunchedEffect(cartMessage) {
+        cartMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.consumeCartMessage()
+        }
+    }
 
     var selectedTypeChip by remember { mutableStateOf("All") }
     var selectedStateChip by remember { mutableStateOf("All") }
@@ -119,129 +127,42 @@ fun MarketplaceHomeScreen(
             .background(MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top App Bar
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                shadowElevation = 2.dp
-            ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // Status row simulation
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "09:41",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp,
-                            color = OnSurface
+            // Same top bar as Home: real logo, "MARKETPLACE" and the signed-in user's photo.
+            AppTopBar(
+                subtitle = "MARKETPLACE",
+                actions = {
+                    IconButton(onClick = onOpenSearch) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "Search",
+                            tint = OnSurfaceVariant
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    }
+                    BadgedBox(
+                        badge = {
+                            if (cartCount > 0) {
+                                Badge(containerColor = Primary) {
+                                    Text(
+                                        text = "$cartCount",
+                                        color = OnPrimary,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    ) {
+                        IconButton(onClick = onCartClick) {
                             Icon(
-                                imageVector = Icons.Default.Security,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
+                                imageVector = Icons.Default.ShoppingCart,
+                                contentDescription = "Shopping Cart",
                                 tint = OnSurfaceVariant
                             )
                         }
                     }
-
-                    // Header Brand and Actions
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            AsyncImage(
-                                model = HOWDOWO_LOGO_URL,
-                                contentDescription = "Howdowo Logo",
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(RoundedCornerShape(6.dp)),
-                                contentScale = ContentScale.Fit
-                            )
-                            Column {
-                                Text(
-                                    text = "Howdowo",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Primary,
-                                    letterSpacing = (-0.2).sp
-                                )
-                                Text(
-                                    text = "MARKETPLACE",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = OnSurfaceVariant,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            IconButton(onClick = onOpenSearch) {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Search",
-                                    tint = OnSurfaceVariant
-                                )
-                            }
-
-                            BadgedBox(
-                                badge = {
-                                    if (cartCount > 0) {
-                                        Badge(containerColor = Primary) {
-                                            Text(
-                                                text = "$cartCount",
-                                                color = OnPrimary,
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            ) {
-                                IconButton(onClick = onCartClick) {
-                                    Icon(
-                                        imageVector = Icons.Default.ShoppingCart,
-                                        contentDescription = "Shopping Cart",
-                                        tint = OnSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .clickable { onOpenProfile() }
-                            ) {
-                                AsyncImage(
-                                    model = USER_AVATAR_URL,
-                                    contentDescription = "Profile",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                        }
-                    }
+                    ProfileAvatar(name = "", size = 34, onClick = onOpenProfile, photoUrl = profilePhotoUrl)
                 }
-            }
+            )
 
             // Main Scrollable Content
             LazyColumn(
@@ -502,7 +423,6 @@ fun MarketplaceHomeScreen(
                                     product = item,
                                     onAddToCart = {
                                         viewModel.addToCart(item)
-                                        Toast.makeText(context, "Added to cart: ${item.title}", Toast.LENGTH_SHORT).show()
                                     }
                                 )
                             }
@@ -565,7 +485,6 @@ fun MarketplaceHomeScreen(
                                     },
                                     onBuy = {
                                         viewModel.addToCart(item)
-                                        Toast.makeText(context, "Added ${item.title} to order", Toast.LENGTH_SHORT).show()
                                     }
                                 )
                             }
@@ -1033,29 +952,32 @@ private fun CommunityDealRowItem(
                                 modifier = Modifier.size(12.dp)
                             )
                             Text(
-                                text = "${product.distanceKm ?: 2.4} km away • ${product.sellerName}",
+                                text = listOfNotNull(product.distanceKm?.let { "$it km away" }, product.sellerName).joinToString(" • "),
                                 fontSize = 10.sp,
                                 color = OnSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = TertiaryContainer,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Text(
-                                text = "${product.rating}",
-                                fontSize = 11.sp,
-                                color = Primary,
-                                fontWeight = FontWeight.Bold
-                            )
+                        // Stars only for products with real reviews.
+                        if (product.rating > 0.0) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = TertiaryContainer,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = "${product.rating}",
+                                    fontSize = 11.sp,
+                                    color = Primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
 

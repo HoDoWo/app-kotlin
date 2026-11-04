@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.hodowo.BuildConfig
+import com.hodowo.viewmodel.CartViewModel
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.DemoHoDoWoAiService
 import com.hodowo.viewmodel.HoDoWoAiService
@@ -23,7 +24,20 @@ object AiServiceProvider {
 
     val authManager by lazy { AuthManager() }
     val firebaseRepository by lazy { FirebaseRepository() }
+    /** Cart of the Product Detail screen, which still shows demo products (Backend#38). */
     val cartRepository by lazy { InMemoryCartRepository() }
+
+    /**
+     * The real cart (Backend#42), shared by the badge, the marketplace screens and the
+     * cart screen. Without a backend URL the cart stays empty and refuses changes.
+     */
+    val cartStore by lazy {
+        val backendUrl = BuildConfig.BACKEND_URL
+        CartStore(
+            if (backendUrl.isBlank()) UnavailableCartService
+            else RemoteCartService(backendUrl, FirebaseTokenProvider()::token)
+        )
+    }
 
     /**
      * The listings service, kept as a singleton so edits/mark-as-sold/delete done through
@@ -100,7 +114,8 @@ object AiServiceProvider {
         viewModelFactory {
             initializer {
                 MarketplaceViewModel(
-                    MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token)
+                    MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
+                    cartStore
                 )
             }
         }
@@ -124,6 +139,14 @@ object AiServiceProvider {
                     marketplaceService = marketplaceService(),
                     cartRepository = cartRepository
                 )
+            }
+        }
+
+    /** Factory that builds [CartViewModel] on the shared [cartStore]. */
+    fun cartViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                CartViewModel(cartStore)
             }
         }
 

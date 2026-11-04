@@ -34,7 +34,7 @@ class MarketplaceServiceTest {
     }
 
     @Test
-    fun searchReturnsFilteredProductsFromMockAndRemote() = runTest {
+    fun searchReturnsTheFilteredBackendProducts() = runTest {
         val remoteJson = """{
             "items": [
                 {
@@ -61,9 +61,9 @@ class MarketplaceServiceTest {
             maxPrice = 50.0
         )
 
-        assertTrue(results.isNotEmpty())
-        assertTrue(results.any { it.id == "remote-1" })
-        val item = results.first { it.id == "remote-1" }
+        // Only backend products: the sample catalogue is no longer mixed in.
+        assertEquals(listOf("remote-1"), results.map { it.id })
+        val item = results.single()
         assertEquals("Bosch Pump Motor", item.title)
         assertEquals(25.0, item.price, 0.01)
         assertEquals(50.0, item.originalPrice!!, 0.01)
@@ -71,14 +71,28 @@ class MarketplaceServiceTest {
         assertTrue(item.isPart)
     }
 
-    @Test
-    fun searchHandlesBackendFailureByFallingBackToMockCatalog() = runTest {
+    @Test(expected = IOException::class)
+    fun searchReportsABackendFailureInsteadOfShowingSampleData() = runTest {
         mockWebServer.enqueue(MockResponse().setResponseCode(500))
 
-        val results = service.search(query = "Bosch", type = "all")
+        service.search(query = "Bosch", type = "all")
+    }
 
-        assertTrue(results.isNotEmpty())
-        assertTrue(results.all { it.brand == "Bosch" || it.title.contains("Bosch", ignoreCase = true) })
+    @Test
+    fun searchShowsNoStarsWithoutRealReviews() = runTest {
+        mockWebServer.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"items": [{"id": "p1", "title": "Pump", "rating": null, "review_count": null},
+                              {"id": "p2", "title": "Belt", "rating": 4.5, "review_count": 3}]}"""
+            )
+        )
+
+        val results = service.search()
+
+        assertEquals(0.0, results[0].rating, 0.0)
+        assertEquals(0, results[0].reviewCount)
+        assertEquals(4.5, results[1].rating, 0.0)
+        assertEquals(3, results[1].reviewCount)
     }
 
     @Test

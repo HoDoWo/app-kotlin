@@ -46,6 +46,7 @@ import com.hodowo.ui.components.BottomNavBar
 import com.hodowo.ui.components.NewChatButton
 import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SecondaryContainer
+import com.hodowo.viewmodel.CartViewModel
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
@@ -71,6 +72,7 @@ fun HoDoWoApp(
     val context = LocalContext.current
     val marketplaceViewModel: MarketplaceViewModel = viewModel(factory = AiServiceProvider.marketplaceViewModelFactory())
     val postProductViewModel: PostProductViewModel = viewModel(factory = AiServiceProvider.postProductViewModelFactory())
+    val cartViewModel: CartViewModel = viewModel(factory = AiServiceProvider.cartViewModelFactory())
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     val chatState by chatViewModel.uiState.collectAsState()
@@ -79,6 +81,7 @@ fun HoDoWoApp(
     var showPostProduct by remember { mutableStateOf(false) }
     var showMarketplaceSearch by remember { mutableStateOf(false) }
     var showMyListings by remember { mutableStateOf(false) }
+    var showCart by remember { mutableStateOf(false) }
     // Temporary stand-in for #138/#139: picks a demo product to open in ProductDetailScreen (#140).
     var selectedMarketProductId by remember { mutableStateOf<String?>(null) }
 
@@ -188,7 +191,21 @@ fun HoDoWoApp(
                     }
                     AppNavTab.MARKET -> {
                         val productId = selectedMarketProductId
-                        if (productId != null) {
+                        if (showCart) {
+                            BackHandler { showCart = false }
+                            CartScreen(
+                                viewModel = cartViewModel,
+                                onBack = { showCart = false },
+                                onCheckout = {
+                                    // The Stripe PaymentSheet arrives with #143.
+                                    Toast.makeText(context, "Payment is coming soon", Toast.LENGTH_SHORT).show()
+                                },
+                                onBrowse = {
+                                    showCart = false
+                                    showMarketplaceSearch = true
+                                }
+                            )
+                        } else if (productId != null) {
                             ProductDetailScreen(
                                 viewModel = viewModel(
                                     key = productId,
@@ -207,7 +224,7 @@ fun HoDoWoApp(
                             ProductSearchAndFiltersScreen(
                                 viewModel = marketplaceViewModel,
                                 onBack = { showMarketplaceSearch = false },
-                                onCartClick = { }
+                                onCartClick = { showCart = true }
                             )
                         } else {
                             MarketplaceHomeScreen(
@@ -215,7 +232,8 @@ fun HoDoWoApp(
                                 onOpenSearch = { showMarketplaceSearch = true },
                                 onPostProduct = { showPostProduct = true },
                                 onOpenProfile = { currentTab = AppNavTab.PROFILE },
-                                onCartClick = { }
+                                onCartClick = { showCart = true },
+                                profilePhotoUrl = chatState.userProfile?.photoUrl
                             )
                         }
                     }
@@ -228,9 +246,9 @@ fun HoDoWoApp(
                     }
                 }
 
-                // The chat has its own "+" in the header. Product Detail has its own sticky
-                // add-to-cart/buy bar at the bottom, which this button would overlap.
-                if (currentTab != AppNavTab.AI_CHAT && selectedMarketProductId == null) {
+                // The chat has its own "+" in the header. Product Detail and the cart have their
+                // own sticky bar at the bottom, which this button would overlap.
+                if (currentTab != AppNavTab.AI_CHAT && selectedMarketProductId == null && !showCart) {
                     NewChatButton(
                         onClick = { startNewChat() },
                         modifier = Modifier
@@ -248,6 +266,7 @@ fun HoDoWoApp(
                     showMarketplaceSearch = false
                     showPostProduct = false
                     showMyListings = false
+                    showCart = false
                     selectedMarketProductId = null
                     currentTab = it
                 }
