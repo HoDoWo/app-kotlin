@@ -84,8 +84,8 @@
   "title": "Security rules for marketplace and forum collections"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4M0": {
-  "c": 3.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 33,
   "title": "Curated CSV seed: partners, products, parts and compatibility"
  },
@@ -126,8 +126,8 @@
   "title": "Official partner product API with partner-only writes"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4S4": {
-  "c": 6.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 24,
   "title": "Partner catalogue import from CSV/JSON feeds"
  },

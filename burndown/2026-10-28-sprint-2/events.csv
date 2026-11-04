@@ -35,3 +35,5 @@ timestamp,issue,title,type,delta_hours
 2026-11-02T21:21:59+00:00,147,Search suggestions and recent searches,removed,-4.0
 2026-11-03T17:47:36+00:00,42,Cart API,reopened,5.0
 2026-11-03T18:41:12+00:00,140,"Product detail page (new, second-hand and part variants)",completed,-7.0
+2026-11-03T21:27:12+00:00,33,"Curated CSV seed: partners, products, parts and compatibility",completed,-3.0
+2026-11-03T21:27:14+00:00,24,Partner catalogue import from CSV/JSON feeds,completed,-6.0
