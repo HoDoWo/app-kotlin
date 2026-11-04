@@ -1,8 +1,13 @@
 package com.hodowo.viewmodel
 
+import com.hodowo.data.Cart
+import com.hodowo.data.CartException
+import com.hodowo.data.CartService
+import com.hodowo.data.CartStore
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.MarketplaceService
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,6 +23,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MarketplaceViewModelTest {
@@ -91,14 +97,91 @@ class MarketplaceViewModelTest {
         assertEquals(!initialUnder50, viewModel.under50.value)
     }
 
+    // ---------- cart (#142) ----------
+
+    private val cartService: CartService = mockk()
+    private val pump = MarketplaceProduct(id = "HDW-P-001", title = "Drain pump", description = "", type = "part")
+
+    private fun viewModelWithCart(): MarketplaceViewModel {
+        coEvery { cartService.getCart() } returns Cart(itemCount = 1)
+        return MarketplaceViewModel(service, CartStore(cartService))
+    }
+
     @Test
-    fun addToCartIncrementsCartCount() {
-        val count = viewModel.cartCount.value
-        val product = MarketplaceProduct(id = "p1", title = "Test Product", description = "Desc")
+    fun theBadgeShowsTheBackendCartWhenTheMarketplaceOpens() = runTest(dispatcher) {
+        val vm = viewModelWithCart()
+        advanceUntilIdle()
 
-        viewModel.addToCart(product)
+        assertEquals(1, vm.cartCount.value)
+    }
 
-        assertEquals(count + 1, viewModel.cartCount.value)
+    @Test
+    fun addToCartSendsTheProductTypeAndUpdatesTheBadge() = runTest(dispatcher) {
+        coEvery { cartService.addItem("part", "HDW-P-001", 1) } returns Cart(itemCount = 2)
+        val vm = viewModelWithCart()
+
+        vm.addToCart(pump)
+        advanceUntilIdle()
+
+        coVerify { cartService.addItem("part", "HDW-P-001", 1) }
+        assertEquals(2, vm.cartCount.value)
+        assertEquals("Added to cart: Drain pump", vm.cartMessage.value)
+
+        vm.consumeCartMessage()
+        assertNull(vm.cartMessage.value)
+    }
+
+    @Test
+    fun aRefusedAddShowsTheBackendReason() = runTest(dispatcher) {
+        coEvery { cartService.addItem(any(), any(), any()) } throws CartException("already sold")
+        val vm = viewModelWithCart()
+
+        vm.addToCart(pump.copy(type = "used"))
+        advanceUntilIdle()
+
+        assertEquals("Could not add to cart: already sold", vm.cartMessage.value)
+        assertEquals(1, vm.cartCount.value)
+    }
+
+    @Test
+    fun aNetworkErrorWhileAddingAsksToCheckTheConnection() = runTest(dispatcher) {
+        coEvery { cartService.addItem(any(), any(), any()) } throws IOException("timeout")
+        val vm = viewModelWithCart()
+
+        vm.addToCart(pump)
+        advanceUntilIdle()
+
+        assertEquals("Could not add to cart, check your connection", vm.cartMessage.value)
+    }
+
+    @Test
+    fun aProductTheBackendCannotSellIsNotSent() = runTest(dispatcher) {
+        val vm = viewModelWithCart()
+
+        vm.addToCart(pump.copy(type = "appliance"))
+        advanceUntilIdle()
+
+        assertEquals("This product cannot be bought yet", vm.cartMessage.value)
+        coVerify(exactly = 0) { cartService.addItem(any(), any(), any()) }
+    }
+
+    @Test
+    fun aFailedCartLoadKeepsTheBadgeAtZero() = runTest(dispatcher) {
+        coEvery { cartService.getCart() } throws IOException("offline")
+        val vm = MarketplaceViewModel(service, CartStore(cartService))
+
+        vm.refreshCart()
+        advanceUntilIdle()
+
+        assertEquals(0, vm.cartCount.value)
+    }
+
+    @Test
+    fun withoutACartServiceAddingIsRefused() = runTest(dispatcher) {
+        viewModel.addToCart(pump)
+        advanceUntilIdle()
+
+        assertEquals("Could not add to cart: The cart is not available right now", viewModel.cartMessage.value)
     }
 
     @Test

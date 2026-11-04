@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -56,6 +57,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -116,6 +118,15 @@ fun ProductSearchAndFiltersScreen(
     val under50 by viewModel.under50.collectAsState()
     val cartCount by viewModel.cartCount.collectAsState()
 
+    // Feedback of "add to cart" comes from the backend: added, already sold, out of stock...
+    val cartMessage by viewModel.cartMessage.collectAsState()
+    LaunchedEffect(cartMessage) {
+        cartMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.consumeCartMessage()
+        }
+    }
+
     var showFilterMatrix by remember { mutableStateOf(true) }
 
     val filterCount = (if (fitsBosch) 1 else 0) +
@@ -135,31 +146,7 @@ fun ProductSearchAndFiltersScreen(
                 color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
                 shadowElevation = 2.dp
             ) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // System status strip simulation
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "09:41",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp,
-                            color = OnSurface
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = OnSurfaceVariant
-                            )
-                        }
-                    }
-
+                Column(modifier = Modifier.fillMaxWidth().statusBarsPadding()) {
                     // Top Action Bar
                     Row(
                         modifier = Modifier
@@ -642,7 +629,6 @@ fun ProductSearchAndFiltersScreen(
                                     product = product,
                                     onAddToCart = {
                                         viewModel.addToCart(product)
-                                        Toast.makeText(context, "Added to cart: ${product.title}", Toast.LENGTH_SHORT).show()
                                     },
                                     onViewSpecs = {
                                         Toast.makeText(context, "Specs: ${product.title}", Toast.LENGTH_SHORT).show()
@@ -653,7 +639,6 @@ fun ProductSearchAndFiltersScreen(
                                     product = product,
                                     onAddToCart = {
                                         viewModel.addToCart(product)
-                                        Toast.makeText(context, "Added to cart: ${product.title}", Toast.LENGTH_SHORT).show()
                                     }
                                 )
                             } else {
@@ -664,7 +649,6 @@ fun ProductSearchAndFiltersScreen(
                                     },
                                     onBuyOrPickup = {
                                         viewModel.addToCart(product)
-                                        Toast.makeText(context, "Selected ${product.title}", Toast.LENGTH_SHORT).show()
                                     }
                                 )
                             }
@@ -836,28 +820,30 @@ private fun TopPromotedOemHeroCard(
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.padding(top = 2.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Star,
-                                    contentDescription = null,
-                                    tint = TertiaryContainer,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = "${product.rating}",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = OnSurface
-                                )
-                                Text(
-                                    text = "(${product.reviewCount} reviews)",
-                                    fontSize = 11.sp,
-                                    color = OnSurfaceVariant
-                                )
+                            if (product.rating > 0.0) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.padding(top = 2.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Star,
+                                        contentDescription = null,
+                                        tint = TertiaryContainer,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "${product.rating}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface
+                                    )
+                                    Text(
+                                        text = "(${product.reviewCount} reviews)",
+                                        fontSize = 11.sp,
+                                        color = OnSurfaceVariant
+                                    )
+                                }
                             }
                         }
 
@@ -993,28 +979,30 @@ private fun OfficialPartnerAccessoryCard(
                             modifier = Modifier.padding(top = 4.dp)
                         )
 
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier.padding(top = 2.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Star,
-                                contentDescription = null,
-                                tint = TertiaryContainer,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = "${product.rating}",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = OnSurface
-                            )
-                            Text(
-                                text = "(${product.reviewCount})",
-                                fontSize = 11.sp,
-                                color = OnSurfaceVariant
-                            )
+                        if (product.rating > 0.0) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(top = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = TertiaryContainer,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "${product.rating}",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface
+                                )
+                                Text(
+                                    text = "(${product.reviewCount})",
+                                    fontSize = 11.sp,
+                                    color = OnSurfaceVariant
+                                )
+                            }
                         }
                     }
 
