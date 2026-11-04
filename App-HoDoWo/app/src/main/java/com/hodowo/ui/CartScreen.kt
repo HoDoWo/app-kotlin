@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -43,10 +44,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.hodowo.data.Cart
 import com.hodowo.data.CartLine
+import com.hodowo.data.CheckoutSession
 import com.hodowo.data.formatPriceCents
 import com.hodowo.ui.theme.Error
 import com.hodowo.ui.theme.ErrorContainer
@@ -77,6 +81,12 @@ import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLow
 import com.hodowo.ui.theme.SurfaceContainerLowest
 import com.hodowo.viewmodel.CartViewModel
+import com.hodowo.viewmodel.CheckoutViewModel
+import com.hodowo.viewmodel.PaymentOutcome
+import com.stripe.android.PaymentConfiguration
+import com.stripe.android.paymentsheet.PaymentSheet
+import com.stripe.android.paymentsheet.PaymentSheetResult
+import com.stripe.android.paymentsheet.PaymentSheetResultCallback
 
 /**
  * "Shopping Cart & Checkout" screen (#142), following the Stitch design: lines grouped by
@@ -91,12 +101,38 @@ import com.hodowo.viewmodel.CartViewModel
 @Composable
 fun CartScreen(
     viewModel: CartViewModel,
+    checkoutViewModel: CheckoutViewModel,
     onBack: () -> Unit,
-    onCheckout: () -> Unit,
     onBrowse: () -> Unit
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
+    val checkout by checkoutViewModel.uiState.collectAsState()
+
+    // Stripe PaymentSheet (#143): it must be created on every composition, before it is used.
+    val paymentCallback = remember(checkoutViewModel) {
+        PaymentSheetResultCallback { result -> checkoutViewModel.onPaymentResult(result.toOutcome()) }
+    }
+    val paymentSheet = remember(paymentCallback) { PaymentSheet.Builder(paymentCallback) }.build()
+
+    LaunchedEffect(checkout.paymentToPresent) {
+        val request = checkout.paymentToPresent ?: return@LaunchedEffect
+        PaymentConfiguration.init(context, request.publishableKey)
+        paymentSheet.presentWithPaymentIntent(
+            request.clientSecret,
+            PaymentSheet.Configuration.Builder(merchantDisplayName = "Howdowo").build()
+        )
+        checkoutViewModel.onPaymentPresented()
+    }
+    LaunchedEffect(checkout.message) {
+        checkout.message?.let {
+            Toast.makeText(context, it, Toast.LENGTH_LONG).show()
+            checkoutViewModel.consumeMessage()
+        }
+    }
+    checkout.placedOrder?.let { order ->
+        OrderPlacedDialog(order = order, onDismiss = { checkoutViewModel.dismissConfirmation() })
+    }
 
     LaunchedEffect(Unit) { viewModel.load() }
     LaunchedEffect(state.message) {
@@ -172,7 +208,11 @@ fun CartScreen(
         }
 
         if (state.cart.items.isNotEmpty()) {
-            CheckoutBar(cart = state.cart, onCheckout = onCheckout)
+            CheckoutBar(
+                cart = state.cart,
+                isPreparing = checkout.isPreparing,
+                onCheckout = { checkoutViewModel.placeOrder() }
+            )
         }
     }
 }
@@ -524,7 +564,7 @@ private fun SummaryRow(label: String, value: String) {
 
 /** Sticky bottom bar: secure-payment note and the "Place Order" button. */
 @Composable
-private fun CheckoutBar(cart: Cart, onCheckout: () -> Unit) {
+private fun CheckoutBar(cart: Cart, isPreparing: Boolean, onCheckout: () -> Unit) {
     Surface(color = SurfaceColor.copy(alpha = 0.95f), shadowElevation = 8.dp) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
@@ -548,18 +588,62 @@ private fun CheckoutBar(cart: Cart, onCheckout: () -> Unit) {
             }
             Button(
                 onClick = onCheckout,
-                enabled = cart.canCheckout,
+                enabled = cart.canCheckout && !isPreparing,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer, contentColor = OnPrimary)
             ) {
-                Icon(imageVector = Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Place Order • ${formatPriceCents(cart.totalCents, cart.currency)}",
-                    style = MaterialTheme.typography.labelLarge
-                )
+                if (isPreparing) {
+                    CircularProgressIndicator(color = OnPrimary, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(text = "Securing payment…", style = MaterialTheme.typography.labelLarge)
+                } else {
+                    Icon(imageVector = Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Place Order • ${formatPriceCents(cart.totalCents, cart.currency)}",
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
             }
         }
     }
+}
+
+/** Confirmation after the payment (or the simulated purchase when the server has no Stripe keys). */
+@Composable
+private fun OrderPlacedDialog(order: CheckoutSession, onDismiss: () -> Unit) {
+    val orders = order.orderIds.size
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(imageVector = Icons.Default.VerifiedUser, contentDescription = null, tint = Primary) },
+        title = { Text(text = "Order placed", style = MaterialTheme.typography.titleLarge) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    text = "Total paid: ${formatPriceCents(order.totalCents, order.currency)}" +
+                            if (orders > 1) " ($orders orders, one per seller)" else "",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = if (order.simulated) {
+                        "Test purchase recorded without payment: the server has no Stripe keys."
+                    } else {
+                        "Paid in Stripe test mode: no real money was taken."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OnSurfaceVariant
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("OK") } }
+    )
+}
+
+/** Stripe result to the app's own type, so the ViewModel does not depend on Stripe. */
+private fun PaymentSheetResult.toOutcome(): PaymentOutcome = when (this) {
+    is PaymentSheetResult.Completed -> PaymentOutcome.Completed
+    is PaymentSheetResult.Canceled -> PaymentOutcome.Canceled
+    is PaymentSheetResult.Failed -> PaymentOutcome.Failed(error.message)
+    else -> PaymentOutcome.Failed(null)
 }
