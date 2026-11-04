@@ -1,4 +1,46 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzhCeYWk": {
+  "c": 0.0,
+  "done": false,
+  "issue": 111,
+  "title": "Marketplace app screens"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeXzk": {
+  "c": 0.0,
+  "done": false,
+  "issue": 26,
+  "title": "Marketplace catalogue and search API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4iY": {
+  "c": 10.0,
+  "done": false,
+  "issue": 145,
+  "title": "Post-to-sell form (photos, details and validation)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW9jY": {
+  "c": 6.0,
+  "done": false,
+  "issue": 122,
+  "title": "Mockups: marketplace, ads and cart pages"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4b0": {
+  "c": 4.0,
+  "done": false,
+  "issue": 138,
+  "title": "Marketplace tab and entry points"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4UQ": {
+  "c": 10.0,
+  "done": false,
+  "issue": 40,
+  "title": "Unified product search: new, second-hand and spare parts"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Kg": {
+  "c": 0.0,
+  "done": true,
+  "issue": 31,
+  "title": "Marketplace Firestore schema and ER diagram"
+ },
  "PVTI_lADOFCkyKM4Bl88jzhDW4YQ": {
   "c": 12.0,
   "done": false,
@@ -10,6 +52,30 @@
   "done": false,
   "issue": 42,
   "title": "Cart API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4M0": {
+  "c": 3.0,
+  "done": false,
+  "issue": 33,
+  "title": "Curated CSV seed: partners, products, parts and compatibility"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4fI": {
+  "c": 6.0,
+  "done": false,
+  "issue": 142,
+  "title": "Cart page and cart state"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4S4": {
+  "c": 6.0,
+  "done": false,
+  "issue": 24,
+  "title": "Partner catalogue import from CSV/JSON feeds"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4eo": {
+  "c": 7.0,
+  "done": false,
+  "issue": 143,
+  "title": "Payment section (Stripe test checkout UI)"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-7q-U": {
   "c": 0.0,
@@ -29,12 +95,6 @@
   "issue": 25,
   "title": "Marketplace: data model and seed data"
  },
- "PVTI_lADOFCkyKM4Bl88jzhCeXzk": {
-  "c": 0.0,
-  "done": false,
-  "issue": 26,
-  "title": "Marketplace catalogue and search API"
- },
  "PVTI_lADOFCkyKM4Bl88jzhCeX7o": {
   "c": 0.0,
   "done": false,
@@ -53,12 +113,6 @@
   "issue": 27,
   "title": "Second-hand listings API"
  },
- "PVTI_lADOFCkyKM4Bl88jzhCeYWk": {
-  "c": 0.0,
-  "done": false,
-  "issue": 111,
-  "title": "Marketplace app screens"
- },
  "PVTI_lADOFCkyKM4Bl88jzhCeYdY": {
   "c": 0.0,
   "done": false,
@@ -71,23 +125,11 @@
   "issue": 29,
   "title": "Search ranking: partner sponsorship and personalisation"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4Kg": {
-  "c": 4.0,
-  "done": false,
-  "issue": 31,
-  "title": "Marketplace Firestore schema and ER diagram"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Lk": {
   "c": 3.0,
   "done": false,
   "issue": 32,
   "title": "Security rules for marketplace and forum collections"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4M0": {
-  "c": 0.0,
-  "done": true,
-  "issue": 33,
-  "title": "Curated CSV seed: partners, products, parts and compatibility"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Nw": {
   "c": 2.0,
@@ -125,18 +167,6 @@
   "issue": 39,
   "title": "Official partner product API with partner-only writes"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4S4": {
-  "c": 0.0,
-  "done": true,
-  "issue": 24,
-  "title": "Partner catalogue import from CSV/JSON feeds"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4UQ": {
-  "c": 10.0,
-  "done": false,
-  "issue": 40,
-  "title": "Unified product search: new, second-hand and spare parts"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW4WQ": {
   "c": 6.0,
   "done": false,
@@ -148,12 +178,6 @@
   "done": false,
   "issue": 44,
   "title": "Forum API: categories, threads and replies"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4b0": {
-  "c": 4.0,
-  "done": false,
-  "issue": 138,
-  "title": "Marketplace tab and entry points"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4c4": {
   "c": 0.0,
@@ -173,33 +197,15 @@
   "issue": 141,
   "title": "Ads / sponsored partners page"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4eo": {
-  "c": 7.0,
-  "done": false,
-  "issue": 143,
-  "title": "Payment section (Stripe test checkout UI)"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4fI": {
-  "c": 6.0,
-  "done": false,
-  "issue": 142,
-  "title": "Cart page and cart state"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW4gU": {
   "c": 4.0,
   "done": false,
   "issue": 144,
   "title": "Order confirmation and purchase history screens"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4iY": {
-  "c": 10.0,
-  "done": false,
-  "issue": 145,
-  "title": "Post-to-sell form (photos, details and validation)"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW4ik": {
-  "c": 4.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 146,
   "title": "My listings: edit, mark as sold and delete"
  },
@@ -220,12 +226,6 @@
   "done": false,
   "issue": 150,
   "title": "Forum UI: categories, threads and composer"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW9jY": {
-  "c": 6.0,
-  "done": false,
-  "issue": 122,
-  "title": "Mockups: marketplace, ads and cart pages"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW9lE": {
   "c": 6.0,

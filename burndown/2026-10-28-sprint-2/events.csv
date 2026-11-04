@@ -37,3 +37,7 @@ timestamp,issue,title,type,delta_hours
 2026-11-03T18:41:12+00:00,140,"Product detail page (new, second-hand and part variants)",completed,-7.0
 2026-11-03T21:27:12+00:00,33,"Curated CSV seed: partners, products, parts and compatibility",completed,-3.0
 2026-11-03T21:27:14+00:00,24,Partner catalogue import from CSV/JSON feeds,completed,-6.0
+2026-11-04T16:34:22+00:00,31,Marketplace Firestore schema and ER diagram,completed,-4.0
+2026-11-04T17:07:17+00:00,33,"Curated CSV seed: partners, products, parts and compatibility",reopened,3.0
+2026-11-04T17:07:20+00:00,24,Partner catalogue import from CSV/JSON feeds,reopened,6.0
+2026-11-04T14:13:36+00:00,146,"My listings: edit, mark as sold and delete",completed,-4.0
