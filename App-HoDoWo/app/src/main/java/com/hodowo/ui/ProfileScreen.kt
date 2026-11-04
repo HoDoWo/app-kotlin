@@ -47,7 +47,8 @@ fun ProfileScreen(
     onNavigateMarket: () -> Unit = {},
     onNavigateArCore: () -> Unit = {},
     onNavigateProfile: () -> Unit = {},
-    onOpenApplianceManuals: () -> Unit = {}
+    onOpenApplianceManuals: () -> Unit = {},
+    onOpenMyListings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val currentUser = authManager?.currentUser?.collectAsState()?.value
@@ -90,7 +91,7 @@ fun ProfileScreen(
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showAddApplianceDialog by remember { mutableStateOf(false) }
     var showAccountDialog by remember { mutableStateOf(false) }
-    var showMarketplaceDialog by remember { mutableStateOf(false) }
+    var showPostToSellComingSoonDialog by remember { mutableStateOf(false) }
     var selectedGuideForDetails by remember { mutableStateOf<ManualGuide?>(null) }
 
     var editNameInput by remember(defaultName) { mutableStateOf(defaultName) }
@@ -140,14 +141,6 @@ fun ProfileScreen(
             )
         }
         list
-    }
-
-    // Marketplace (placeholder for now)
-    val marketplaceListings = remember {
-        listOf(
-            MarketListingData("De'Longhi Dedica Espresso", "Active", true, "Refurbished pump • Descaled", "$85.00", "2 Inquiries", true, Icons.Default.Coffee),
-            MarketListingData("Philips Airfryer XL", "Pending Pickup", false, "Like new • Original basket & manual", "$45.00", "Reserved for Buyer", false, Icons.Default.Microwave)
-        )
     }
 
     Scaffold(
@@ -331,17 +324,17 @@ fun ProfileScreen(
                 }
             }
 
-            // 4. MARKETPLACE (placeholder)
+            // 4. MY LISTINGS entry point (#146 has the full screen; posting to sell is #145, not built yet)
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                     Column {
                         Text("Appliances Posted to Sell", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text("Your marketplace listings & buyer inquiries", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Manage your marketplace listings", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.clickable { showMarketplaceDialog = true }
+                        modifier = Modifier.clickable { showPostToSellComingSoonDialog = true }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -353,15 +346,23 @@ fun ProfileScreen(
                         }
                     }
                 }
-                marketplaceListings.forEach { l ->
-                    MarketListingCard(
-                        icon = l.icon, title = l.title, statusText = l.statusText,
-                        statusColor = if (l.isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                        subtitle = l.subtitle, price = l.price, footerLeft = l.footerLeft,
-                        isPrimaryInquiries = l.isPrimaryInquiries,
-                        onEdit = { showMarketplaceDialog = true },
-                        onViewListing = { showMarketplaceDialog = true }
-                    )
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth().clickable { onOpenMyListings() }
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Icon(Icons.Default.Sell, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Text("Manage your listings", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        }
+                        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
@@ -481,24 +482,22 @@ fun ProfileScreen(
         )
     }
 
-    // Marketplace placeholder
-    if (showMarketplaceDialog) {
+    // Posting a new listing (#145) isn't built yet.
+    if (showPostToSellComingSoonDialog) {
         AlertDialog(
-            onDismissRequest = { showMarketplaceDialog = false },
-            title = { Text("HoDoWo Marketplace") },
+            onDismissRequest = { showPostToSellComingSoonDialog = false },
+            title = { Text("Post an appliance to sell") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Coming Soon!", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Text(
-                        "The HoDoWo marketplace is currently under development. Soon you will be able to:\n" +
-                                "• Buy certified genuine spare parts from official vendors\n" +
-                                "• Sell and buy refurbished second-hand appliances safely\n" +
-                                "• Connect with local certified technicians for repairs",
+                        "The post-to-sell form is still being built. You'll be able to add photos, " +
+                            "details and a price for your appliance here.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
             },
-            confirmButton = { Button(onClick = { showMarketplaceDialog = false }) { Text("Got it") } }
+            confirmButton = { Button(onClick = { showPostToSellComingSoonDialog = false }) { Text("Got it") } }
         )
     }
 }
@@ -576,17 +575,6 @@ private data class ApplianceItemData(
     val isUserRegistered: Boolean = false,
     val brand: String? = null,
     val model: String? = null
-)
-
-private data class MarketListingData(
-    val title: String,
-    val statusText: String,
-    val isActive: Boolean,
-    val subtitle: String,
-    val price: String,
-    val footerLeft: String,
-    val isPrimaryInquiries: Boolean,
-    val icon: ImageVector
 )
 
 @Composable
@@ -690,174 +678,3 @@ fun ApplianceCard(
     }
 }
 
-@Composable
-fun MarketListingCard(
-    icon: ImageVector,
-    title: String,
-    statusText: String,
-    statusColor: Color,
-    subtitle: String,
-    price: String,
-    footerLeft: String,
-    isPrimaryInquiries: Boolean,
-    onEdit: () -> Unit = {},
-    onViewListing: () -> Unit = {}
-) {
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Top,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Surface(
-                        modifier = Modifier.size(56.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                tint = statusColor,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, false)
-                            )
-                            Surface(
-                                shape = CircleShape,
-                                color = statusColor.copy(alpha = 0.1f)
-                            ) {
-                                Text(
-                                    text = statusText,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = statusColor,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            text = subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                        Text(
-                            text = price,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-                }
-            }
-
-            Divider(
-                modifier = Modifier.fillMaxWidth(),
-                thickness = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    if (isPrimaryInquiries) {
-                        Icon(
-                            imageVector = Icons.Default.ChatBubble,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = footerLeft,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = footerLeft,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = onEdit,
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = "Edit",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                    Button(
-                        onClick = onViewListing,
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isPrimaryInquiries) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer,
-                            contentColor = if (isPrimaryInquiries) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
-                        )
-                    ) {
-                        Text(
-                            text = "View Listing",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
