@@ -48,6 +48,7 @@ import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SecondaryContainer
 import com.hodowo.viewmodel.CartViewModel
 import com.hodowo.viewmodel.ChatViewModel
+import com.hodowo.viewmodel.CheckoutViewModel
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
 import com.hodowo.viewmodel.PostProductViewModel
@@ -73,6 +74,7 @@ fun HoDoWoApp(
     val marketplaceViewModel: MarketplaceViewModel = viewModel(factory = AiServiceProvider.marketplaceViewModelFactory())
     val postProductViewModel: PostProductViewModel = viewModel(factory = AiServiceProvider.postProductViewModelFactory())
     val cartViewModel: CartViewModel = viewModel(factory = AiServiceProvider.cartViewModelFactory())
+    val checkoutViewModel: CheckoutViewModel = viewModel(factory = AiServiceProvider.checkoutViewModelFactory())
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     val chatState by chatViewModel.uiState.collectAsState()
@@ -195,11 +197,8 @@ fun HoDoWoApp(
                             BackHandler { showCart = false }
                             CartScreen(
                                 viewModel = cartViewModel,
+                                checkoutViewModel = checkoutViewModel,
                                 onBack = { showCart = false },
-                                onCheckout = {
-                                    // The Stripe PaymentSheet arrives with #143.
-                                    Toast.makeText(context, "Payment is coming soon", Toast.LENGTH_SHORT).show()
-                                },
                                 onBrowse = {
                                     showCart = false
                                     showMarketplaceSearch = true

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.hodowo.BuildConfig
 import com.hodowo.viewmodel.CartViewModel
 import com.hodowo.viewmodel.ChatViewModel
+import com.hodowo.viewmodel.CheckoutViewModel
 import com.hodowo.viewmodel.DemoHoDoWoAiService
 import com.hodowo.viewmodel.HoDoWoAiService
 import com.hodowo.viewmodel.HomeViewModel
@@ -147,6 +148,21 @@ object AiServiceProvider {
         viewModelFactory {
             initializer {
                 CartViewModel(cartStore)
+            }
+        }
+
+    /**
+     * Factory that builds [CheckoutViewModel] (#143): orders from the backend checkout,
+     * payment in the Stripe PaymentSheet with the publishable test key of local.properties.
+     */
+    fun checkoutViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                CheckoutViewModel(
+                    checkout = RemoteCheckoutService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
+                    cart = cartStore,
+                    publishableKey = BuildConfig.STRIPE_PUBLISHABLE_KEY
+                )
             }
         }
 

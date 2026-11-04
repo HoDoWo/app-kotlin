@@ -7,6 +7,9 @@ if (localPropertiesFile.exists()) {
 }
 
 val backendUrl = localProperties.getProperty("backend.url", "")
+// Stripe publishable TEST key (pk_test_...) for the PaymentSheet (#143). It is not a secret,
+// but it stays in local.properties like backend.url. Empty = payments disabled in the app.
+val stripePublishableKey = localProperties.getProperty("stripe.publishable.key", "")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -69,6 +72,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
+        buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
     }
 
     buildTypes {
@@ -128,6 +132,8 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
     implementation(libs.coil.compose)
+    // Stripe PaymentSheet: card data is entered in Stripe's own UI, never in ours (#143).
+    implementation(libs.stripe.android)
     implementation(libs.androidx.compose.material.icons.extended)
     testImplementation(kotlin("test"))
 }
