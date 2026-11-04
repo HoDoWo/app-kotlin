@@ -48,6 +48,8 @@ import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SecondaryContainer
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.HomeViewModel
+import com.hodowo.viewmodel.MarketplaceViewModel
+import com.hodowo.viewmodel.PostProductViewModel
 
 /**
  * Root composable of the application.
@@ -67,11 +69,15 @@ fun HoDoWoApp(
     authManager: AuthManager = AiServiceProvider.authManager
 ) {
     val context = LocalContext.current
+    val marketplaceViewModel: MarketplaceViewModel = viewModel(factory = AiServiceProvider.marketplaceViewModelFactory())
+    val postProductViewModel: PostProductViewModel = viewModel(factory = AiServiceProvider.postProductViewModelFactory())
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     val chatState by chatViewModel.uiState.collectAsState()
     var showAuthDialog by remember { mutableStateOf(false) }
     var showApplianceManuals by remember { mutableStateOf(false) }
+    var showPostProduct by remember { mutableStateOf(false) }
+    var showMarketplaceSearch by remember { mutableStateOf(false) }
     var showMyListings by remember { mutableStateOf(false) }
     // Temporary stand-in for #138/#139: picks a demo product to open in ProductDetailScreen (#140).
     var selectedMarketProductId by remember { mutableStateOf<String?>(null) }
@@ -182,15 +188,34 @@ fun HoDoWoApp(
                     }
                     AppNavTab.MARKET -> {
                         val productId = selectedMarketProductId
-                        if (productId == null) {
-                            MarketScreen(onOpenProduct = { selectedMarketProductId = it })
-                        } else {
+                        if (productId != null) {
                             ProductDetailScreen(
                                 viewModel = viewModel(
                                     key = productId,
                                     factory = AiServiceProvider.productDetailViewModelFactory(productId)
                                 ),
                                 onBack = { selectedMarketProductId = null }
+                            )
+                        } else if (showPostProduct) {
+                            PostProductScreen(
+                                viewModel = postProductViewModel,
+                                userId = authManager.currentUserId,
+                                onPublished = { showPostProduct = false },
+                                onBack = { showPostProduct = false }
+                            )
+                        } else if (showMarketplaceSearch) {
+                            ProductSearchAndFiltersScreen(
+                                viewModel = marketplaceViewModel,
+                                onBack = { showMarketplaceSearch = false },
+                                onCartClick = { }
+                            )
+                        } else {
+                            MarketplaceHomeScreen(
+                                viewModel = marketplaceViewModel,
+                                onOpenSearch = { showMarketplaceSearch = true },
+                                onPostProduct = { showPostProduct = true },
+                                onOpenProfile = { currentTab = AppNavTab.PROFILE },
+                                onCartClick = { }
                             )
                         }
                     }
@@ -220,6 +245,8 @@ fun HoDoWoApp(
                 currentTab = currentTab,
                 onTabSelected = {
                     showApplianceManuals = false
+                    showMarketplaceSearch = false
+                    showPostProduct = false
                     showMyListings = false
                     selectedMarketProductId = null
                     currentTab = it

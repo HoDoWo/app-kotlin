@@ -25,6 +25,7 @@ android {
         dependsOn("testDebugUnitTest")
         reports {
             xml.required.set(true)
+            xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/jacocoDebugUnitTestReport/jacocoDebugUnitTestReport.xml"))
             html.required.set(true)
         }
         val excludes = listOf(
