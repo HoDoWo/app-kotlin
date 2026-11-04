@@ -9,6 +9,7 @@ import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.DemoHoDoWoAiService
 import com.hodowo.viewmodel.HoDoWoAiService
 import com.hodowo.viewmodel.HomeViewModel
+import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.greetingName
 import java.io.File
@@ -21,6 +22,16 @@ object AiServiceProvider {
     val authManager by lazy { AuthManager() }
     val firebaseRepository by lazy { FirebaseRepository() }
     val cartRepository by lazy { InMemoryCartRepository() }
+
+    /**
+     * The listings service, kept as a singleton so edits/mark-as-sold/delete done through
+     * [DemoListingsService]'s in-memory data survive navigating away from the screen.
+     *
+     * Like [marketplaceService], this doesn't switch on [BuildConfig.BACKEND_URL] yet: the
+     * marketplace routes (Backend#38, Backend#40) aren't deployed. Switch to
+     * [RemoteListingsService] once they are.
+     */
+    val listingsService: ListingsService by lazy { DemoListingsService() }
 
     fun create(context: Context): HoDoWoAiService {
         val backendUrl = BuildConfig.BACKEND_URL
@@ -91,6 +102,14 @@ object AiServiceProvider {
                     marketplaceService = marketplaceService(),
                     cartRepository = cartRepository
                 )
+            }
+        }
+
+    /** Factory that builds [MyListingsViewModel] with the shared listings service. */
+    fun myListingsViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                MyListingsViewModel(service = listingsService)
             }
         }
 }
