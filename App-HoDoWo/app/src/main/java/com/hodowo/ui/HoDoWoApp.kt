@@ -1,8 +1,7 @@
-﻿package com.hodowo.ui
+package com.hodowo.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.content.res.Configuration
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -10,15 +9,11 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -29,7 +24,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,7 +32,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -46,28 +39,16 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hodowo.data.AiServiceProvider
-import com.hodowo.data.MarketplaceProduct
-import com.hodowo.data.cartProductType
 import com.hodowo.data.AuthManager
-import com.hodowo.viewmodel.MyListingsViewModel
-import com.hodowo.viewmodel.ProductDetailViewModel
-import com.hodowo.viewmodel.ProductForumViewModel
-import com.hodowo.ui.adaptive.LocalAppLayout
-import com.hodowo.ui.adaptive.appLayoutInfoFor
 import com.hodowo.ui.components.AppNavTab
-import com.hodowo.ui.components.AppNavigationRail
 import com.hodowo.ui.components.BottomNavBar
-import com.hodowo.ui.components.NotificationIconButton
-import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.ui.components.NewChatButton
 import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SecondaryContainer
-import com.hodowo.viewmodel.CartViewModel
+import com.hodowo.ui.ProductSearchScreen
 import com.hodowo.viewmodel.ChatViewModel
-import com.hodowo.viewmodel.CheckoutViewModel
 import com.hodowo.viewmodel.HomeViewModel
-import com.hodowo.viewmodel.MarketplaceViewModel
-import com.hodowo.viewmodel.PostProductViewModel
+import com.hodowo.viewmodel.ProductViewModel
 
 /**
  * Root composable of the application.
@@ -84,27 +65,19 @@ fun HoDoWoApp(
             LocalContext.current.applicationContext
         )
     ),
+    productViewModel: ProductViewModel = viewModel(
+        factory = AiServiceProvider.productViewModelFactory(
+            LocalContext.current.applicationContext
+        )
+    ),
     authManager: AuthManager = AiServiceProvider.authManager
 ) {
     val context = LocalContext.current
-    val marketplaceViewModel: MarketplaceViewModel = viewModel(factory = AiServiceProvider.marketplaceViewModelFactory())
-    val postProductViewModel: PostProductViewModel = viewModel(
-        factory = AiServiceProvider.postProductViewModelFactory(context)
-    )
-    val cartViewModel: CartViewModel = viewModel(factory = AiServiceProvider.cartViewModelFactory())
-    val checkoutViewModel: CheckoutViewModel = viewModel(factory = AiServiceProvider.checkoutViewModelFactory())
-    val myListingsViewModel: MyListingsViewModel = viewModel(factory = AiServiceProvider.myListingsViewModelFactory())
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     val chatState by chatViewModel.uiState.collectAsState()
     var showAuthDialog by remember { mutableStateOf(false) }
     var showApplianceManuals by remember { mutableStateOf(false) }
-    var showPostProduct by remember { mutableStateOf(false) }
-    var showMarketplaceSearch by remember { mutableStateOf(false) }
-    var showMyListings by remember { mutableStateOf(false) }
-    var showCart by remember { mutableStateOf(false) }
-    // Product opened from a marketplace card: its Product Detail page (#140) with the forum (#150).
-    var selectedMarketProduct by remember { mutableStateOf<MarketplaceProduct?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -150,53 +123,9 @@ fun HoDoWoApp(
             }
         )
     } else {
-        // The window size decides between a vertical navigation rail (landscape
-        // and tablets) and the bottom tab bar (portrait phones).
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-            val layoutInfo = appLayoutInfoFor(width = maxWidth, isLandscape = isLandscape)
-            val useRail = layoutInfo.useNavigationRail && !showPostProduct
-
-            CompositionLocalProvider(LocalAppLayout provides layoutInfo) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    if (useRail) {
-                        AppNavigationRail(
-                            modifier = Modifier.width(80.dp),
-                            currentTab = currentTab,
-                            onTabSelected = {
-                                showApplianceManuals = false
-                                showMarketplaceSearch = false
-                                showPostProduct = false
-                                showMyListings = false
-                                showCart = false
-                                selectedMarketProduct = null
-                                currentTab = it
-                            },
-                            bottomActions = {
-                                NotificationIconButton(onClick = {
-                                    Toast.makeText(context, "No notifications yet", Toast.LENGTH_SHORT).show()
-                                })
-                                ProfileAvatar(
-                                    name = "",
-                                    size = 34,
-                                    onClick = {
-                                        showApplianceManuals = false
-                                        showMarketplaceSearch = false
-                                        showPostProduct = false
-                                        showMyListings = false
-                                        showCart = false
-                                        selectedMarketProduct = null
-                                        currentTab = AppNavTab.PROFILE
-                                    },
-                                    photoUrl = chatState.userProfile?.photoUrl
-                                )
-                            }
-                        )
-                    }
-
-                    Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            when (currentTab) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f)) {
+                when (currentTab) {
                     AppNavTab.HOME -> {
                         HomeScreen(
                             viewModel = homeViewModel,
@@ -234,92 +163,26 @@ fun HoDoWoApp(
                                     currentTab = AppNavTab.AI_CHAT
                                 }
                             )
-                        } else if (showMyListings) {
-                            MyListingsScreen(
-                                viewModel = myListingsViewModel,
-                                onBack = { showMyListings = false },
-                                onPostProduct = {
-                                    showMyListings = false
-                                    currentTab = AppNavTab.MARKET
-                                    showPostProduct = true
-                                }
-                            )
                         } else {
                             ProfileScreen(
                                 authManager = authManager,
                                 viewModel = chatViewModel,
-                                myListingsViewModel = myListingsViewModel,
                                 onOpenAuth = { showAuthDialog = true },
                                 onNavigateHome = { currentTab = AppNavTab.HOME },
                                 onNavigateAiChat = { currentTab = AppNavTab.AI_CHAT },
                                 onNavigateMarket = { currentTab = AppNavTab.MARKET },
                                 onNavigateArCore = { currentTab = AppNavTab.AR_CORE },
                                 onNavigateProfile = { currentTab = AppNavTab.PROFILE },
-                                onOpenApplianceManuals = { showApplianceManuals = true },
-                                onOpenMyListings = { showMyListings = true },
-                                onPostProduct = {
-                                    currentTab = AppNavTab.MARKET
-                                    showPostProduct = true
-                                }
+                                onOpenApplianceManuals = { showApplianceManuals = true }
                             )
                         }
                     }
                     AppNavTab.MARKET -> {
-                        val product = selectedMarketProduct
-                        if (showCart) {
-                            BackHandler { showCart = false }
-                            CartScreen(
-                                viewModel = cartViewModel,
-                                checkoutViewModel = checkoutViewModel,
-                                onBack = { showCart = false },
-                                onBrowse = {
-                                    showCart = false
-                                    showMarketplaceSearch = true
-                                }
-                            )
-                        } else if (product != null) {
-                            BackHandler { selectedMarketProduct = null }
-                            val productType = product.cartProductType()
-                            ProductDetailScreen(
-                                viewModel = viewModel(
-                                    key = "detail-${product.type}-${product.id}",
-                                    factory = AiServiceProvider.productDetailViewModelFactory(product)
-                                ),
-                                forumViewModel = productType?.let {
-                                    viewModel<ProductForumViewModel>(
-                                        key = "forum-$it-${product.id}",
-                                        factory = AiServiceProvider.productForumViewModelFactory(it, product.id)
-                                    )
-                                },
-                                onBack = { selectedMarketProduct = null },
-                                onOpenCart = { showCart = true }
-                            )
-                        } else if (showPostProduct) {
-                            PostProductScreen(
-                                viewModel = postProductViewModel,
-                                userId = authManager.currentUserId,
-                                onPublished = { showPostProduct = false },
-                                onBack = { showPostProduct = false },
-                                onOpenCart = { showCart = true }
-                            )
-                        } else if (showMarketplaceSearch) {
-                            ProductSearchAndFiltersScreen(
-                                viewModel = marketplaceViewModel,
-                                onBack = { showMarketplaceSearch = false },
-                                onCartClick = { showCart = true },
-                                onOpenProduct = { selectedMarketProduct = it }
-                            )
-                        } else {
-                            MarketplaceHomeScreen(
-                                viewModel = marketplaceViewModel,
-                                onOpenSearch = { showMarketplaceSearch = true },
-                                onPostProduct = { showPostProduct = true },
-                                onOpenProfile = { currentTab = AppNavTab.PROFILE },
-                                onCartClick = { showCart = true },
-                                onOpenProduct = { selectedMarketProduct = it },
-                                profilePhotoUrl = chatState.userProfile?.photoUrl
-                            )
-                        }
+                        ProductSearchScreen(
+                            viewModel = productViewModel,
+                            onBack = { currentTab = AppNavTab.HOME },
+                            onCart = { currentTab = AppNavTab.AI_CHAT }
+                        )
                     }
                     AppNavTab.AR_CORE -> {
                         NotImplementedScreen(
@@ -330,11 +193,8 @@ fun HoDoWoApp(
                     }
                 }
 
-                // The chat has its own "+" in the header. Product Detail, the cart and the sell
-                // form have their own sticky bar at the bottom, which this button would overlap.
-                if (currentTab != AppNavTab.AI_CHAT && selectedMarketProduct == null && !showCart &&
-                    !showPostProduct
-                ) {
+                // The chat has its own "+" in the header; every other section gets this button.
+                if (currentTab != AppNavTab.AI_CHAT) {
                     NewChatButton(
                         onClick = { startNewChat() },
                         modifier = Modifier
@@ -344,26 +204,15 @@ fun HoDoWoApp(
                 }
             }
 
-            // Bottom Navigation Bar matching HTML mockup. The sell form has its own
-            // sticky publish bar, so the tab bar is hidden while it is open.
-            if (!showPostProduct && !useRail) {
-                BottomNavBar(
-                    currentTab = currentTab,
-                    onTabSelected = {
-                        showApplianceManuals = false
-                        showMarketplaceSearch = false
-                        showPostProduct = false
-                        showMyListings = false
-                        showCart = false
-                        selectedMarketProduct = null
-                        currentTab = it
-                    }
-                )
-            }
+            // Bottom Navigation Bar matching HTML mockup
+            BottomNavBar(
+                currentTab = currentTab,
+                onTabSelected = {
+                    showApplianceManuals = false
+                    currentTab = it
+                }
+            )
         }
-    }
-    }
-    }
     }
 
     if (showAuthDialog) {
