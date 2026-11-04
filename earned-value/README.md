@@ -1,30 +1,30 @@
 # Earned Value – HoDoWo
 
-Status on **2026-11-03** (generated 2026-11-03 12:49 UTC).
+Status on **2026-11-04** (generated 2026-11-04 13:00 UTC).
 
 | KPI | Name | Formula | Sprint 2 | Cumulative | Hours (cumulative) |
 |---|---|---|---:|---:|---:|
-| **PV** | Planned Value | % planned × BAC | 888 € | 3,761 € | 167.5 h |
-| **EV** | Earned Value | % completed × BAC | 112 € | 3,098 € | 138.0 h |
+| **PV** | Planned Value | % planned × BAC | 1,014 € | 3,888 € | 173.2 h |
+| **EV** | Earned Value | % completed × BAC | 359 € | 3,345 € | 149.0 h |
 | **AC** | Actual Cost | hours spent × rate + services | 0 € | 2,578 € | 124.7 h |
 | **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 4,311 € | 9,879 € | 440.0 h |
-| **EAC** | Estimate at Completion | BAC / CPI | – | 8,218 € | 366.0 h |
-| **ETC** | Estimate to Complete | EAC − AC | – | 5,641 € | 241.3 h |
-| **VAC** | Variance at Completion | BAC − EAC | – | 1,661 € | 74.0 h |
-| **CPI** | Cost Performance Index | EV / AC | – | 1.20 | – |
-| **SPI** | Schedule Performance Index | EV / PV | 0.13 | 0.82 | – |
+| **EAC** | Estimate at Completion | BAC / CPI | – | 7,611 € | 339.0 h |
+| **ETC** | Estimate to Complete | EAC − AC | – | 5,034 € | 214.3 h |
+| **VAC** | Variance at Completion | BAC − EAC | – | 2,268 € | 101.0 h |
+| **CPI** | Cost Performance Index | EV / AC | – | 1.30 | – |
+| **SPI** | Schedule Performance Index | EV / PV | 0.35 | 0.86 | – |
 
 ## Reading
 
-- CPI 1.20: under budget (the completed work cost less than planned)
-- SPI 0.82: behind schedule
-- VAC 1,661 €: saving money
+- CPI 1.30: under budget (the completed work cost less than planned)
+- SPI 0.86: behind schedule
+- VAC 2,268 €: saving money
 
 ## Inputs
 
 - BAC: 9,879 € (total cost estimated in Sprint 0), 440 h planned for the whole project.
-- % planned: 167.5 h of the Sprint 0 baseline by 2026-11-03 → 38.1%.
-- % completed: 138.0 h estimated on the items in Done → 31.4%.
+- % planned: 173.2 h of the Sprint 0 baseline by 2026-11-04 → 39.4%.
+- % completed: 149.0 h estimated on the items in Done → 33.9%.
 - AC: 124.7 h spent × 20 €/h + 84 € of services.
 - Hypothetical costs: the team uses free tiers and pays nothing. Each service counts with the price planned in Sprint 0 from the date it is used.
 - Not counted (outside Sprint 1, Sprint 2, Sprint 3): 15 items, 47 h estimated, 29 h spent.
@@ -46,12 +46,12 @@ Status on **2026-11-03** (generated 2026-11-03 12:49 UTC).
 
 ## Sprint 2 (2026-10-28 → 2026-11-24)
 
-- Items: 39, estimated 186.0 h, completed 5.0 h, spent 0.0 h.
+- Items: 39, estimated 186.0 h, completed 16.0 h, spent 0.0 h.
 - Open items:
-  - #43 Stripe test-mode checkout, confirmation and order history API – In preview (12 h estimated, 0 h spent)
+  - #42 Cart API – In Progress (5 h estimated, 0 h spent)
+  - #43 Stripe test-mode checkout, confirmation and order history API – In Progress (12 h estimated, 0 h spent)
   - #13 Sprint 2 documentation – Todo (4 h estimated, 0 h spent)
   - #17 Forum about concrete home appliances – Todo (0 h estimated, 0 h spent)
-  - #24 Partner catalogue import from CSV/JSON feeds – Todo (6 h estimated, 0 h spent)
   - #25 Marketplace: data model and seed data – Todo (0 h estimated, 0 h spent)
   - #26 Marketplace catalogue and search API – Todo (0 h estimated, 0 h spent)
   - #27 Second-hand listings API – Todo (0 h estimated, 0 h spent)
@@ -60,7 +60,6 @@ Status on **2026-11-03** (generated 2026-11-03 12:49 UTC).
   - #30 Diagnosis to suggested spare part – Todo (5 h estimated, 0 h spent)
   - #31 Marketplace Firestore schema and ER diagram – Todo (4 h estimated, 0 h spent)
   - #32 Security rules for marketplace and forum collections – Todo (3 h estimated, 0 h spent)
-  - #33 Curated CSV seed: partners, products, parts and compatibility – Todo (3 h estimated, 0 h spent)
   - #34 Composite indexes for search and ranking – Todo (2 h estimated, 0 h spent)
   - #35 Second-hand listing CRUD and ownership – Todo (7 h estimated, 0 h spent)
   - #36 Listing image upload and compression – Todo (4 h estimated, 0 h spent)
@@ -76,7 +75,6 @@ Status on **2026-11-03** (generated 2026-11-03 12:49 UTC).
   - #122 Mockups: marketplace, ads and cart pages – Todo (6 h estimated, 0 h spent)
   - #138 Marketplace tab and entry points – Todo (4 h estimated, 0 h spent)
   - #139 Product search page with new / second-hand / parts filters – Todo (9 h estimated, 0 h spent)
-  - #140 Product detail page (new, second-hand and part variants) – Todo (7 h estimated, 0 h spent)
   - #141 Ads / sponsored partners page – Todo (5 h estimated, 0 h spent)
   - #142 Cart page and cart state – Todo (6 h estimated, 0 h spent)
   - #143 Payment section (Stripe test checkout UI) – Todo (7 h estimated, 0 h spent)
