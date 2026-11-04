@@ -78,6 +78,8 @@ fun HoDoWoApp(
     var showApplianceManuals by remember { mutableStateOf(false) }
     var showPostProduct by remember { mutableStateOf(false) }
     var showMarketplaceSearch by remember { mutableStateOf(false) }
+    var showMyListings by remember { mutableStateOf(false) }
+    // Temporary stand-in for #138/#139: picks a demo product to open in ProductDetailScreen (#140).
     var selectedMarketProductId by remember { mutableStateOf<String?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -164,6 +166,11 @@ fun HoDoWoApp(
                                     currentTab = AppNavTab.AI_CHAT
                                 }
                             )
+                        } else if (showMyListings) {
+                            MyListingsScreen(
+                                viewModel = viewModel(factory = AiServiceProvider.myListingsViewModelFactory()),
+                                onBack = { showMyListings = false }
+                            )
                         } else {
                             ProfileScreen(
                                 authManager = authManager,
@@ -174,7 +181,8 @@ fun HoDoWoApp(
                                 onNavigateMarket = { currentTab = AppNavTab.MARKET },
                                 onNavigateArCore = { currentTab = AppNavTab.AR_CORE },
                                 onNavigateProfile = { currentTab = AppNavTab.PROFILE },
-                                onOpenApplianceManuals = { showApplianceManuals = true }
+                                onOpenApplianceManuals = { showApplianceManuals = true },
+                                onOpenMyListings = { showMyListings = true }
                             )
                         }
                     }
@@ -239,6 +247,7 @@ fun HoDoWoApp(
                     showApplianceManuals = false
                     showMarketplaceSearch = false
                     showPostProduct = false
+                    showMyListings = false
                     selectedMarketProductId = null
                     currentTab = it
                 }
