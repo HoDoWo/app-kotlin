@@ -1,15 +1,21 @@
 {
- "PVTI_lADOFCkyKM4Bl88jzhCeYWk": {
+ "PVTI_lADOFCkyKM4Bl88jzhDW4eo": {
   "c": 0.0,
-  "done": false,
-  "issue": 111,
-  "title": "Marketplace app screens"
+  "done": true,
+  "issue": 143,
+  "title": "Payment section (Stripe test checkout UI)"
  },
- "PVTI_lADOFCkyKM4Bl88jzhCeXzk": {
-  "c": 0.0,
+ "PVTI_lADOFCkyKM4Bl88jzhDW4YQ": {
+  "c": 12.0,
   "done": false,
-  "issue": 26,
-  "title": "Marketplace catalogue and search API"
+  "issue": 43,
+  "title": "Stripe test-mode checkout, confirmation and order history API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Ws": {
+  "c": 5.0,
+  "done": false,
+  "issue": 42,
+  "title": "Cart API"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4iY": {
   "c": 10.0,
@@ -35,29 +41,17 @@
   "issue": 40,
   "title": "Unified product search: new, second-hand and spare parts"
  },
+ "PVTI_lADOFCkyKM4Bl88jzhCeXzk": {
+  "c": 0.0,
+  "done": false,
+  "issue": 26,
+  "title": "Marketplace catalogue and search API"
+ },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Kg": {
   "c": 0.0,
   "done": true,
   "issue": 31,
   "title": "Marketplace Firestore schema and ER diagram"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4YQ": {
-  "c": 12.0,
-  "done": false,
-  "issue": 43,
-  "title": "Stripe test-mode checkout, confirmation and order history API"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4Ws": {
-  "c": 5.0,
-  "done": false,
-  "issue": 42,
-  "title": "Cart API"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4M0": {
-  "c": 3.0,
-  "done": false,
-  "issue": 33,
-  "title": "Curated CSV seed: partners, products, parts and compatibility"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4fI": {
   "c": 6.0,
@@ -71,11 +65,17 @@
   "issue": 24,
   "title": "Partner catalogue import from CSV/JSON feeds"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4eo": {
-  "c": 7.0,
+ "PVTI_lADOFCkyKM4Bl88jzhDW4M0": {
+  "c": 3.0,
   "done": false,
-  "issue": 143,
-  "title": "Payment section (Stripe test checkout UI)"
+  "issue": 33,
+  "title": "Curated CSV seed: partners, products, parts and compatibility"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeYWk": {
+  "c": 0.0,
+  "done": false,
+  "issue": 111,
+  "title": "Marketplace app screens"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-7q-U": {
   "c": 0.0,
@@ -174,8 +174,8 @@
   "title": "Partner tiers, sponsored ranking and 'for me' ordering"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Ys": {
-  "c": 7.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 44,
   "title": "Forum API: categories, threads and replies"
  },
