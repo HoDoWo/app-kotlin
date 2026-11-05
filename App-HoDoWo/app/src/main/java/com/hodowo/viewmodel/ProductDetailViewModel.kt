@@ -2,6 +2,7 @@ package com.hodowo.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hodowo.data.CartException
 import com.hodowo.data.CartRepository
 import com.hodowo.data.DemoMarketplaceService
 import com.hodowo.data.InMemoryCartRepository
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 /** Everything the Product Detail screen shows. */
 data class ProductDetailUiState(
@@ -20,7 +22,9 @@ data class ProductDetailUiState(
     /** True while a part add-to-cart/buy needs the user to confirm the compatibility mismatch. */
     val pendingIncompatibleConfirmation: Boolean = false,
     /** One-off "Added to cart"/"Purchase started" feedback; cleared by [ProductDetailViewModel.consumeCartMessage]. */
-    val cartMessage: String? = null
+    val cartMessage: String? = null,
+    /** "Buy now" put the product in the cart: the screen opens the cart; cleared by [ProductDetailViewModel.onCartOpened]. */
+    val openCart: Boolean = false
 )
 
 /**
@@ -60,17 +64,38 @@ class ProductDetailViewModel(
 
     fun onAddToCartClicked() {
         runOrAskConfirmation {
-            if (cartRepository.addToCart(productId)) {
-                _uiState.value = _uiState.value.copy(cartMessage = "Added to cart")
+            reportCartErrors {
+                if (cartRepository.addToCart(productId)) {
+                    _uiState.value = _uiState.value.copy(cartMessage = "Added to cart")
+                }
             }
         }
     }
 
     fun onBuyNowClicked() {
         runOrAskConfirmation {
-            if (cartRepository.buyNow(productId)) {
-                _uiState.value = _uiState.value.copy(cartMessage = "Purchase started")
+            reportCartErrors {
+                if (cartRepository.buyNow(productId)) {
+                    _uiState.value = _uiState.value.copy(openCart = true)
+                }
             }
+        }
+    }
+
+    fun onCartOpened() {
+        _uiState.value = _uiState.value.copy(openCart = false)
+    }
+
+    /** The real cart (#142) refuses sold or out-of-stock items: show its reason instead of crashing. */
+    private suspend fun reportCartErrors(action: suspend () -> Unit) {
+        try {
+            action()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: CartException) {
+            _uiState.value = _uiState.value.copy(cartMessage = "Could not add to cart: ${e.message}")
+        } catch (e: IOException) {
+            _uiState.value = _uiState.value.copy(cartMessage = "Could not add to cart, check your connection")
         }
     }
 

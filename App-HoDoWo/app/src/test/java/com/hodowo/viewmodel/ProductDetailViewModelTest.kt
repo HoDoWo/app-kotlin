@@ -1,5 +1,6 @@
 package com.hodowo.viewmodel
 
+import com.hodowo.data.CartException
 import com.hodowo.data.CartRepository
 import com.hodowo.data.DemoMarketplaceService
 import com.hodowo.data.MarketplaceService
@@ -134,6 +135,39 @@ class ProductDetailViewModelTest {
 
         assertEquals(listOf(SECOND_HAND.id), cart.bought)
         assertFalse(vm.uiState.value.pendingIncompatibleConfirmation)
+        assertTrue(vm.uiState.value.openCart)
+
+        vm.onCartOpened()
+        assertFalse(vm.uiState.value.openCart)
+    }
+
+    @Test
+    fun aCartRefusalIsShownInsteadOfCrashing() = runTest(dispatcher) {
+        cart.error = CartException("already sold")
+        val vm = viewModel(SECOND_HAND.id)
+        vm.load()
+        advanceUntilIdle()
+
+        vm.onAddToCartClicked()
+        advanceUntilIdle()
+        assertEquals("Could not add to cart: already sold", vm.uiState.value.cartMessage)
+
+        vm.onBuyNowClicked()
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.openCart)
+    }
+
+    @Test
+    fun aNetworkErrorWhileAddingAsksToCheckTheConnection() = runTest(dispatcher) {
+        cart.error = IOException("timeout")
+        val vm = viewModel(NEW.id)
+        vm.load()
+        advanceUntilIdle()
+
+        vm.onAddToCartClicked()
+        advanceUntilIdle()
+
+        assertEquals("Could not add to cart, check your connection", vm.uiState.value.cartMessage)
     }
 
     @Test
@@ -272,13 +306,16 @@ private class FakeMarketplaceService : MarketplaceService {
 private class FakeCartRepository : CartRepository {
     val added = mutableListOf<String>()
     val bought = mutableListOf<String>()
+    var error: IOException? = null
 
     override suspend fun addToCart(productId: String, quantity: Int): Boolean {
+        error?.let { throw it }
         added.add(productId)
         return true
     }
 
     override suspend fun buyNow(productId: String): Boolean {
+        error?.let { throw it }
         bought.add(productId)
         return true
     }

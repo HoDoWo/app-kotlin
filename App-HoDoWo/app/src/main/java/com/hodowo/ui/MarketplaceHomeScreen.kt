@@ -97,6 +97,8 @@ fun MarketplaceHomeScreen(
     onPostProduct: () -> Unit,
     onOpenProfile: () -> Unit = {},
     onCartClick: () -> Unit = {},
+    /** Opens the Product Detail page (#140) with its community forum (#150). */
+    onOpenProduct: (MarketplaceProduct) -> Unit = {},
     /** Photo of the signed-in user, as on the Home top bar. */
     profilePhotoUrl: String? = null
 ) {
@@ -421,6 +423,7 @@ fun MarketplaceHomeScreen(
                             items(partnerDeals, key = { it.id }) { item ->
                                 PartnerDealCarouselCard(
                                     product = item,
+                                    onOpen = { onOpenProduct(item) },
                                     onAddToCart = {
                                         viewModel.addToCart(item)
                                     }
@@ -480,6 +483,7 @@ fun MarketplaceHomeScreen(
                             communityDeals.forEach { item ->
                                 CommunityDealRowItem(
                                     product = item,
+                                    onOpen = { onOpenProduct(item) },
                                     onChat = {
                                         Toast.makeText(context, "Chat with ${item.sellerName}", Toast.LENGTH_SHORT).show()
                                     },
@@ -754,9 +758,11 @@ private fun CommunitySellPromptBanner(
 @Composable
 private fun PartnerDealCarouselCard(
     product: MarketplaceProduct,
+    onOpen: () -> Unit,
     onAddToCart: () -> Unit
 ) {
     Card(
+        onClick = onOpen,
         modifier = Modifier.width(220.dp),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
@@ -888,10 +894,12 @@ private fun PartnerDealCarouselCard(
 @Composable
 private fun CommunityDealRowItem(
     product: MarketplaceProduct,
+    onOpen: () -> Unit,
     onChat: () -> Unit,
     onBuy: () -> Unit
 ) {
     Card(
+        onClick = onOpen,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
