@@ -181,6 +181,7 @@ fun MarketplaceHomeScreen(
                             .padding(horizontal = 16.dp, vertical = 6.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        // Search only: the cart is in the top bar, with its badge.
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -214,43 +215,6 @@ fun MarketplaceHomeScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                }
-                            }
-
-                            BadgedBox(
-                                badge = {
-                                    if (cartCount > 0) {
-                                        Badge(containerColor = Primary) {
-                                            Text(
-                                                text = "$cartCount",
-                                                color = OnPrimary,
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            ) {
-                                Surface(
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .clickable { onCartClick() },
-                                    color = SurfaceContainerLowest,
-                                    shape = RoundedCornerShape(12.dp),
-                                    shadowElevation = 1.dp
-                                ) {
-                                    Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ShoppingCart,
-                                            contentDescription = "Marketplace Cart",
-                                            tint = OnSurface,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
                                 }
                             }
                         }
