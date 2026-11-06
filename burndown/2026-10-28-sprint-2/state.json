@@ -1,21 +1,45 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Os": {
+  "c": 7.0,
+  "done": false,
+  "issue": 35,
+  "title": "Second-hand listing CRUD and ownership"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeYWk": {
+  "c": 0.0,
+  "done": false,
+  "issue": 111,
+  "title": "Marketplace app screens"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4SE": {
+  "c": 8.0,
+  "done": false,
+  "issue": 39,
+  "title": "Official partner product API with partner-only writes"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4mc": {
+  "c": 0.0,
+  "done": true,
+  "issue": 150,
+  "title": "Forum UI: categories, threads and composer"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4S4": {
+  "c": 6.0,
+  "done": false,
+  "issue": 24,
+  "title": "Partner catalogue import from CSV/JSON feeds"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4fI": {
+  "c": 6.0,
+  "done": false,
+  "issue": 142,
+  "title": "Cart page and cart state"
+ },
  "PVTI_lADOFCkyKM4Bl88jzhDW4eo": {
   "c": 0.0,
   "done": true,
   "issue": 143,
   "title": "Payment section (Stripe test checkout UI)"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4YQ": {
-  "c": 12.0,
-  "done": false,
-  "issue": 43,
-  "title": "Stripe test-mode checkout, confirmation and order history API"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4Ws": {
-  "c": 5.0,
-  "done": false,
-  "issue": 42,
-  "title": "Cart API"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4iY": {
   "c": 10.0,
@@ -53,30 +77,6 @@
   "issue": 31,
   "title": "Marketplace Firestore schema and ER diagram"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4fI": {
-  "c": 6.0,
-  "done": false,
-  "issue": 142,
-  "title": "Cart page and cart state"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4S4": {
-  "c": 6.0,
-  "done": false,
-  "issue": 24,
-  "title": "Partner catalogue import from CSV/JSON feeds"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4M0": {
-  "c": 3.0,
-  "done": false,
-  "issue": 33,
-  "title": "Curated CSV seed: partners, products, parts and compatibility"
- },
- "PVTI_lADOFCkyKM4Bl88jzhCeYWk": {
-  "c": 0.0,
-  "done": false,
-  "issue": 111,
-  "title": "Marketplace app screens"
- },
  "PVTI_lADOFCkyKM4Bl88jzg-7q-U": {
   "c": 0.0,
   "done": false,
@@ -113,12 +113,6 @@
   "issue": 27,
   "title": "Second-hand listings API"
  },
- "PVTI_lADOFCkyKM4Bl88jzhCeYdY": {
-  "c": 0.0,
-  "done": false,
-  "issue": 28,
-  "title": "Cart, checkout and purchase records"
- },
  "PVTI_lADOFCkyKM4Bl88jzhCeYkc": {
   "c": 0.0,
   "done": false,
@@ -136,12 +130,6 @@
   "done": false,
   "issue": 34,
   "title": "Composite indexes for search and ranking"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4Os": {
-  "c": 7.0,
-  "done": false,
-  "issue": 35,
-  "title": "Second-hand listing CRUD and ownership"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Pw": {
   "c": 4.0,
@@ -161,12 +149,6 @@
   "issue": 38,
   "title": "Part detail and compatibility resolution API"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4SE": {
-  "c": 8.0,
-  "done": false,
-  "issue": 39,
-  "title": "Official partner product API with partner-only writes"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW4WQ": {
   "c": 6.0,
   "done": false,
@@ -178,6 +160,30 @@
   "done": true,
   "issue": 44,
   "title": "Forum API: categories, threads and replies"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4M0": {
+  "c": 0.0,
+  "done": true,
+  "issue": 33,
+  "title": "Curated CSV seed: partners, products, parts and compatibility"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Ws": {
+  "c": 0.0,
+  "done": true,
+  "issue": 42,
+  "title": "Cart API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4YQ": {
+  "c": 0.0,
+  "done": true,
+  "issue": 43,
+  "title": "Stripe test-mode checkout, confirmation and order history API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeYdY": {
+  "c": 0.0,
+  "done": true,
+  "issue": 28,
+  "title": "Cart, checkout and purchase records"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4c4": {
   "c": 0.0,
@@ -220,12 +226,6 @@
   "done": false,
   "issue": 149,
   "title": "Error resolution card: suggested spare part CTA"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4mc": {
-  "c": 9.0,
-  "done": false,
-  "issue": 150,
-  "title": "Forum UI: categories, threads and composer"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW9lE": {
   "c": 6.0,

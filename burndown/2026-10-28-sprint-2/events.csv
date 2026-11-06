@@ -43,3 +43,7 @@ timestamp,issue,title,type,delta_hours
 2026-11-04T14:13:36+00:00,146,"My listings: edit, mark as sold and delete",completed,-4.0
 2026-11-05T15:44:19+00:00,143,Payment section (Stripe test checkout UI),completed,-7.0
 2026-11-05T15:42:54+00:00,44,"Forum API: categories, threads and replies",completed,-7.0
+2026-11-06T17:55:50+00:00,150,"Forum UI: categories, threads and composer",completed,-9.0
+2026-11-06T15:52:56+00:00,33,"Curated CSV seed: partners, products, parts and compatibility",completed,-3.0
+2026-11-06T15:52:57+00:00,42,Cart API,completed,-5.0
+2026-11-06T15:52:59+00:00,43,"Stripe test-mode checkout, confirmation and order history API",completed,-12.0
