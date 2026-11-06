@@ -39,8 +39,11 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hodowo.data.AiServiceProvider
+import com.hodowo.data.MarketplaceProduct
+import com.hodowo.data.cartProductType
 import com.hodowo.data.AuthManager
 import com.hodowo.viewmodel.ProductDetailViewModel
+import com.hodowo.viewmodel.ProductForumViewModel
 import com.hodowo.ui.components.AppNavTab
 import com.hodowo.ui.components.BottomNavBar
 import com.hodowo.ui.components.NewChatButton
@@ -84,8 +87,8 @@ fun HoDoWoApp(
     var showMarketplaceSearch by remember { mutableStateOf(false) }
     var showMyListings by remember { mutableStateOf(false) }
     var showCart by remember { mutableStateOf(false) }
-    // Temporary stand-in for #138/#139: picks a demo product to open in ProductDetailScreen (#140).
-    var selectedMarketProductId by remember { mutableStateOf<String?>(null) }
+    // Product opened from a marketplace card: its Product Detail page (#140) with the forum (#150).
+    var selectedMarketProduct by remember { mutableStateOf<MarketplaceProduct?>(null) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -192,7 +195,7 @@ fun HoDoWoApp(
                         }
                     }
                     AppNavTab.MARKET -> {
-                        val productId = selectedMarketProductId
+                        val product = selectedMarketProduct
                         if (showCart) {
                             BackHandler { showCart = false }
                             CartScreen(
@@ -204,13 +207,22 @@ fun HoDoWoApp(
                                     showMarketplaceSearch = true
                                 }
                             )
-                        } else if (productId != null) {
+                        } else if (product != null) {
+                            BackHandler { selectedMarketProduct = null }
+                            val productType = product.cartProductType()
                             ProductDetailScreen(
                                 viewModel = viewModel(
-                                    key = productId,
-                                    factory = AiServiceProvider.productDetailViewModelFactory(productId)
+                                    key = "detail-${product.type}-${product.id}",
+                                    factory = AiServiceProvider.productDetailViewModelFactory(product)
                                 ),
-                                onBack = { selectedMarketProductId = null }
+                                forumViewModel = productType?.let {
+                                    viewModel<ProductForumViewModel>(
+                                        key = "forum-$it-${product.id}",
+                                        factory = AiServiceProvider.productForumViewModelFactory(it, product.id)
+                                    )
+                                },
+                                onBack = { selectedMarketProduct = null },
+                                onOpenCart = { showCart = true }
                             )
                         } else if (showPostProduct) {
                             PostProductScreen(
@@ -223,7 +235,8 @@ fun HoDoWoApp(
                             ProductSearchAndFiltersScreen(
                                 viewModel = marketplaceViewModel,
                                 onBack = { showMarketplaceSearch = false },
-                                onCartClick = { showCart = true }
+                                onCartClick = { showCart = true },
+                                onOpenProduct = { selectedMarketProduct = it }
                             )
                         } else {
                             MarketplaceHomeScreen(
@@ -232,6 +245,7 @@ fun HoDoWoApp(
                                 onPostProduct = { showPostProduct = true },
                                 onOpenProfile = { currentTab = AppNavTab.PROFILE },
                                 onCartClick = { showCart = true },
+                                onOpenProduct = { selectedMarketProduct = it },
                                 profilePhotoUrl = chatState.userProfile?.photoUrl
                             )
                         }
@@ -247,7 +261,7 @@ fun HoDoWoApp(
 
                 // The chat has its own "+" in the header. Product Detail and the cart have their
                 // own sticky bar at the bottom, which this button would overlap.
-                if (currentTab != AppNavTab.AI_CHAT && selectedMarketProductId == null && !showCart) {
+                if (currentTab != AppNavTab.AI_CHAT && selectedMarketProduct == null && !showCart) {
                     NewChatButton(
                         onClick = { startNewChat() },
                         modifier = Modifier
@@ -266,7 +280,7 @@ fun HoDoWoApp(
                     showPostProduct = false
                     showMyListings = false
                     showCart = false
-                    selectedMarketProductId = null
+                    selectedMarketProduct = null
                     currentTab = it
                 }
             )

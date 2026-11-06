@@ -105,7 +105,9 @@ import com.hodowo.viewmodel.MarketplaceViewModel
 fun ProductSearchAndFiltersScreen(
     viewModel: MarketplaceViewModel,
     onBack: () -> Unit,
-    onCartClick: () -> Unit = {}
+    onCartClick: () -> Unit = {},
+    /** Opens the Product Detail page (#140) with its community forum (#150). */
+    onOpenProduct: (MarketplaceProduct) -> Unit = {}
 ) {
     val context = LocalContext.current
     val products by viewModel.products.collectAsState()
@@ -627,6 +629,7 @@ fun ProductSearchAndFiltersScreen(
                             if (product.sponsored) {
                                 TopPromotedOemHeroCard(
                                     product = product,
+                                    onOpen = { onOpenProduct(product) },
                                     onAddToCart = {
                                         viewModel.addToCart(product)
                                     },
@@ -637,6 +640,7 @@ fun ProductSearchAndFiltersScreen(
                             } else if (product.partnerName != null && product.condition.contains("new", ignoreCase = true)) {
                                 OfficialPartnerAccessoryCard(
                                     product = product,
+                                    onOpen = { onOpenProduct(product) },
                                     onAddToCart = {
                                         viewModel.addToCart(product)
                                     }
@@ -644,6 +648,7 @@ fun ProductSearchAndFiltersScreen(
                             } else {
                                 CommunityListingCard(
                                     product = product,
+                                    onOpen = { onOpenProduct(product) },
                                     onChat = {
                                         Toast.makeText(context, "Chat with ${product.sellerName}", Toast.LENGTH_SHORT).show()
                                     },
@@ -702,10 +707,12 @@ fun ProductSearchAndFiltersScreen(
 @Composable
 private fun TopPromotedOemHeroCard(
     product: MarketplaceProduct,
+    onOpen: () -> Unit,
     onAddToCart: () -> Unit,
     onViewSpecs: () -> Unit
 ) {
     Card(
+        onClick = onOpen,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
@@ -899,9 +906,11 @@ private fun TopPromotedOemHeroCard(
 @Composable
 private fun OfficialPartnerAccessoryCard(
     product: MarketplaceProduct,
+    onOpen: () -> Unit,
     onAddToCart: () -> Unit
 ) {
     Card(
+        onClick = onOpen,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
@@ -1073,10 +1082,12 @@ private fun OfficialPartnerAccessoryCard(
 @Composable
 private fun CommunityListingCard(
     product: MarketplaceProduct,
+    onOpen: () -> Unit,
     onChat: () -> Unit,
     onBuyOrPickup: () -> Unit
 ) {
     Card(
+        onClick = onOpen,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),

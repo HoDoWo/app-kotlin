@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -64,18 +63,16 @@ import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.theme.Error
-import com.hodowo.ui.theme.OnSecondaryContainer
 import com.hodowo.ui.theme.OutlineVariant
 import com.hodowo.ui.theme.Primary
-import com.hodowo.ui.theme.SecondaryContainer
 import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLow
 import com.hodowo.ui.theme.SurfaceContainerLowest
-import com.hodowo.viewmodel.CommunityQuestion
 import com.hodowo.viewmodel.CustomerReview
 import com.hodowo.viewmodel.PartCompatibility
 import com.hodowo.viewmodel.ProductDetail
 import com.hodowo.viewmodel.ProductDetailViewModel
+import com.hodowo.viewmodel.ProductForumViewModel
 
 /** Green used only for the "Fits" compatibility badge: not part of the theme palette. */
 private val CompatibilityFitsGreen = Color(0xFF1B8A3A)
@@ -88,7 +85,11 @@ private val CompatibilityFitsGreen = Color(0xFF1B8A3A)
 @Composable
 fun ProductDetailScreen(
     viewModel: ProductDetailViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    /** Community questions about this product (app #150); null hides the section. */
+    forumViewModel: ProductForumViewModel? = null,
+    /** "Buy now" put the product in the cart: show the cart to pay. */
+    onOpenCart: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -99,6 +100,22 @@ fun ProductDetailScreen(
         state.cartMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             viewModel.consumeCartMessage()
+        }
+    }
+
+    LaunchedEffect(state.openCart) {
+        if (state.openCart) {
+            viewModel.onCartOpened()
+            onOpenCart()
+        }
+    }
+
+    val forumState = forumViewModel?.uiState?.collectAsState()?.value
+    LaunchedEffect(forumViewModel) { forumViewModel?.load() }
+    LaunchedEffect(forumState?.message) {
+        forumState?.message?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            forumViewModel?.consumeMessage()
         }
     }
 
@@ -137,7 +154,11 @@ fun ProductDetailScreen(
                     )
                 }
                 state.product != null -> {
-                    ProductDetailContent(product = state.product!!)
+                    ProductDetailContent(product = state.product!!) {
+                        if (forumViewModel != null && forumState != null) {
+                            ProductForumSection(state = forumState, viewModel = forumViewModel)
+                        }
+                    }
                 }
             }
         }
@@ -159,7 +180,7 @@ fun ProductDetailScreen(
 }
 
 @Composable
-private fun ProductDetailContent(product: ProductDetail) {
+private fun ProductDetailContent(product: ProductDetail, forum: @Composable () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -183,7 +204,8 @@ private fun ProductDetailContent(product: ProductDetail) {
                 color = MaterialTheme.colorScheme.onSurface
             )
 
-            if (product is ProductDetail.New) {
+            // Only real reviews: no stars until the product has some.
+            if (product is ProductDetail.New && product.reviewCount > 0) {
                 RatingRow(rating = product.rating, reviewCount = product.reviewCount)
             }
 
@@ -210,6 +232,9 @@ private fun ProductDetailContent(product: ProductDetail) {
             is ProductDetail.SecondHand -> SecondHandSection(product)
             is ProductDetail.Part -> PartSection(product)
         }
+
+        // The forum is about every kind of product: new, second-hand and parts.
+        Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) { forum() }
     }
 }
 
@@ -321,11 +346,6 @@ private fun NewProductSections(product: ProductDetail.New) {
             SpecsCard(specs = product.specs)
         }
 
-        if (product.questions.isNotEmpty()) {
-            SectionTitle("Community Forum")
-            product.questions.forEach { QuestionCard(it) }
-        }
-
         if (product.reviews.isNotEmpty()) {
             SectionTitle("Customer Reviews")
             product.reviews.forEach { ReviewCard(it) }
@@ -402,58 +422,6 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-private fun QuestionCard(question: CommunityQuestion) {
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-        border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.4f))
-    ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = question.question,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Surface(shape = RoundedCornerShape(8.dp), color = SurfaceContainerLow) {
-                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            text = question.answererName,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        question.answererBadge?.let {
-                            Surface(shape = RoundedCornerShape(50), color = SecondaryContainer) {
-                                Text(
-                                    text = it,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = OnSecondaryContainer,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(text = question.postedAgo, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Text(text = question.answer, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
-                }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Icon(Icons.Outlined.ThumbUp, contentDescription = null, tint = Primary, modifier = Modifier.size(14.dp))
-                Text(
-                    text = "${question.upvotes} upvotes",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun ReviewCard(review: CustomerReview) {
     Card(
         shape = RoundedCornerShape(12.dp),
@@ -510,7 +478,9 @@ private fun SecondHandSection(product: ProductDetail.SecondHand) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 InfoChip(label = "Condition", value = product.condition)
-                InfoChip(label = "Posted", value = product.postedAgo)
+                if (product.postedAgo.isNotBlank()) {
+                    InfoChip(label = "Posted", value = product.postedAgo)
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))

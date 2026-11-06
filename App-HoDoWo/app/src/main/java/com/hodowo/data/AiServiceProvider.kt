@@ -15,6 +15,7 @@ import com.hodowo.viewmodel.MarketplaceViewModel
 import com.hodowo.viewmodel.PostProductViewModel
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
+import com.hodowo.viewmodel.ProductForumViewModel
 import com.hodowo.viewmodel.greetingName
 import java.io.File
 
@@ -25,9 +26,6 @@ object AiServiceProvider {
 
     val authManager by lazy { AuthManager() }
     val firebaseRepository by lazy { FirebaseRepository() }
-    /** Cart of the Product Detail screen, which still shows demo products (Backend#38). */
-    val cartRepository by lazy { InMemoryCartRepository() }
-
     /**
      * The real cart (Backend#42), shared by the badge, the marketplace screens and the
      * cart screen. Without a backend URL the cart stays empty and refuses changes.
@@ -131,14 +129,30 @@ object AiServiceProvider {
             }
         }
 
-    /** Factory that builds [ProductDetailViewModel] for the given product id. */
-    fun productDetailViewModelFactory(productId: String): ViewModelProvider.Factory =
+    /**
+     * Factory that builds [ProductDetailViewModel] for a product tapped in the marketplace:
+     * the page is built from the search result (no detail endpoint yet, Backend#38) and
+     * "Add" / "Buy now" use the real cart.
+     */
+    fun productDetailViewModelFactory(product: MarketplaceProduct): ViewModelProvider.Factory =
         viewModelFactory {
             initializer {
                 ProductDetailViewModel(
-                    productId = productId,
-                    marketplaceService = marketplaceService(),
-                    cartRepository = cartRepository
+                    productId = product.id,
+                    marketplaceService = SelectedProductService(product),
+                    cartRepository = StoreCartRepository(cartStore, product.cartProductType())
+                )
+            }
+        }
+
+    /** Factory that builds [ProductForumViewModel] (app #150) for one product's questions. */
+    fun productForumViewModelFactory(productType: String, productId: String): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                ProductForumViewModel(
+                    service = RemoteForumService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
+                    productType = productType,
+                    productId = productId
                 )
             }
         }

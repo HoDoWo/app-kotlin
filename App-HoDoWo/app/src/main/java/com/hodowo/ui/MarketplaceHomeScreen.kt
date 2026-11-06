@@ -97,6 +97,8 @@ fun MarketplaceHomeScreen(
     onPostProduct: () -> Unit,
     onOpenProfile: () -> Unit = {},
     onCartClick: () -> Unit = {},
+    /** Opens the Product Detail page (#140) with its community forum (#150). */
+    onOpenProduct: (MarketplaceProduct) -> Unit = {},
     /** Photo of the signed-in user, as on the Home top bar. */
     profilePhotoUrl: String? = null
 ) {
@@ -179,6 +181,7 @@ fun MarketplaceHomeScreen(
                             .padding(horizontal = 16.dp, vertical = 6.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        // Search only: the cart is in the top bar, with its badge.
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -212,43 +215,6 @@ fun MarketplaceHomeScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-                                }
-                            }
-
-                            BadgedBox(
-                                badge = {
-                                    if (cartCount > 0) {
-                                        Badge(containerColor = Primary) {
-                                            Text(
-                                                text = "$cartCount",
-                                                color = OnPrimary,
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            ) {
-                                Surface(
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .clickable { onCartClick() },
-                                    color = SurfaceContainerLowest,
-                                    shape = RoundedCornerShape(12.dp),
-                                    shadowElevation = 1.dp
-                                ) {
-                                    Box(
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.ShoppingCart,
-                                            contentDescription = "Marketplace Cart",
-                                            tint = OnSurface,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
                                 }
                             }
                         }
@@ -421,6 +387,7 @@ fun MarketplaceHomeScreen(
                             items(partnerDeals, key = { it.id }) { item ->
                                 PartnerDealCarouselCard(
                                     product = item,
+                                    onOpen = { onOpenProduct(item) },
                                     onAddToCart = {
                                         viewModel.addToCart(item)
                                     }
@@ -480,6 +447,7 @@ fun MarketplaceHomeScreen(
                             communityDeals.forEach { item ->
                                 CommunityDealRowItem(
                                     product = item,
+                                    onOpen = { onOpenProduct(item) },
                                     onChat = {
                                         Toast.makeText(context, "Chat with ${item.sellerName}", Toast.LENGTH_SHORT).show()
                                     },
@@ -754,9 +722,11 @@ private fun CommunitySellPromptBanner(
 @Composable
 private fun PartnerDealCarouselCard(
     product: MarketplaceProduct,
+    onOpen: () -> Unit,
     onAddToCart: () -> Unit
 ) {
     Card(
+        onClick = onOpen,
         modifier = Modifier.width(220.dp),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
@@ -888,10 +858,12 @@ private fun PartnerDealCarouselCard(
 @Composable
 private fun CommunityDealRowItem(
     product: MarketplaceProduct,
+    onOpen: () -> Unit,
     onChat: () -> Unit,
     onBuy: () -> Unit
 ) {
     Card(
+        onClick = onOpen,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
