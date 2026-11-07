@@ -1,32 +1,32 @@
 # Earned Value – HoDoWo
 
-Status on **2026-11-06** (generated 2026-11-06 12:58 UTC).
+Status on **2026-11-07** (generated 2026-11-07 11:44 UTC).
 
 | KPI | Name | Formula | Sprint 2 | Cumulative | Hours (cumulative) |
 |---|---|---|---:|---:|---:|
-| **PV** | Planned Value | % planned × BAC | 1,268 € | 4,142 € | 184.5 h |
-| **EV** | Earned Value | % completed × BAC | 651 € | 3,637 € | 162.0 h |
-| **AC** | Actual Cost | hours spent × rate + services | 30 € | 2,607 € | 124.7 h |
+| **PV** | Planned Value | % planned × BAC | 1,395 € | 4,269 € | 190.1 h |
+| **EV** | Earned Value | % completed × BAC | 1,302 € | 4,288 € | 191.0 h |
+| **AC** | Actual Cost | hours spent × rate + services | 1,010 € | 3,587 € | 173.7 h |
 | **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 4,311 € | 9,879 € | 440.0 h |
-| **EAC** | Estimate at Completion | BAC / CPI | 195 € | 7,081 € | 315.4 h |
-| **ETC** | Estimate to Complete | EAC − AC | 166 € | 4,474 € | 190.7 h |
-| **VAC** | Variance at Completion | BAC − EAC | 4,116 € | 2,798 € | 124.6 h |
-| **CPI** | Cost Performance Index | EV / AC | 22.07 | 1.40 | – |
-| **SPI** | Schedule Performance Index | EV / PV | 0.51 | 0.88 | – |
+| **EAC** | Estimate at Completion | BAC / CPI | 3,342 € | 8,263 € | 368.0 h |
+| **ETC** | Estimate to Complete | EAC − AC | 2,332 € | 4,676 € | 194.3 h |
+| **VAC** | Variance at Completion | BAC − EAC | 969 € | 1,616 € | 72.0 h |
+| **CPI** | Cost Performance Index | EV / AC | 1.29 | 1.20 | – |
+| **SPI** | Schedule Performance Index | EV / PV | 0.93 | 1.00 | – |
 
 ## Reading
 
-- CPI 1.40: under budget (the completed work cost less than planned)
-- SPI 0.88: behind schedule
-- VAC 2,798 €: saving money
-- Sprint 2: budget 4,311 € (its share of the BAC), EAC 195 € with the current CPI, so VAC 4,116 € (saving money).
+- CPI 1.20: under budget (the completed work cost less than planned)
+- SPI 1.00: ahead of or on schedule
+- VAC 1,616 €: saving money
+- Sprint 2: budget 4,311 € (its share of the BAC), EAC 3,342 € with the current CPI, so VAC 969 € (saving money).
 
 ## Inputs
 
 - BAC: 9,879 € (total cost estimated in Sprint 0), 440 h planned for the whole project.
-- % planned: 184.5 h of the Sprint 0 baseline by 2026-11-06 → 41.9%.
-- % completed: 162.0 h estimated on the items in Done → 36.8%.
-- AC: 124.7 h spent × 20 €/h + 113 € of services.
+- % planned: 190.1 h of the Sprint 0 baseline by 2026-11-07 → 43.2%.
+- % completed: 191.0 h estimated on the items in Done → 43.4%.
+- AC: 173.7 h spent × 20 €/h + 113 € of services.
 - Hypothetical costs: the team uses free tiers and pays nothing. Each service counts with the price planned in Sprint 0 from the date it is used.
 - Not counted (outside Sprint 1, Sprint 2, Sprint 3): 15 items, 47 h estimated, 29 h spent.
   - #1 Create KanBan Board – Sprint 0 (2 h estimated, 2 h spent)
@@ -47,33 +47,29 @@ Status on **2026-11-06** (generated 2026-11-06 12:58 UTC).
 
 ## Sprint 2 (2026-10-28 → 2026-11-24)
 
-- Items: 39, estimated 186.0 h, completed 29.0 h, spent 0.0 h.
+- Items: 39, estimated 186.0 h, completed 58.0 h, spent 49.0 h.
 - Open items:
-  - #24 Partner catalogue import from CSV/JSON feeds – In Progress (6 h estimated, 0 h spent)
+  - #17 Forum about concrete home appliances – In Progress (0 h estimated, 0 h spent)
+  - #25 Marketplace: data model and seed data – In Progress (0 h estimated, 0 h spent)
+  - #26 Marketplace catalogue and search API – In Progress (0 h estimated, 0 h spent)
+  - #35 Second-hand listing CRUD and ownership – In Progress (7 h estimated, 7 h spent)
+  - #39 Official partner product API with partner-only writes – In Progress (8 h estimated, 8 h spent)
   - #111 Marketplace app screens – In Progress (0 h estimated, 0 h spent)
-  - #142 Cart page and cart state – In Progress (6 h estimated, 0 h spent)
-  - #26 Marketplace catalogue and search API – In preview (0 h estimated, 0 h spent)
-  - #33 Curated CSV seed: partners, products, parts and compatibility – In preview (3 h estimated, 0 h spent)
+  - #24 Partner catalogue import from CSV/JSON feeds – In preview (6 h estimated, 0 h spent)
   - #40 Unified product search: new, second-hand and spare parts – In preview (10 h estimated, 0 h spent)
-  - #42 Cart API – In preview (5 h estimated, 0 h spent)
-  - #43 Stripe test-mode checkout, confirmation and order history API – In preview (12 h estimated, 0 h spent)
   - #122 Mockups: marketplace, ads and cart pages – In preview (6 h estimated, 0 h spent)
   - #138 Marketplace tab and entry points – In preview (4 h estimated, 0 h spent)
+  - #142 Cart page and cart state – In preview (6 h estimated, 0 h spent)
   - #145 Post-to-sell form (photos, details and validation) – In preview (10 h estimated, 0 h spent)
   - #13 Sprint 2 documentation – Todo (4 h estimated, 0 h spent)
-  - #17 Forum about concrete home appliances – Todo (0 h estimated, 0 h spent)
-  - #25 Marketplace: data model and seed data – Todo (0 h estimated, 0 h spent)
   - #27 Second-hand listings API – Todo (0 h estimated, 0 h spent)
-  - #28 Cart, checkout and purchase records – Todo (0 h estimated, 0 h spent)
   - #29 Search ranking: partner sponsorship and personalisation – Todo (0 h estimated, 0 h spent)
   - #30 Diagnosis to suggested spare part – Todo (5 h estimated, 0 h spent)
   - #32 Security rules for marketplace and forum collections – Todo (3 h estimated, 0 h spent)
   - #34 Composite indexes for search and ranking – Todo (2 h estimated, 0 h spent)
-  - #35 Second-hand listing CRUD and ownership – Todo (7 h estimated, 0 h spent)
   - #36 Listing image upload and compression – Todo (4 h estimated, 0 h spent)
   - #37 Spare parts search and filter API – Todo (7 h estimated, 0 h spent)
   - #38 Part detail and compatibility resolution API – Todo (5 h estimated, 0 h spent)
-  - #39 Official partner product API with partner-only writes – Todo (8 h estimated, 0 h spent)
   - #41 Partner tiers, sponsored ranking and 'for me' ordering – Todo (6 h estimated, 0 h spent)
   - #45 Marketplace end-to-end tests (API and device) – Todo (6 h estimated, 0 h spent)
   - #108 Parts catalogue and diagnosis link (app) – Todo (0 h estimated, 0 h spent)
@@ -82,6 +78,5 @@ Status on **2026-11-06** (generated 2026-11-06 12:58 UTC).
   - #144 Order confirmation and purchase history screens – Todo (4 h estimated, 0 h spent)
   - #148 Parts catalogue UI (list, filters and detail) – Todo (8 h estimated, 0 h spent)
   - #149 Error resolution card: suggested spare part CTA – Todo (3 h estimated, 0 h spent)
-  - #150 Forum UI: categories, threads and composer – Todo (9 h estimated, 0 h spent)
 
 ![PV, EV and AC over time](ev.svg)
