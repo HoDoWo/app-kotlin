@@ -57,7 +57,7 @@ class RemoteCheckoutServiceTest {
         assertEquals("POST", request.method)
         assertEquals("/api/marketplace/checkout", request.path)
         assertEquals("Bearer token-abc", request.getHeader("Authorization"))
-        assertEquals("{}", request.body.readUtf8())
+        assertEquals("{\"delivery\":{}}", request.body.readUtf8())
 
         assertEquals("c1", session.checkoutId)
         assertEquals(listOf("o1", "o2"), session.orderIds)
@@ -145,5 +145,29 @@ class RemoteCheckoutServiceTest {
         assertNull(RemoteCheckoutService.detailOf("""{"detail": [1, 2]}"""))
         assertNull(RemoteCheckoutService.detailOf("""{"detail": "  "}"""))
         assertNull(RemoteCheckoutService.detailOf("not json"))
+    }
+
+    @Test
+    fun theSelectionIsSentAndShippingIsRead() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """{"checkout_id": "c3", "order_ids": ["o1"], "subtotal_cents": 2500, "shipping_cents": 990,
+                    "total_cents": 3490, "payment_method": "klarna", "simulated": false, "client_secret": "pi_s"}"""
+            )
+        )
+
+        val session = service.startCheckout(
+            CartSelection(cartItemIds = listOf("c1"), delivery = mapOf("voltacasa" to "express"), paymentMethod = "klarna")
+        )
+
+        val body = org.json.JSONObject(server.takeRequest().body.readUtf8())
+        assertEquals("c1", body.getJSONArray("cart_item_ids").getString(0))
+        assertEquals("express", body.getJSONObject("delivery").getString("voltacasa"))
+        assertEquals("klarna", body.getString("payment_method"))
+        assertFalse(body.has("total_cents"))
+        assertEquals(2500, session.subtotalCents)
+        assertEquals(990, session.shippingCents)
+        assertEquals(3490, session.totalCents)
+        assertEquals("klarna", session.paymentMethod)
     }
 }
