@@ -24,15 +24,19 @@ data class CheckoutSession(
     /** True when the server has no Stripe keys: the purchase is recorded without payment. */
     val simulated: Boolean,
     /** Secret of the PaymentIntent for the PaymentSheet; null for a simulated purchase. */
-    val clientSecret: String?
+    val clientSecret: String?,
+    val subtotalCents: Int = totalCents,
+    val shippingCents: Int = 0,
+    /** "card", "google_pay" or "klarna"; null when the buyer did not choose. */
+    val paymentMethod: String? = null
 )
 
 /** The backend refused the checkout; the message can be shown as it is. */
 class CheckoutException(message: String) : IOException(message)
 
 interface CheckoutService {
-    /** Turns the user's cart into orders and returns what the PaymentSheet needs. */
-    suspend fun startCheckout(): CheckoutSession
+    /** Turns the selected cart lines into orders and returns what the PaymentSheet needs. */
+    suspend fun startCheckout(selection: CartSelection = CartSelection()): CheckoutSession
 }
 
 /** [CheckoutService] backed by `POST /api/marketplace/checkout`. */
@@ -43,11 +47,11 @@ class RemoteCheckoutService(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : CheckoutService {
 
-    override suspend fun startCheckout(): CheckoutSession {
+    override suspend fun startCheckout(selection: CartSelection): CheckoutSession {
         val builder = Request.Builder()
             .url("${backendUrl.trimEnd('/')}$CHECKOUT_PATH")
-            // The amount is never sent: the backend computes it from the cart.
-            .post("{}".toRequestBody(JSON))
+            // The amount is never sent: the backend computes it from the cart, shipping included.
+            .post(selection.toJson().toString().toRequestBody(JSON))
         val token = tokenProvider()
         if (!token.isNullOrBlank()) {
             builder.header("Authorization", "Bearer $token")
@@ -113,7 +117,10 @@ class RemoteCheckoutService(
                 totalCents = json.optInt("total_cents", 0),
                 currency = json.optString("currency", "eur").ifBlank { "eur" },
                 simulated = json.optBoolean("simulated", false),
-                clientSecret = if (json.isNull("client_secret")) null else json.optString("client_secret").takeIf { it.isNotBlank() }
+                clientSecret = if (json.isNull("client_secret")) null else json.optString("client_secret").takeIf { it.isNotBlank() },
+                subtotalCents = json.optInt("subtotal_cents", json.optInt("total_cents", 0)),
+                shippingCents = json.optInt("shipping_cents", 0),
+                paymentMethod = if (json.isNull("payment_method")) null else json.optString("payment_method").takeIf { it.isNotBlank() }
             )
         }
     }

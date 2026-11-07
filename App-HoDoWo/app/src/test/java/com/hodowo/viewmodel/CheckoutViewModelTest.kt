@@ -1,6 +1,7 @@
 package com.hodowo.viewmodel
 
 import com.hodowo.data.Cart
+import com.hodowo.data.CartSelection
 import com.hodowo.data.CartService
 import com.hodowo.data.CartStore
 import com.hodowo.data.CheckoutException
@@ -196,5 +197,18 @@ class CheckoutViewModelTest {
         advanceUntilIdle()
 
         assertEquals(session, vm.uiState.value.placedOrder)
+    }
+
+    @Test
+    fun theCartSelectionIsSentAndGooglePayReachesThePaymentSheet() = runTest(dispatcher) {
+        val selection = CartSelection(listOf("c1"), mapOf("voltacasa" to "express"), "google_pay")
+        coEvery { checkout.startCheckout(selection) } returns session
+        val vm = viewModel()
+
+        vm.placeOrder(selection)
+        advanceUntilIdle()
+
+        coVerify(exactly = 1) { checkout.startCheckout(selection) }
+        assertEquals(PaymentRequest("pi_1_secret_abc", "pk_test_123", "google_pay"), vm.uiState.value.paymentToPresent)
     }
 }

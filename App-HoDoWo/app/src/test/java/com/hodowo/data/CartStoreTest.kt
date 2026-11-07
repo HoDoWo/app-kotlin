@@ -78,12 +78,44 @@ class CartStoreTest {
     }
 
     @Test
-    fun checkoutNeedsItemsAndNothingUnavailable() {
+    fun checkoutFollowsTheBackendSummary() {
         val line = CartLine("l", "part", "p", "Pump", null, 1, 100, 100, 100, false, true, null)
 
         assertFalse(Cart().canCheckout)
-        assertTrue(Cart(items = listOf(line)).canCheckout)
-        assertFalse(Cart(items = listOf(line), hasUnavailableItems = true).canCheckout)
+        assertTrue(Cart(items = listOf(line), itemCount = 1, totalCents = 100).canCheckout)
+        assertFalse(Cart(items = listOf(line), itemCount = 1, summary = CartSummary(canCheckout = false)).canCheckout)
+        assertEquals("partner", line.sellerKind)
+        assertEquals("community", CartLine("l", "used", "p", "", null, 1, 1, 1, 1, false, true, null).sellerKind)
+        assertTrue(line.selected)
+    }
+
+    @Test
+    fun aQuoteReplacesTheSharedCart() = runTest {
+        val selection = CartSelection(cartItemIds = listOf("l"), delivery = mapOf("partner-a" to "express"))
+        coEvery { service.quote(selection) } returns Cart(itemCount = 3)
+
+        store.quote(selection)
+
+        assertEquals(3, store.cart.value.itemCount)
+        assertEquals(Cart(), UnavailableCartService.quote(selection))
+    }
+
+    @Test
+    fun theSelectionIsSentAsJson() {
+        val json = CartSelection(listOf("a", "b"), mapOf("s1" to "pickup"), "klarna").toJson()
+
+        assertEquals("[\"a\",\"b\"]", json.getJSONArray("cart_item_ids").toString())
+        assertEquals("pickup", json.getJSONObject("delivery").getString("s1"))
+        assertEquals("klarna", json.getString("payment_method"))
+        val empty = CartSelection().toJson()
+        assertFalse(empty.has("cart_item_ids") || empty.has("payment_method"))
+    }
+
+    @Test
+    fun deliveryDatesAreReadable() {
+        assertEquals("Wed 11 Nov – Fri 13 Nov", formatDeliveryWindow(DeliveryWindow("2026-11-11", "2026-11-13")))
+        assertEquals("Mon 9 Nov", formatDeliveryWindow(DeliveryWindow("2026-11-09", "2026-11-09")))
+        assertEquals("", formatDeliveryWindow(DeliveryWindow("soon", "later")))
     }
 
     @Test

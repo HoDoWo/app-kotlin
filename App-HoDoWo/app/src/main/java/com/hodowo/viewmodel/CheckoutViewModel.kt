@@ -2,6 +2,7 @@ package com.hodowo.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hodowo.data.CartSelection
 import com.hodowo.data.CartStore
 import com.hodowo.data.CheckoutException
 import com.hodowo.data.CheckoutService
@@ -14,7 +15,12 @@ import kotlinx.coroutines.launch
 import java.io.IOException
 
 /** What the Stripe PaymentSheet needs to open. */
-data class PaymentRequest(val clientSecret: String, val publishableKey: String)
+data class PaymentRequest(
+    val clientSecret: String,
+    val publishableKey: String,
+    /** The method chosen in the cart: "google_pay" turns on the Google Pay button. */
+    val paymentMethod: String? = null
+)
 
 /** Result of the PaymentSheet, without Stripe types, so the logic can be unit tested. */
 sealed interface PaymentOutcome {
@@ -53,13 +59,14 @@ class CheckoutViewModel(
     /** Session being paid in the PaymentSheet. */
     private var pendingSession: CheckoutSession? = null
 
-    fun placeOrder() {
+    /** Pays the [selection] chosen in the cart: items, delivery of each seller and payment method. */
+    fun placeOrder(selection: CartSelection = CartSelection()) {
         val state = _uiState.value
         if (state.isPreparing || state.paymentToPresent != null || pendingSession != null) return
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isPreparing = true, message = null)
             try {
-                val session = checkout.startCheckout()
+                val session = checkout.startCheckout(selection)
                 val secret = session.clientSecret
                 when {
                     session.simulated || secret == null -> {
@@ -72,7 +79,9 @@ class CheckoutViewModel(
                     )
                     else -> {
                         pendingSession = session
-                        _uiState.value = _uiState.value.copy(paymentToPresent = PaymentRequest(secret, publishableKey))
+                        _uiState.value = _uiState.value.copy(
+                            paymentToPresent = PaymentRequest(secret, publishableKey, selection.paymentMethod)
+                        )
                     }
                 }
             } catch (e: CancellationException) {

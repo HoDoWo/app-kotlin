@@ -214,4 +214,84 @@ class RemoteCartServiceTest {
 
         service.getCart()
     }
+
+    private val quotedJson = """
+        {
+          "items": [
+            {"cart_item_id": "c1", "product_type": "part", "product_id": "pump-1", "title": "Drain pump",
+             "subtitle": "Bosch · #00145787", "seller_id": "voltacasa", "seller_name": "VoltaCasa",
+             "seller_kind": "partner", "quantity": 1, "unit_price_cents": 2500, "price_cents": 2500,
+             "available": true, "selected": true},
+            {"cart_item_id": "c3", "product_type": "used", "product_id": "fridge-2", "title": "Used fridge",
+             "seller_id": "seller-9", "seller_name": "Marc", "seller_kind": "community", "quantity": 1,
+             "unit_price_cents": 12000, "price_cents": 12000, "available": true, "selected": false}
+          ],
+          "item_count": 2, "total_cents": 14500, "currency": "eur", "has_unavailable_items": false,
+          "groups": [
+            {"seller_id": "voltacasa", "seller_name": "VoltaCasa", "seller_kind": "partner",
+             "cart_item_ids": ["c1"], "selected_count": 1,
+             "options": [
+               {"method": "standard", "label": "Standard shipping", "price_cents": 490,
+                "delivery": {"from": "2026-11-11", "to": "2026-11-13"}},
+               {"method": "express", "label": "Express shipping", "price_cents": 990,
+                "delivery": {"from": "2026-11-09", "to": "2026-11-10"}}
+             ],
+             "method": "express", "delivery": {"from": "2026-11-09", "to": "2026-11-10"},
+             "pickup_area": null, "subtotal_cents": 2500, "shipping_cents": 990, "total_cents": 3490},
+            {"seller_id": "seller-9", "seller_name": "Marc", "seller_kind": "community",
+             "cart_item_ids": ["c3"], "selected_count": 0,
+             "options": [{"method": "pickup", "label": "Local pickup", "price_cents": 0, "delivery": null}],
+             "method": "pickup", "delivery": null, "pickup_area": "080xx",
+             "subtotal_cents": 0, "shipping_cents": 0, "total_cents": 0}
+          ],
+          "summary": {"selected_item_count": 1, "subtotal_cents": 2500, "shipping_cents": 990,
+                      "total_cents": 3490, "vat_included_cents": 606, "can_checkout": true},
+          "payment_methods": ["card", "google_pay", "klarna"]
+        }
+    """.trimIndent()
+
+    @Test
+    fun quotePostsTheSelectionAndReadsGroupsAndSummary() = runTest {
+        server.enqueue(ok(quotedJson))
+
+        val cart = service.quote(CartSelection(cartItemIds = listOf("c1"), delivery = mapOf("voltacasa" to "express")))
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/marketplace/checkout/quote", request.path)
+        val body = org.json.JSONObject(request.body.readUtf8())
+        assertEquals("express", body.getJSONObject("delivery").getString("voltacasa"))
+
+        assertEquals("Bosch · #00145787", cart.items[0].subtitle)
+        assertEquals("VoltaCasa", cart.items[0].sellerName)
+        assertEquals(false, cart.items[1].selected)
+        assertEquals("community", cart.items[1].sellerKind)
+
+        val partner = cart.groups[0]
+        assertEquals(listOf("standard", "express"), partner.options.map { it.method })
+        assertEquals(DeliveryWindow("2026-11-09", "2026-11-10"), partner.delivery)
+        assertEquals("express", partner.method)
+        assertEquals(990, partner.shippingCents)
+        val community = cart.groups[1]
+        assertEquals("080xx", community.pickupArea)
+        assertEquals(null, community.options[0].delivery)
+
+        assertEquals(CartSummary(1, 2500, 990, 3490, 606, true), cart.summary)
+        assertEquals(true, cart.canCheckout)
+        assertEquals(listOf("card", "google_pay", "klarna"), cart.paymentMethods)
+    }
+
+    @Test
+    fun anOlderCartWithoutGroupsStillWorks() = runTest {
+        server.enqueue(ok())
+
+        val cart = service.getCart()
+
+        assertEquals(emptyList<CartGroup>(), cart.groups)
+        assertEquals(listOf("card"), cart.paymentMethods)
+        // An unavailable line blocks the old-style summary, as before.
+        assertEquals(false, cart.canCheckout)
+        assertEquals("community", cart.items[1].sellerKind)
+        assertEquals(false, cart.items[1].selected)
+    }
 }
