@@ -47,3 +47,7 @@ timestamp,issue,title,type,delta_hours
 2026-11-06T15:52:56+00:00,33,"Curated CSV seed: partners, products, parts and compatibility",completed,-3.0
 2026-11-06T15:52:57+00:00,42,Cart API,completed,-5.0
 2026-11-06T15:52:59+00:00,43,"Stripe test-mode checkout, confirmation and order history API",completed,-12.0
+2026-11-09T13:52:43+00:00,142,Cart page and cart state,completed,-6.0
+2026-11-09T13:17:45+00:00,35,Second-hand listing CRUD and ownership,completed,-7.0
+2026-11-09T13:52:41+00:00,24,Partner catalogue import from CSV/JSON feeds,completed,-6.0
+2026-11-09T13:16:07+00:00,39,Official partner product API with partner-only writes,completed,-8.0

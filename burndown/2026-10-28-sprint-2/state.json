@@ -1,9 +1,21 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzhDW4fI": {
+  "c": 0.0,
+  "done": true,
+  "issue": 142,
+  "title": "Cart page and cart state"
+ },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Os": {
-  "c": 7.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 35,
   "title": "Second-hand listing CRUD and ownership"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4S4": {
+  "c": 0.0,
+  "done": true,
+  "issue": 24,
+  "title": "Partner catalogue import from CSV/JSON feeds"
  },
  "PVTI_lADOFCkyKM4Bl88jzhCeYWk": {
   "c": 0.0,
@@ -12,8 +24,8 @@
   "title": "Marketplace app screens"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4SE": {
-  "c": 8.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 39,
   "title": "Official partner product API with partner-only writes"
  },
@@ -22,18 +34,6 @@
   "done": true,
   "issue": 150,
   "title": "Forum UI: categories, threads and composer"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4S4": {
-  "c": 6.0,
-  "done": false,
-  "issue": 24,
-  "title": "Partner catalogue import from CSV/JSON feeds"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4fI": {
-  "c": 6.0,
-  "done": false,
-  "issue": 142,
-  "title": "Cart page and cart state"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4eo": {
   "c": 0.0,
