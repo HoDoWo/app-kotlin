@@ -229,7 +229,8 @@ fun HoDoWoApp(
                                 viewModel = postProductViewModel,
                                 userId = authManager.currentUserId,
                                 onPublished = { showPostProduct = false },
-                                onBack = { showPostProduct = false }
+                                onBack = { showPostProduct = false },
+                                onOpenCart = { showCart = true }
                             )
                         } else if (showMarketplaceSearch) {
                             ProductSearchAndFiltersScreen(
@@ -259,9 +260,11 @@ fun HoDoWoApp(
                     }
                 }
 
-                // The chat has its own "+" in the header. Product Detail and the cart have their
-                // own sticky bar at the bottom, which this button would overlap.
-                if (currentTab != AppNavTab.AI_CHAT && selectedMarketProduct == null && !showCart) {
+                // The chat has its own "+" in the header. Product Detail, the cart and the sell
+                // form have their own sticky bar at the bottom, which this button would overlap.
+                if (currentTab != AppNavTab.AI_CHAT && selectedMarketProduct == null && !showCart &&
+                    !showPostProduct
+                ) {
                     NewChatButton(
                         onClick = { startNewChat() },
                         modifier = Modifier
@@ -271,19 +274,22 @@ fun HoDoWoApp(
                 }
             }
 
-            // Bottom Navigation Bar matching HTML mockup
-            BottomNavBar(
-                currentTab = currentTab,
-                onTabSelected = {
-                    showApplianceManuals = false
-                    showMarketplaceSearch = false
-                    showPostProduct = false
-                    showMyListings = false
-                    showCart = false
-                    selectedMarketProduct = null
-                    currentTab = it
-                }
-            )
+            // Bottom Navigation Bar matching HTML mockup. The sell form has its own sticky
+            // publish bar, so the tab bar is hidden while it is open.
+            if (!showPostProduct) {
+                BottomNavBar(
+                    currentTab = currentTab,
+                    onTabSelected = {
+                        showApplianceManuals = false
+                        showMarketplaceSearch = false
+                        showPostProduct = false
+                        showMyListings = false
+                        showCart = false
+                        selectedMarketProduct = null
+                        currentTab = it
+                    }
+                )
+            }
         }
     }
 
