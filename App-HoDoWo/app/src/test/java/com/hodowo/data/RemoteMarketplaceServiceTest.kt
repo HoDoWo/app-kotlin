@@ -9,6 +9,7 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
@@ -116,6 +117,25 @@ class RemoteMarketplaceServiceTest {
         assertEquals(680, body.getInt("shipping_price_cents"))
         assertEquals("used-good", body.getString("condition"))
         assertEquals("part", body.getString("listing_kind"))
+    }
+
+    @Test
+    fun uploadListingImagePostsThePhotoAsMultipart() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(201)
+                .setHeader("Content-Type", "application/json")
+                .setBody("""{"url": "https://storage.example/listing.jpg"}""")
+        )
+
+        val url = service.uploadListingImage(byteArrayOf(1, 2, 3, 4))
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/marketplace/listings/images", request.path)
+        assertEquals("Bearer token-abc", request.getHeader("Authorization"))
+        assertTrue(request.getHeader("Content-Type")!!.startsWith("multipart/form-data"))
+        assertTrue(request.body.readUtf8().contains("listing.jpg"))
+        assertEquals("https://storage.example/listing.jpg", url)
     }
 
     @Test(expected = IOException::class)

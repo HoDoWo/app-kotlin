@@ -75,7 +75,9 @@ fun HoDoWoApp(
 ) {
     val context = LocalContext.current
     val marketplaceViewModel: MarketplaceViewModel = viewModel(factory = AiServiceProvider.marketplaceViewModelFactory())
-    val postProductViewModel: PostProductViewModel = viewModel(factory = AiServiceProvider.postProductViewModelFactory())
+    val postProductViewModel: PostProductViewModel = viewModel(
+        factory = AiServiceProvider.postProductViewModelFactory(context)
+    )
     val cartViewModel: CartViewModel = viewModel(factory = AiServiceProvider.cartViewModelFactory())
     val checkoutViewModel: CheckoutViewModel = viewModel(factory = AiServiceProvider.checkoutViewModelFactory())
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }

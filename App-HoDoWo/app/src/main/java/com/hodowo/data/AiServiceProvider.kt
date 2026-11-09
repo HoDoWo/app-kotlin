@@ -119,12 +119,16 @@ object AiServiceProvider {
             }
         }
 
-    fun postProductViewModelFactory(): ViewModelProvider.Factory =
+    fun postProductViewModelFactory(context: Context): ViewModelProvider.Factory =
         viewModelFactory {
             initializer {
+                val compressor = ImageCompressor(context.applicationContext)
                 PostProductViewModel(
-                    MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
-                    firebaseRepository
+                    service = MarketplaceService(
+                        BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token
+                    ),
+                    aiService = create(context),
+                    loadImage = { uri -> compressor.compress(uri) }
                 )
             }
         }
