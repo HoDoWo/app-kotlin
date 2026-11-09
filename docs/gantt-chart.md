@@ -86,11 +86,13 @@ gantt
     Backend#35 Second-hand listing CRUD (Plan) :p_backend_35, 2026-11-02, 2026-11-05
     Backend#27 Second-hand listings API (Plan) :p_backend_27, 2026-11-02, 2026-11-07
     Backend#37 Spare parts search and f (Plan) :p_backend_37, 2026-11-03, 2026-11-06
+    App#143 Payment section (Stripe tes (Plan) :p_app_143, 2026-11-03, 2026-11-10
     Backend#26 Marketplace catalogue an (Plan) :p_backend_26, 2026-11-03, 2026-11-13
+    App#144 Order confirmation and purc (Plan) :p_app_144, 2026-11-03, 2026-11-24
     Backend#39 Official partner product (Plan) :p_backend_39, 2026-11-04, 2026-11-07
     Backend#36 Listing image upload and (Plan) :p_backend_36, 2026-11-05, 2026-11-07
     Backend#38 Part detail and compatib (Plan) :p_backend_38, 2026-11-06, 2026-11-08
-    Backend#24 Zyte API configuration a (Plan) :p_backend_24, 2026-11-07, 2026-11-11
+    Backend#24 Partner catalogue import (Plan) :p_backend_24, 2026-11-07, 2026-11-11
     App#145 Post-to-sell form (photos, (Plan) :p_app_145, 2026-11-07, 2026-11-12
     Backend#30 Diagnosis to suggested s (Plan) :p_backend_30, 2026-11-08, 2026-11-12
     App#148 Parts catalogue UI (list, f (Plan) :p_app_148, 2026-11-09, 2026-11-13
@@ -110,11 +112,16 @@ gantt
     App#140 Product detail page (new, s (Plan) :p_app_140, 2026-11-16, 2026-11-19
     App#150 Forum UI categories, thread (Plan) :p_app_150, 2026-11-16, 2026-11-20
     App#141 Ads / sponsored partners pa (Plan) :p_app_141, 2026-11-18, 2026-11-20
-    App#147 Search suggestions and rece (Plan) :p_app_147, 2026-11-19, 2026-11-21
-    App#143 Payment section (Stripe tes (Plan) :p_app_143, 2026-11-19, 2026-11-24
-    App#144 Order confirmation and purc (Plan) :p_app_144, 2026-11-24, 2026-11-27
-    App#13 Sprint 2 documentation (Plan) :p_app_13, 2026-11-27, 2026-11-30
+    App#13 Sprint 2 documentation (Plan) :p_app_13, 2026-11-22, 2026-11-29
     Backend#45 Marketplace end-to-end t (Plan) :p_backend_45, 2026-11-27, 2026-11-30
+    section Sprint 2 - Actual
+    Backend#31 Marketplace Firestore sc (Actual) :done, a_backend_31, 2026-10-30, 2026-11-02
+    App#143 Payment section (Stripe tes (Actual) :done, a_app_143, 2026-11-03, 2026-11-06
+
+    section Sprint 3 - Planned
+    App#170 User-adjustable font size s (Plan) :p_app_170, 2026-11-25, 2026-11-27
+    App#168 Dark mode (follow system + (Plan) :p_app_168, 2026-11-30, 2026-12-03
+    App#169 Multi-language support (i18 (Plan) :p_app_169, 2026-12-04, 2026-12-11
 
     section Backlog - Planned
     App#50 Contextual prompt synthesize (Plan) :p_app_50, 2026-10-10, 2026-10-11
@@ -219,11 +226,13 @@ gantt
     Backend#35 Second-hand listing CRUD (Plan) :p_backend_35, 2026-11-02, 2026-11-05
     Backend#27 Second-hand listings API (Plan) :p_backend_27, 2026-11-02, 2026-11-07
     Backend#37 Spare parts search and f (Plan) :p_backend_37, 2026-11-03, 2026-11-06
+    App#143 Payment section (Stripe tes (Plan) :p_app_143, 2026-11-03, 2026-11-10
     Backend#26 Marketplace catalogue an (Plan) :p_backend_26, 2026-11-03, 2026-11-13
+    App#144 Order confirmation and purc (Plan) :p_app_144, 2026-11-03, 2026-11-24
     Backend#39 Official partner product (Plan) :p_backend_39, 2026-11-04, 2026-11-07
     Backend#36 Listing image upload and (Plan) :p_backend_36, 2026-11-05, 2026-11-07
     Backend#38 Part detail and compatib (Plan) :p_backend_38, 2026-11-06, 2026-11-08
-    Backend#24 Zyte API configuration a (Plan) :p_backend_24, 2026-11-07, 2026-11-11
+    Backend#24 Partner catalogue import (Plan) :p_backend_24, 2026-11-07, 2026-11-11
     App#145 Post-to-sell form (photos, (Plan) :p_app_145, 2026-11-07, 2026-11-12
     Backend#30 Diagnosis to suggested s (Plan) :p_backend_30, 2026-11-08, 2026-11-12
     App#148 Parts catalogue UI (list, f (Plan) :p_app_148, 2026-11-09, 2026-11-13
@@ -243,11 +252,26 @@ gantt
     App#140 Product detail page (new, s (Plan) :p_app_140, 2026-11-16, 2026-11-19
     App#150 Forum UI categories, thread (Plan) :p_app_150, 2026-11-16, 2026-11-20
     App#141 Ads / sponsored partners pa (Plan) :p_app_141, 2026-11-18, 2026-11-20
-    App#147 Search suggestions and rece (Plan) :p_app_147, 2026-11-19, 2026-11-21
-    App#143 Payment section (Stripe tes (Plan) :p_app_143, 2026-11-19, 2026-11-24
-    App#144 Order confirmation and purc (Plan) :p_app_144, 2026-11-24, 2026-11-27
-    App#13 Sprint 2 documentation (Plan) :p_app_13, 2026-11-27, 2026-11-30
+    App#13 Sprint 2 documentation (Plan) :p_app_13, 2026-11-22, 2026-11-29
     Backend#45 Marketplace end-to-end t (Plan) :p_backend_45, 2026-11-27, 2026-11-30
+
+    section Actual Execution
+    Backend#31 Marketplace Firestore sc (Actual) :done, a_backend_31, 2026-10-30, 2026-11-02
+    App#143 Payment section (Stripe tes (Actual) :done, a_app_143, 2026-11-03, 2026-11-06
+```
+
+## Sprint 3 Detail (Planned vs Actual)
+
+```mermaid
+gantt
+    title Sprint 3 Schedule: Planned vs Actual
+    dateFormat  YYYY-MM-DD
+    axisFormat  %d/%m
+
+    section Planned (Baseline)
+    App#170 User-adjustable font size s (Plan) :p_app_170, 2026-11-25, 2026-11-27
+    App#168 Dark mode (follow system + (Plan) :p_app_168, 2026-11-30, 2026-12-03
+    App#169 Multi-language support (i18 (Plan) :p_app_169, 2026-12-04, 2026-12-11
 
     section Actual Execution
     No actual dates found : 2026-10-06, 2026-10-27
