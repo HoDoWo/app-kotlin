@@ -37,7 +37,8 @@ class PostProductViewModel(
         onSuccess: () -> Unit
     ) {
         val price = priceText.toDoubleOrNull()
-        if (title.length < 3 || description.length < 30 || category.isBlank() || price == null || price <= 0 ||
+        if (title.trim().length < 3 || description.trim().length < 30 || category.isBlank() ||
+            price == null || price <= 0 ||
             imageUris.isEmpty() || imageUris.size > 8 || diagnosticMediaUris.size > 8 ||
             handoverMethods.isEmpty() ||
             (handoverMethods.contains("pickup") && pickupZip.isBlank())
@@ -62,4 +63,28 @@ class PostProductViewModel(
             _isSubmitting.value = false
         }
     }
+}
+
+/**
+ * Local "AI Polish" for a listing narrative: trims, collapses repeated whitespace,
+ * capitalises the first letter of every sentence and makes sure the text ends
+ * with a full stop. It runs on the device, so the button works offline too.
+ */
+fun polishListingDescription(raw: String): String {
+    val cleaned = raw.trim().replace(Regex("\\s+"), " ")
+    if (cleaned.isEmpty()) return cleaned
+
+    val capitalised = buildString {
+        var startOfSentence = true
+        cleaned.forEach { char ->
+            if (startOfSentence && char.isLetter()) {
+                append(char.uppercaseChar())
+                startOfSentence = false
+            } else {
+                append(char)
+                if (char == '.' || char == '!' || char == '?') startOfSentence = true
+            }
+        }
+    }
+    return if (capitalised.last() in ".!?") capitalised else "$capitalised."
 }

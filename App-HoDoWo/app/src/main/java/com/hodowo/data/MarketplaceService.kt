@@ -307,6 +307,7 @@ class RemoteMarketplaceService(
             .put("diagnostic_media_urls", JSONArray(diagnosticMediaUrls))
             .put("handover_methods", JSONArray(handoverMethods))
             .put("pickup_zip", pickupZip.ifBlank { JSONObject.NULL })
+            .put("location", pickupZip.ifBlank { JSONObject.NULL })
             .put("shipping_price_cents", shippingPriceCents ?: JSONObject.NULL)
             .put("quantity", 1)
         return parseMarketplaceProduct(jsonOf(post("/api/marketplace/listings", body.toString())))
