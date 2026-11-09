@@ -1,31 +1,31 @@
 # Earned Value – HoDoWo
 
-Status on **2026-11-08** (generated 2026-11-08 11:57 UTC).
+Status on **2026-11-09** (generated 2026-11-09 13:56 UTC).
 
 | KPI | Name | Formula | Sprint 2 | Cumulative | Hours (cumulative) |
 |---|---|---|---:|---:|---:|
-| **PV** | Planned Value | % planned × BAC | 1,521 € | 4,395 € | 195.8 h |
-| **EV** | Earned Value | % completed × BAC | 1,302 € | 4,288 € | 191.0 h |
+| **PV** | Planned Value | % planned × BAC | 1,648 € | 4,522 € | 201.4 h |
+| **EV** | Earned Value | % completed × BAC | 1,908 € | 4,895 € | 218.0 h |
 | **AC** | Actual Cost | hours spent × rate + services | 1,010 € | 3,587 € | 173.7 h |
 | **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 4,311 € | 9,879 € | 440.0 h |
-| **EAC** | Estimate at Completion | BAC / CPI | 3,342 € | 8,263 € | 368.0 h |
-| **ETC** | Estimate to Complete | EAC − AC | 2,332 € | 4,676 € | 194.3 h |
-| **VAC** | Variance at Completion | BAC − EAC | 969 € | 1,616 € | 72.0 h |
-| **CPI** | Cost Performance Index | EV / AC | 1.29 | 1.20 | – |
-| **SPI** | Schedule Performance Index | EV / PV | 0.86 | 0.98 | – |
+| **EAC** | Estimate at Completion | BAC / CPI | 2,280 € | 7,240 € | 322.5 h |
+| **ETC** | Estimate to Complete | EAC − AC | 1,271 € | 3,653 € | 148.8 h |
+| **VAC** | Variance at Completion | BAC − EAC | 2,031 € | 2,639 € | 117.5 h |
+| **CPI** | Cost Performance Index | EV / AC | 1.89 | 1.36 | – |
+| **SPI** | Schedule Performance Index | EV / PV | 1.16 | 1.08 | – |
 
 ## Reading
 
-- CPI 1.20: under budget (the completed work cost less than planned)
-- SPI 0.98: behind schedule
-- VAC 1,616 €: saving money
-- Sprint 2: budget 4,311 € (its share of the BAC), EAC 3,342 € with the current CPI, so VAC 969 € (saving money).
+- CPI 1.36: under budget (the completed work cost less than planned)
+- SPI 1.08: ahead of or on schedule
+- VAC 2,639 €: saving money
+- Sprint 2: budget 4,311 € (its share of the BAC), EAC 2,280 € with the current CPI, so VAC 2,031 € (saving money).
 
 ## Inputs
 
 - BAC: 9,879 € (total cost estimated in Sprint 0), 440 h planned for the whole project.
-- % planned: 195.8 h of the Sprint 0 baseline by 2026-11-08 → 44.5%.
-- % completed: 191.0 h estimated on the items in Done → 43.4%.
+- % planned: 201.4 h of the Sprint 0 baseline by 2026-11-09 → 45.8%.
+- % completed: 218.0 h estimated on the items in Done → 49.5%.
 - AC: 173.7 h spent × 20 €/h + 113 € of services.
 - Hypothetical costs: the team uses free tiers and pays nothing. Each service counts with the price planned in Sprint 0 from the date it is used.
 - Not counted (outside Sprint 1, Sprint 2, Sprint 3): 15 items, 47 h estimated, 29 h spent.
@@ -47,19 +47,15 @@ Status on **2026-11-08** (generated 2026-11-08 11:57 UTC).
 
 ## Sprint 2 (2026-10-28 → 2026-11-24)
 
-- Items: 39, estimated 186.0 h, completed 58.0 h, spent 49.0 h.
+- Items: 39, estimated 186.0 h, completed 85.0 h, spent 49.0 h.
 - Open items:
-  - #17 Forum about concrete home appliances – In Progress (0 h estimated, 0 h spent)
   - #25 Marketplace: data model and seed data – In Progress (0 h estimated, 0 h spent)
   - #26 Marketplace catalogue and search API – In Progress (0 h estimated, 0 h spent)
-  - #35 Second-hand listing CRUD and ownership – In Progress (7 h estimated, 7 h spent)
-  - #39 Official partner product API with partner-only writes – In Progress (8 h estimated, 8 h spent)
   - #111 Marketplace app screens – In Progress (0 h estimated, 0 h spent)
-  - #24 Partner catalogue import from CSV/JSON feeds – In preview (6 h estimated, 0 h spent)
+  - #17 Forum about concrete home appliances – In preview (0 h estimated, 0 h spent)
   - #40 Unified product search: new, second-hand and spare parts – In preview (10 h estimated, 0 h spent)
   - #122 Mockups: marketplace, ads and cart pages – In preview (6 h estimated, 0 h spent)
   - #138 Marketplace tab and entry points – In preview (4 h estimated, 0 h spent)
-  - #142 Cart page and cart state – In preview (6 h estimated, 0 h spent)
   - #145 Post-to-sell form (photos, details and validation) – In preview (10 h estimated, 0 h spent)
   - #13 Sprint 2 documentation – Todo (4 h estimated, 0 h spent)
   - #27 Second-hand listings API – Todo (0 h estimated, 0 h spent)
