@@ -5,6 +5,7 @@ import com.hodowo.viewmodel.Appliance
 import com.hodowo.viewmodel.ChatMessageHistory
 import com.hodowo.viewmodel.ChatStreamEvent
 import com.hodowo.viewmodel.FeedbackReport
+import com.hodowo.viewmodel.ListingDetails
 import io.mockk.mockk
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
@@ -491,5 +492,84 @@ class RemoteHoDoWoAiServiceTest {
 
         val jsonNoBox = JSONObject("""{"other": "data"}""")
         assertNull(RemoteHoDoWoAiService.parsePanelBox(jsonNoBox))
+    }
+
+    // ==========================================
+    // 7. Sell Form AI Features (Polish, Estimate, Scan)
+    // ==========================================
+
+    @Test
+    fun polishListingDescriptionSendsPostRequestAndParsesPolishedText() = runTest {
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody("""{"description": "Genuine Bosch motor in great condition."}"""))
+
+        val polished = service.polishListingDescription("genuine bosch motor good condition")
+
+        assertEquals("Genuine Bosch motor in great condition.", polished)
+        val request = mockWebServer.takeRequest()
+        assertEquals("/api/marketplace/listings/polish", request.path)
+        assertEquals("POST", request.method)
+    }
+
+    @Test
+    fun estimateListingPriceSendsListingDetailsAndParsesPriceEstimate() = runTest {
+        val responseJson = """{
+            "low": 20.0,
+            "high": 35.0,
+            "currency": "EUR",
+            "rationale": "Based on similar Bosch drain pumps sold recently."
+        }"""
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(responseJson))
+
+        val details = ListingDetails(
+            title = "Bosch Drain Pump",
+            description = "Working drain pump pulled from Serie 4",
+            category = "washing-machine",
+            brand = "Bosch",
+            model = "WAN28209GB",
+            condition = "used-good",
+            listingKind = "part",
+            photoCount = 2,
+            pickup = true,
+            shipping = true,
+            location = "90210"
+        )
+
+        val estimate = service.estimateListingPrice(details)
+
+        assertNotNull(estimate)
+        assertEquals(20.0, estimate!!.low, 0.01)
+        assertEquals(35.0, estimate.high, 0.01)
+        assertEquals("EUR", estimate.currency)
+        assertEquals("Based on similar Bosch drain pumps sold recently.", estimate.rationale)
+
+        val request = mockWebServer.takeRequest()
+        assertEquals("/api/marketplace/listings/estimate", request.path)
+        assertEquals("POST", request.method)
+    }
+
+    @Test
+    fun scanModelLabelSendsMultipartPhotoAndParsesScanResult() = runTest {
+        val responseJson = """{
+            "brand": "Bosch",
+            "model": "WAN28209GB",
+            "part_number": "00145787",
+            "confidence": 0.95,
+            "visible_evidence": "Printed on label"
+        }"""
+        mockWebServer.enqueue(MockResponse().setResponseCode(200).setBody(responseJson))
+
+        val result = service.scanModelLabel(mockUri)
+
+        assertNotNull(result)
+        assertEquals("Bosch", result!!.brand)
+        assertEquals("WAN28209GB", result.model)
+        assertEquals("00145787", result.partNumber)
+        assertEquals(0.95f, result.confidence, 0.01f)
+        assertEquals("Printed on label", result.evidence)
+
+        val request = mockWebServer.takeRequest()
+        assertEquals("/api/marketplace/listings/scan-label", request.path)
+        assertEquals("POST", request.method)
+        assertTrue(request.getHeader("Content-Type")?.contains("multipart/form-data") == true)
     }
 }
