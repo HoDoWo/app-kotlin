@@ -1,7 +1,6 @@
 package com.hodowo.viewmodel
 
 import android.net.Uri
-import com.hodowo.data.FirebaseRepository
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.MarketplaceService
 import io.mockk.coEvery
@@ -25,7 +24,7 @@ class PostProductViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
     private lateinit var service: MarketplaceService
-    private lateinit var repository: FirebaseRepository
+    private lateinit var aiService: HoDoWoAiService
     private lateinit var viewModel: PostProductViewModel
     private val mockUri: Uri = mockk(relaxed = true)
 
@@ -33,8 +32,12 @@ class PostProductViewModelTest {
     fun setUp() {
         Dispatchers.setMain(dispatcher)
         service = mockk(relaxed = true)
-        repository = mockk(relaxed = true)
-        viewModel = PostProductViewModel(service, repository)
+        aiService = mockk(relaxed = true)
+        viewModel = PostProductViewModel(
+            service = service,
+            aiService = aiService,
+            loadImage = { byteArrayOf(1, 2, 3) }
+        )
     }
 
     @After
@@ -160,11 +163,76 @@ class PostProductViewModelTest {
     }
 
     @Test
+    fun localPolishTrimsWhitespaceCapitalisesSentencesAndAddsAFullStop() {
+        assertEquals(
+            "Genuine OEM motor. Brushes replaced 6 months ago.",
+            localPolishDescription("  genuine   OEM motor.  brushes replaced 6 months ago  ")
+        )
+        assertEquals("", localPolishDescription("   "))
+        assertEquals(
+            "Already tidied.",
+            localPolishDescription("Already tidied.")
+        )
+    }
+
+    @Test
+    fun polishDescriptionUsesTheAiResult() = runTest(dispatcher) {
+        coEvery { aiService.polishListingDescription(any()) } returns "Genuine OEM motor, tested."
+        var polished: String? = null
+
+        viewModel.polishDescription("genuine oem motor tested") { polished = it }
+        advanceUntilIdle()
+
+        assertEquals("Genuine OEM motor, tested.", polished)
+        assertFalse(viewModel.isPolishing.value)
+    }
+
+    @Test
+    fun polishDescriptionFallsBackToLocalTidyUpWhenTheAiFails() = runTest(dispatcher) {
+        coEvery { aiService.polishListingDescription(any()) } throws RuntimeException("offline")
+        var polished: String? = null
+
+        viewModel.polishDescription("  genuine   oem motor  ") { polished = it }
+        advanceUntilIdle()
+
+        assertEquals("Genuine oem motor.", polished)
+        assertFalse(viewModel.isPolishing.value)
+    }
+
+    @Test
+    fun estimatePriceReturnsTheAiRange() = runTest(dispatcher) {
+        val estimate = PriceEstimate(low = 18.0, high = 26.0, rationale = "Similar sales")
+        coEvery { aiService.estimateListingPrice(any()) } returns estimate
+        var received: PriceEstimate? = null
+
+        viewModel.estimatePrice(
+            ListingDetails("Drain pump", "Tested", "washing-machine", "Bosch", "WAN", "used-good", "part", 2, true, true, "90210")
+        ) { received = it }
+        advanceUntilIdle()
+
+        assertEquals(estimate, received)
+        assertFalse(viewModel.isEstimating.value)
+    }
+
+    @Test
+    fun scanModelLabelReturnsWhatTheAiRead() = runTest(dispatcher) {
+        val scan = ModelScanResult("Bosch", "WAN28201GB", "00145787", 0.9f, "Door sticker")
+        coEvery { aiService.scanModelLabel(any()) } returns scan
+        var received: ModelScanResult? = null
+
+        viewModel.scanModelLabel(mockUri) { received = it }
+        advanceUntilIdle()
+
+        assertEquals(scan, received)
+        assertFalse(viewModel.isScanningLabel.value)
+    }
+
+    @Test
     fun submitUploadsImagesAndCreatesListingOnValidInput() = runTest(dispatcher) {
         var successCalled = false
         val product = MarketplaceProduct(id = "p-100", title = "Bosch Drain Pump", description = "Valid description long enough for 30 characters", price = 25.0)
 
-        coEvery { repository.uploadMarketplaceImage(any(), any()) } returns "http://example.com/img.jpg"
+        coEvery { service.uploadListingImage(any()) } returns "http://example.com/img.jpg"
         coEvery {
             service.createListing(
                 any(), any(), any(), any(), any(), any(), any(),
@@ -201,7 +269,7 @@ class PostProductViewModelTest {
     @Test
     fun submitHandlesUploadFailureGracefully() = runTest(dispatcher) {
         var successCalled = false
-        coEvery { repository.uploadMarketplaceImage(any(), any()) } throws RuntimeException("Upload failed")
+        coEvery { service.uploadListingImage(any()) } throws RuntimeException("Upload failed")
 
         viewModel.submit(
             userId = "u1",

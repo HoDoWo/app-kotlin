@@ -7,8 +7,11 @@ import com.hodowo.viewmodel.ControlBox
 import com.hodowo.viewmodel.ControlType
 import com.hodowo.viewmodel.FeedbackReport
 import com.hodowo.viewmodel.HoDoWoAiService
+import com.hodowo.viewmodel.ListingDetails
+import com.hodowo.viewmodel.ModelScanResult
 import com.hodowo.viewmodel.PanelBox
 import com.hodowo.viewmodel.PanelControl
+import com.hodowo.viewmodel.PriceEstimate
 import com.hodowo.viewmodel.RecentManual
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -407,6 +410,58 @@ class RemoteHoDoWoAiService(
         }
     }
 
+    /** Rewrites the seller's narrative with the backend copywriter prompt. */
+    override suspend fun polishListingDescription(text: String): String {
+        val body = JSONObject().put("description", text)
+        return jsonOf(post(LISTING_POLISH_PATH, body.toString().toRequestBody(JSON)))
+            .getString("description")
+    }
+
+    /** Sends every field already entered in the sell form for a price estimate. */
+    override suspend fun estimateListingPrice(details: ListingDetails): PriceEstimate? {
+        val body = JSONObject()
+            .put("title", details.title)
+            .put("description", details.description)
+            .put("category", details.category)
+            .put("brand", details.brand)
+            .put("model", details.model)
+            .put("condition", details.condition)
+            .put("listing_kind", details.listingKind)
+            .put("photo_count", details.photoCount)
+            .put("pickup", details.pickup)
+            .put("shipping", details.shipping)
+            .put("location", details.location)
+
+        val result = jsonOf(post(LISTING_ESTIMATE_PATH, body.toString().toRequestBody(JSON)))
+        return PriceEstimate(
+            low = result.getDouble("low"),
+            high = result.getDouble("high"),
+            currency = result.optString("currency", "USD"),
+            rationale = result.optString("rationale")
+        )
+    }
+
+    /** Reads the model/part label in a photo taken or picked in the sell form. */
+    override suspend fun scanModelLabel(uri: Uri): ModelScanResult? {
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("image", "label.jpg", loadImage(uri).toRequestBody(JPEG))
+            .addFormDataPart("context", "Read the model and part number of this appliance or part.")
+            .build()
+
+        val result = jsonOf(post(LISTING_SCAN_PATH, body))
+        fun text(key: String): String? =
+            if (result.isNull(key)) null else result.optString(key).takeIf { it.isNotBlank() }
+
+        return ModelScanResult(
+            brand = text("brand"),
+            model = text("model"),
+            partNumber = text("part_number"),
+            confidence = result.optDouble("confidence", 0.0).toFloat(),
+            evidence = text("visible_evidence")
+        )
+    }
+
     companion object {
         private const val TAG = "RemoteHoDoWoAiService"
         private const val HTTP_UNAUTHORIZED = 401
@@ -426,6 +481,9 @@ class RemoteHoDoWoAiService(
         internal const val MANUALS_PATH = "/api/manuals"
         internal const val POPULAR_MANUALS_PATH = "/api/manuals/popular"
         internal const val TIP_PATH = "/api/appliances/environmental-tip"
+        internal const val LISTING_SCAN_PATH = "/api/marketplace/listings/scan-label"
+        internal const val LISTING_POLISH_PATH = "/api/marketplace/listings/polish"
+        internal const val LISTING_ESTIMATE_PATH = "/api/marketplace/listings/estimate"
 
         internal const val UNKNOWN_APPLIANCE = "Unknown appliance"
 

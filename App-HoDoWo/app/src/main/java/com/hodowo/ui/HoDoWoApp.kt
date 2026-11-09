@@ -42,6 +42,7 @@ import com.hodowo.data.AiServiceProvider
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.cartProductType
 import com.hodowo.data.AuthManager
+import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.ProductForumViewModel
 import com.hodowo.ui.components.AppNavTab
@@ -75,9 +76,12 @@ fun HoDoWoApp(
 ) {
     val context = LocalContext.current
     val marketplaceViewModel: MarketplaceViewModel = viewModel(factory = AiServiceProvider.marketplaceViewModelFactory())
-    val postProductViewModel: PostProductViewModel = viewModel(factory = AiServiceProvider.postProductViewModelFactory())
+    val postProductViewModel: PostProductViewModel = viewModel(
+        factory = AiServiceProvider.postProductViewModelFactory(context)
+    )
     val cartViewModel: CartViewModel = viewModel(factory = AiServiceProvider.cartViewModelFactory())
     val checkoutViewModel: CheckoutViewModel = viewModel(factory = AiServiceProvider.checkoutViewModelFactory())
+    val myListingsViewModel: MyListingsViewModel = viewModel(factory = AiServiceProvider.myListingsViewModelFactory())
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     val chatState by chatViewModel.uiState.collectAsState()
@@ -176,13 +180,14 @@ fun HoDoWoApp(
                             )
                         } else if (showMyListings) {
                             MyListingsScreen(
-                                viewModel = viewModel(factory = AiServiceProvider.myListingsViewModelFactory()),
+                                viewModel = myListingsViewModel,
                                 onBack = { showMyListings = false }
                             )
                         } else {
                             ProfileScreen(
                                 authManager = authManager,
                                 viewModel = chatViewModel,
+                                myListingsViewModel = myListingsViewModel,
                                 onOpenAuth = { showAuthDialog = true },
                                 onNavigateHome = { currentTab = AppNavTab.HOME },
                                 onNavigateAiChat = { currentTab = AppNavTab.AI_CHAT },
@@ -190,7 +195,11 @@ fun HoDoWoApp(
                                 onNavigateArCore = { currentTab = AppNavTab.AR_CORE },
                                 onNavigateProfile = { currentTab = AppNavTab.PROFILE },
                                 onOpenApplianceManuals = { showApplianceManuals = true },
-                                onOpenMyListings = { showMyListings = true }
+                                onOpenMyListings = { showMyListings = true },
+                                onPostProduct = {
+                                    currentTab = AppNavTab.MARKET
+                                    showPostProduct = true
+                                }
                             )
                         }
                     }
@@ -229,7 +238,8 @@ fun HoDoWoApp(
                                 viewModel = postProductViewModel,
                                 userId = authManager.currentUserId,
                                 onPublished = { showPostProduct = false },
-                                onBack = { showPostProduct = false }
+                                onBack = { showPostProduct = false },
+                                onOpenCart = { showCart = true }
                             )
                         } else if (showMarketplaceSearch) {
                             ProductSearchAndFiltersScreen(
@@ -259,9 +269,11 @@ fun HoDoWoApp(
                     }
                 }
 
-                // The chat has its own "+" in the header. Product Detail and the cart have their
-                // own sticky bar at the bottom, which this button would overlap.
-                if (currentTab != AppNavTab.AI_CHAT && selectedMarketProduct == null && !showCart) {
+                // The chat has its own "+" in the header. Product Detail, the cart and the sell
+                // form have their own sticky bar at the bottom, which this button would overlap.
+                if (currentTab != AppNavTab.AI_CHAT && selectedMarketProduct == null && !showCart &&
+                    !showPostProduct
+                ) {
                     NewChatButton(
                         onClick = { startNewChat() },
                         modifier = Modifier
@@ -271,19 +283,22 @@ fun HoDoWoApp(
                 }
             }
 
-            // Bottom Navigation Bar matching HTML mockup
-            BottomNavBar(
-                currentTab = currentTab,
-                onTabSelected = {
-                    showApplianceManuals = false
-                    showMarketplaceSearch = false
-                    showPostProduct = false
-                    showMyListings = false
-                    showCart = false
-                    selectedMarketProduct = null
-                    currentTab = it
-                }
-            )
+            // Bottom Navigation Bar matching HTML mockup. The sell form has its own sticky
+            // publish bar, so the tab bar is hidden while it is open.
+            if (!showPostProduct) {
+                BottomNavBar(
+                    currentTab = currentTab,
+                    onTabSelected = {
+                        showApplianceManuals = false
+                        showMarketplaceSearch = false
+                        showPostProduct = false
+                        showMyListings = false
+                        showCart = false
+                        selectedMarketProduct = null
+                        currentTab = it
+                    }
+                )
+            }
         }
     }
 

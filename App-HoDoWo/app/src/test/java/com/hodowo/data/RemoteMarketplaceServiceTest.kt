@@ -9,6 +9,7 @@ import org.json.JSONObject
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.io.IOException
@@ -82,6 +83,59 @@ class RemoteMarketplaceServiceTest {
         assertEquals("Like new", product.condition)
         assertEquals("Marc", product.sellerName)
         assertEquals("$45.00", product.priceLabel)
+    }
+
+    @Test
+    fun createListingSendsTheDatabaseFieldsIncludingLocation() = runTest {
+        server.enqueue(
+            json("""{"id": "l1", "title": "Bosch motor", "price": 45.0, "condition": "used-good"}""")
+        )
+
+        service.createListing(
+            title = "Bosch motor",
+            description = "Working motor pulled from a Bosch Serie 4 washer.",
+            category = "washing-machine",
+            brand = "Bosch",
+            model = "WAN28201GB",
+            partNumber = "145787",
+            listingKind = "part",
+            condition = "used-good",
+            price = 45.0,
+            imageUrls = listOf("https://example.test/motor.jpg"),
+            diagnosticMediaUrls = emptyList(),
+            handoverMethods = listOf("pickup", "shipping"),
+            pickupZip = "98101",
+            shippingPriceCents = 680
+        )
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/marketplace/listings", request.path)
+        val body = JSONObject(request.body.readUtf8())
+        assertEquals("98101", body.getString("pickup_zip"))
+        assertEquals("98101", body.getString("location"))
+        assertEquals(680, body.getInt("shipping_price_cents"))
+        assertEquals("used-good", body.getString("condition"))
+        assertEquals("part", body.getString("listing_kind"))
+    }
+
+    @Test
+    fun uploadListingImagePostsThePhotoAsMultipart() = runTest {
+        server.enqueue(
+            MockResponse().setResponseCode(201)
+                .setHeader("Content-Type", "application/json")
+                .setBody("""{"url": "https://storage.example/listing.jpg"}""")
+        )
+
+        val url = service.uploadListingImage(byteArrayOf(1, 2, 3, 4))
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/marketplace/listings/images", request.path)
+        assertEquals("Bearer token-abc", request.getHeader("Authorization"))
+        assertTrue(request.getHeader("Content-Type")!!.startsWith("multipart/form-data"))
+        assertTrue(request.body.readUtf8().contains("listing.jpg"))
+        assertEquals("https://storage.example/listing.jpg", url)
     }
 
     @Test(expected = IOException::class)

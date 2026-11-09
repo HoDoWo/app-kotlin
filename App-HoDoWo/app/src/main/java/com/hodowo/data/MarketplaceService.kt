@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -80,6 +81,14 @@ interface MarketplaceService {
         pickupZip: String,
         shippingPriceCents: Int?
     ): MarketplaceProduct = throw UnsupportedOperationException("createListing not supported")
+
+    /**
+     * Stores one compressed listing photo and returns the URL to send in
+     * `image_urls`. Uploading through the backend avoids client-side Firebase
+     * Storage rules and bucket mismatches.
+     */
+    suspend fun uploadListingImage(imageBytes: ByteArray): String =
+        throw UnsupportedOperationException("uploadListingImage not supported")
 
     companion object {
         operator fun invoke(
@@ -307,9 +316,22 @@ class RemoteMarketplaceService(
             .put("diagnostic_media_urls", JSONArray(diagnosticMediaUrls))
             .put("handover_methods", JSONArray(handoverMethods))
             .put("pickup_zip", pickupZip.ifBlank { JSONObject.NULL })
+            .put("location", pickupZip.ifBlank { JSONObject.NULL })
             .put("shipping_price_cents", shippingPriceCents ?: JSONObject.NULL)
             .put("quantity", 1)
         return parseMarketplaceProduct(jsonOf(post("/api/marketplace/listings", body.toString())))
+    }
+
+    override suspend fun uploadListingImage(imageBytes: ByteArray): String {
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart(
+                "image",
+                "listing.jpg",
+                imageBytes.toRequestBody("image/jpeg".toMediaType())
+            )
+            .build()
+        return jsonOf(post("/api/marketplace/listings/images", body)).getString("url")
     }
 
     private suspend fun get(path: String): String {
@@ -327,12 +349,15 @@ class RemoteMarketplaceService(
         }
     }
 
-    private suspend fun post(path: String, json: String): String {
+    private suspend fun post(path: String, json: String): String =
+        post(path, json.toRequestBody(JSON))
+
+    private suspend fun post(path: String, body: okhttp3.RequestBody): String {
         val token = tokenProvider()
 
         val builder = Request.Builder()
             .url("${backendUrl.trimEnd('/')}$path")
-            .post(json.toRequestBody(JSON))
+            .post(body)
         if (!token.isNullOrBlank()) {
             builder.header("Authorization", "Bearer $token")
         }

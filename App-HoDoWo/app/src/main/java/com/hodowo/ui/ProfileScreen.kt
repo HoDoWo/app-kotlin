@@ -32,6 +32,10 @@ import com.hodowo.ui.components.NotificationIconButton
 import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.ManualGuide
+import com.hodowo.viewmodel.MyListingsViewModel
+import com.hodowo.viewmodel.Listing
+import com.hodowo.viewmodel.ListingStatus
+import com.hodowo.ui.imageData
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -41,6 +45,7 @@ import java.util.Locale
 fun ProfileScreen(
     authManager: AuthManager? = null,
     viewModel: ChatViewModel? = null,
+    myListingsViewModel: MyListingsViewModel? = null,
     onOpenAuth: () -> Unit = {},
     onNavigateHome: () -> Unit = {},
     onNavigateAiChat: () -> Unit = {},
@@ -48,7 +53,8 @@ fun ProfileScreen(
     onNavigateArCore: () -> Unit = {},
     onNavigateProfile: () -> Unit = {},
     onOpenApplianceManuals: () -> Unit = {},
-    onOpenMyListings: () -> Unit = {}
+    onOpenMyListings: () -> Unit = {},
+    onPostProduct: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val currentUser = authManager?.currentUser?.collectAsState()?.value
@@ -91,7 +97,6 @@ fun ProfileScreen(
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showAddApplianceDialog by remember { mutableStateOf(false) }
     var showAccountDialog by remember { mutableStateOf(false) }
-    var showPostToSellComingSoonDialog by remember { mutableStateOf(false) }
     var selectedGuideForDetails by remember { mutableStateOf<ManualGuide?>(null) }
 
     var editNameInput by remember(defaultName) { mutableStateOf(defaultName) }
@@ -100,6 +105,14 @@ fun ProfileScreen(
     var newApplianceRoom by remember { mutableStateOf("") }
 
     val bookmarkedGuides = chatState?.bookmarkedGuides ?: emptyList()
+    val myListingsState = myListingsViewModel?.uiState?.collectAsState()?.value
+    val listings = myListingsState?.listings ?: emptyList()
+
+    LaunchedEffect(isSignedIn) {
+        if (isSignedIn) {
+            myListingsViewModel?.load()
+        }
+    }
 
     // Owned appliances: active session (if any) + persisted Firestore ones. No fake sample data.
     val ownedAppliances = remember(chatState?.appliance, chatState?.userAppliances) {
@@ -334,7 +347,7 @@ fun ProfileScreen(
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.clickable { showPostToSellComingSoonDialog = true }
+                        modifier = Modifier.clickable { onPostProduct() }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -482,24 +495,6 @@ fun ProfileScreen(
         )
     }
 
-    // Posting a new listing (#145) isn't built yet.
-    if (showPostToSellComingSoonDialog) {
-        AlertDialog(
-            onDismissRequest = { showPostToSellComingSoonDialog = false },
-            title = { Text("Post an appliance to sell") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Coming Soon!", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text(
-                        "The post-to-sell form is still being built. You'll be able to add photos, " +
-                            "details and a price for your appliance here.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            },
-            confirmButton = { Button(onClick = { showPostToSellComingSoonDialog = false }) { Text("Got it") } }
-        )
-    }
 }
 
 /** Shared by Profile (bookmarks) and ApplianceManualsScreen. [onRemove] null = no Remove button. */
@@ -678,3 +673,86 @@ fun ApplianceCard(
     }
 }
 
+
+@Composable
+private fun ProfileListingCard(
+    listing: Listing,
+    onClick: () -> Unit
+) {
+    val isSold = listing.status == ListingStatus.SOLD
+    val statusColor = if (isSold) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.primary
+
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        modifier = Modifier.fillMaxWidth().clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (!listing.imageUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = imageData(listing.imageUrl),
+                    contentDescription = listing.title,
+                    modifier = Modifier.size(54.dp).clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier.size(54.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.Sell, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
+                    }
+                }
+            }
+
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = listing.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Surface(shape = CircleShape, color = statusColor.copy(alpha = 0.12f)) {
+                        Text(
+                            text = if (isSold) "Sold" else "Active",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = statusColor,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                Text(
+                    text = "${listing.condition} • ${listing.postedAgo}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Text(
+                    text = listing.priceLabel,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}

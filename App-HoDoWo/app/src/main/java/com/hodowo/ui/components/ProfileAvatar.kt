@@ -17,6 +17,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.hodowo.ui.imageData
 
 /**
  * Circular avatar shared by the top banners and the profile screen.
@@ -60,7 +61,7 @@ fun ProfileAvatar(
 private fun AvatarContent(name: String, size: Int, photoUrl: String?) {
     when {
         !photoUrl.isNullOrBlank() -> AsyncImage(
-            model = photoUrl,
+            model = imageData(photoUrl),
             contentDescription = "Profile photo",
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()

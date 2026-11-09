@@ -12,7 +12,8 @@ data class Listing(
     val priceLabel: String,
     val status: ListingStatus,
     val inquiryCount: Int,
-    val postedAgo: String
+    val postedAgo: String,
+    val imageUrl: String? = null
 )
 
 /**
