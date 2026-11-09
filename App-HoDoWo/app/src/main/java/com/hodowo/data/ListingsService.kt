@@ -103,8 +103,7 @@ class DemoListingsService : ListingsService {
 
 /**
  * [ListingsService] backed by the HoDoWo backend, following the marketplace API
- * contract (Sprint 2 plan, `/api/marketplace/listings`). Not wired at runtime yet:
- * see [com.hodowo.data.AiServiceProvider.listingsService].
+ * contract (Sprint 2 plan, `/api/marketplace/listings`).
  */
 class RemoteListingsService(
     private val backendUrl: String,
@@ -207,15 +206,22 @@ class RemoteListingsService(
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
 
-        internal fun parseListing(json: JSONObject): Listing = Listing(
-            id = json.optString("id"),
-            title = json.optString("title"),
-            description = json.optString("description"),
-            condition = json.optString("condition"),
-            priceLabel = "$" + String.format(java.util.Locale.US, "%.2f", json.optDouble("price", 0.0)),
-            status = if (json.optString("status") == "sold") ListingStatus.SOLD else ListingStatus.ACTIVE,
-            inquiryCount = json.optInt("inquiry_count", 0),
-            postedAgo = json.optString("posted_ago")
-        )
+        internal fun parseListing(json: JSONObject): Listing {
+            val images = json.optJSONArray("image_urls")
+            val firstImage = images?.optString(0)?.takeIf { it.isNotBlank() }
+                ?: json.optString("image_url").takeIf { it.isNotBlank() }
+
+            return Listing(
+                id = json.optString("id"),
+                title = json.optString("title"),
+                description = json.optString("description"),
+                condition = json.optString("condition"),
+                priceLabel = "$" + String.format(java.util.Locale.US, "%.2f", json.optDouble("price", 0.0)),
+                status = if (json.optString("status") == "sold") ListingStatus.SOLD else ListingStatus.ACTIVE,
+                inquiryCount = json.optInt("inquiry_count", 0),
+                postedAgo = json.optString("posted_ago"),
+                imageUrl = firstImage
+            )
+        }
     }
 }

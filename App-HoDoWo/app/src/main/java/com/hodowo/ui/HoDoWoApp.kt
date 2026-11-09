@@ -42,6 +42,7 @@ import com.hodowo.data.AiServiceProvider
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.cartProductType
 import com.hodowo.data.AuthManager
+import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.ProductForumViewModel
 import com.hodowo.ui.components.AppNavTab
@@ -80,6 +81,7 @@ fun HoDoWoApp(
     )
     val cartViewModel: CartViewModel = viewModel(factory = AiServiceProvider.cartViewModelFactory())
     val checkoutViewModel: CheckoutViewModel = viewModel(factory = AiServiceProvider.checkoutViewModelFactory())
+    val myListingsViewModel: MyListingsViewModel = viewModel(factory = AiServiceProvider.myListingsViewModelFactory())
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
     val chatState by chatViewModel.uiState.collectAsState()
@@ -178,13 +180,14 @@ fun HoDoWoApp(
                             )
                         } else if (showMyListings) {
                             MyListingsScreen(
-                                viewModel = viewModel(factory = AiServiceProvider.myListingsViewModelFactory()),
+                                viewModel = myListingsViewModel,
                                 onBack = { showMyListings = false }
                             )
                         } else {
                             ProfileScreen(
                                 authManager = authManager,
                                 viewModel = chatViewModel,
+                                myListingsViewModel = myListingsViewModel,
                                 onOpenAuth = { showAuthDialog = true },
                                 onNavigateHome = { currentTab = AppNavTab.HOME },
                                 onNavigateAiChat = { currentTab = AppNavTab.AI_CHAT },

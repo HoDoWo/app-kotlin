@@ -46,7 +46,17 @@ object AiServiceProvider {
      * marketplace routes (Backend#38, Backend#40) aren't deployed. Switch to
      * [RemoteListingsService] once they are.
      */
-    val listingsService: ListingsService by lazy { DemoListingsService() }
+    val listingsService: ListingsService by lazy {
+        val backendUrl = BuildConfig.BACKEND_URL
+        if (backendUrl.isNotBlank()) {
+            RemoteListingsService(
+                backendUrl = backendUrl,
+                tokenProvider = FirebaseTokenProvider()::token
+            )
+        } else {
+            DemoListingsService()
+        }
+    }
 
     fun create(context: Context): HoDoWoAiService {
         val backendUrl = BuildConfig.BACKEND_URL
@@ -79,6 +89,7 @@ object AiServiceProvider {
     fun chatViewModelFactory(context: Context): ViewModelProvider.Factory =
         viewModelFactory {
             initializer {
+                val compressor = ImageCompressor(context.applicationContext)
                 ChatViewModel(
                     aiService = create(context),
                     firebaseRepository = firebaseRepository,
@@ -87,7 +98,16 @@ object AiServiceProvider {
                         directory = File(context.filesDir, "chat_history"),
                         openImage = { uri -> context.applicationContext.contentResolver.openInputStream(uri) }
                     ),
-                    profilePhotoStore = ProfilePhotoStore(context.applicationContext)
+                    profilePhotoStore = ProfilePhotoStore(context.applicationContext),
+                    encodeProfilePhoto = { uri ->
+                        try {
+                            val bytes = compressor.compress(uri, maxSide = 512, quality = 75)
+                            val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                            "data:image/jpeg;base64,$base64"
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
                 )
             }
         }

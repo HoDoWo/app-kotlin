@@ -472,6 +472,7 @@ class ChatViewModel(
     private val chatHistory: ChatHistoryStore? = null,
     /** Keeps the profile photo on the phone when Firebase Storage is unavailable. */
     private val profilePhotoStore: ProfilePhotoStore? = null,
+    private val encodeProfilePhoto: (suspend (Uri) -> String?)? = null,
     private val clock: () -> Long = System::currentTimeMillis
 ) : ViewModel() {
 
@@ -810,14 +811,14 @@ class ChatViewModel(
         val uid = currentUid() ?: return
         viewModelScope.launch {
             _isUploadingPhoto.value = true
-            val cloudUrl = firebaseRepository?.uploadProfilePhoto(uid, uri)
+            val photoUrl = encodeProfilePhoto?.invoke(uri) ?: firebaseRepository?.uploadProfilePhoto(uid, uri)
             val savedUrl = if (
-                cloudUrl != null &&
-                firebaseRepository?.updateProfileFields(uid, photoUrl = cloudUrl) == true
+                photoUrl != null &&
+                firebaseRepository?.updateProfileFields(uid, photoUrl = photoUrl) == true
             ) {
-                cloudUrl
+                photoUrl
             } else {
-                // Firebase Storage is not configured: keep the photo on this phone.
+                // Storage is not configured or failed: keep the photo on this phone.
                 profilePhotoStore?.save(uid, uri)
             }
             if (savedUrl != null) {
@@ -828,7 +829,7 @@ class ChatViewModel(
                     )
                 }
                 _userMessages.emit(
-                    if (cloudUrl != null) "Profile photo updated"
+                    if (photoUrl != null) "Profile photo updated"
                     else "Profile photo saved on this device"
                 )
             } else {
