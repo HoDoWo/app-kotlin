@@ -42,6 +42,8 @@ import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Kitchen
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Publish
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -82,9 +84,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.hodowo.ui.components.AppTopBar
-import com.hodowo.viewmodel.polishListingDescription
 import com.hodowo.ui.theme.Error
 import com.hodowo.ui.theme.InverseOnSurface
 import com.hodowo.ui.theme.InverseSurface
@@ -104,7 +106,11 @@ import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLow
 import com.hodowo.ui.theme.SurfaceContainerLowest
 import com.hodowo.ui.theme.TertiaryFixed
+import com.hodowo.viewmodel.ListingDetails
+import com.hodowo.viewmodel.ModelScanResult
+import com.hodowo.viewmodel.PriceEstimate
 import kotlinx.coroutines.delay
+import java.io.File
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -191,14 +197,54 @@ fun PostProductScreen(
     var images by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var attempted by rememberSaveable { mutableStateOf(false) }
     var publishedSuccess by rememberSaveable { mutableStateOf(false) }
+    var priceEstimate by remember { mutableStateOf<PriceEstimate?>(null) }
+    var pendingLabelPhoto by remember { mutableStateOf<Uri?>(null) }
 
     val message by viewModel.message.collectAsState()
     val submitting by viewModel.isSubmitting.collectAsState()
+    val polishing by viewModel.isPolishing.collectAsState()
+    val estimating by viewModel.isEstimating.collectAsState()
+    val scanningLabel by viewModel.isScanningLabel.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
         images = (images + uris).distinctBy { it.toString() }.take(MAX_LISTING_PHOTOS)
+    }
+
+    /** Fills the identification fields with whatever the AI could read. */
+    fun applyLabelScan(result: ModelScanResult?) {
+        if (result == null) return
+        val readBrand = result.brand?.trim().orEmpty()
+        val readCode = result.model?.trim().takeUnless { it.isNullOrEmpty() }
+            ?: result.partNumber?.trim().takeUnless { it.isNullOrEmpty() }
+        if (readBrand.isNotEmpty()) brand = readBrand
+        if (readCode != null) modelCode = readCode
+
+        val feedback = when {
+            readBrand.isEmpty() && readCode == null ->
+                "No model or part number was readable in that photo."
+            !result.evidence.isNullOrBlank() -> result.evidence
+            readCode != null -> "Read model/part number $readCode"
+            else -> "Read brand $readBrand"
+        }
+        Toast.makeText(context, feedback, Toast.LENGTH_LONG).show()
+    }
+
+    val labelCamera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        val uri = pendingLabelPhoto
+        pendingLabelPhoto = null
+        if (saved && uri != null) viewModel.scanModelLabel(uri, ::applyLabelScan)
+    }
+    val labelGallery = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) viewModel.scanModelLabel(uri, ::applyLabelScan)
+    }
+
+    fun scanWithCamera() {
+        val photo = File(context.cacheDir, "listing-label-${System.currentTimeMillis()}.jpg")
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", photo)
+        pendingLabelPhoto = uri
+        labelCamera.launch(uri)
     }
 
     LaunchedEffect(message) {
@@ -212,6 +258,8 @@ fun PostProductScreen(
     }
 
     val priceValue = priceInput.toDoubleOrNull()
+    val shippingValue = if (shipping) shippingInput.toDoubleOrNull() ?: 0.0 else 0.0
+    val totalValue = (priceValue ?: 0.0) + shippingValue
     val titleError = attempted && title.trim().length < MIN_TITLE_LENGTH
     val descriptionError = attempted && description.trim().length < MIN_DESCRIPTION_LENGTH
     val priceError = attempted && (priceValue == null || priceValue <= 0)
@@ -301,13 +349,9 @@ fun PostProductScreen(
                         title = title,
                         onTitleChange = { title = it.take(120) },
                         titleError = titleError,
-                        onScanBarcode = {
-                            Toast.makeText(
-                                context,
-                                "Barcode scanning is not available yet",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        scanning = scanningLabel,
+                        onScanWithCamera = ::scanWithCamera,
+                        onScanFromGallery = { labelGallery.launch("image/*") }
                     )
                 }
 
@@ -318,10 +362,16 @@ fun PostProductScreen(
                 item {
                     NarrativeSection(
                         description = description,
-                        onDescriptionChange = { description = it.take(MAX_DESCRIPTION_LENGTH) },
+                        onDescriptionChange = {
+                            description = it.take(MAX_DESCRIPTION_LENGTH)
+                            priceEstimate = null
+                        },
                         descriptionError = descriptionError,
+                        polishing = polishing,
                         onPolish = {
-                            description = polishListingDescription(description).take(MAX_DESCRIPTION_LENGTH)
+                            viewModel.polishDescription(description) { polished ->
+                                description = polished.take(MAX_DESCRIPTION_LENGTH)
+                            }
                         }
                     )
                 }
@@ -331,6 +381,30 @@ fun PostProductScreen(
                         priceInput = priceInput,
                         onPriceChange = { priceInput = sanitizeMoney(it) },
                         priceError = priceError,
+                        estimate = priceEstimate,
+                        estimating = estimating,
+                        onEstimate = {
+                            viewModel.estimatePrice(
+                                ListingDetails(
+                                    title = title,
+                                    description = description,
+                                    category = APPLIANCE_TYPES
+                                        .firstOrNull { it.value == applianceType }?.label
+                                        ?: applianceType,
+                                    brand = brand,
+                                    model = modelCode,
+                                    condition = condition,
+                                    listingKind = listingKind,
+                                    photoCount = images.size,
+                                    pickup = pickup,
+                                    shipping = shipping,
+                                    location = pickupZip
+                                )
+                            ) { priceEstimate = it }
+                        },
+                        onUseEstimate = { price ->
+                            priceInput = String.format(Locale.US, "%.2f", price)
+                        },
                         pickup = pickup,
                         onPickupChange = { pickup = it },
                         shipping = shipping,
@@ -345,7 +419,12 @@ fun PostProductScreen(
             }
 
             PublishBar(
-                priceLabel = priceValue?.let { formatMoney(it) } ?: "$0.00",
+                priceLabel = formatMoney(totalValue),
+                breakdown = if (shipping && shippingValue > 0 && priceValue != null) {
+                    "Item ${formatMoney(priceValue)} + shipping ${formatMoney(shippingValue)}"
+                } else {
+                    null
+                },
                 submitting = submitting,
                 published = publishedSuccess,
                 onPublish = ::publish
@@ -545,7 +624,9 @@ private fun IdentitySection(
     title: String,
     onTitleChange: (String) -> Unit,
     titleError: Boolean,
-    onScanBarcode: () -> Unit
+    scanning: Boolean,
+    onScanWithCamera: () -> Unit,
+    onScanFromGallery: () -> Unit
 ) {
     SectionCard {
         StepHeader(number = 2, title = "Category & Model Identification")
@@ -610,13 +691,14 @@ private fun IdentitySection(
                 singleLine = true,
                 placeholder = { Text("e.g. WAN28201GB or 00145787") },
                 trailingIcon = {
-                    IconButton(onClick = onScanBarcode) {
-                        Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = "Scan barcode",
-                            tint = Primary
-                        )
-                    }
+                    LabelScanButton(
+                        scanning = scanning,
+                        onScanWithCamera = onScanWithCamera,
+                        onScanFromGallery = onScanFromGallery
+                    )
+                },
+                supportingText = {
+                    Text("Scan the label, sticker or engraved plate to fill this automatically.")
                 },
                 shape = RoundedCornerShape(12.dp)
             )
@@ -756,6 +838,70 @@ private fun BrandSuggestions(current: String, onSelect: (String) -> Unit) {
     }
 }
 
+/**
+ * Scan button of the model/part field: opens a small menu to take a new photo
+ * or pick one from the gallery, then the ViewModel sends it to the AI.
+ */
+@Composable
+private fun LabelScanButton(
+    scanning: Boolean,
+    onScanWithCamera: () -> Unit,
+    onScanFromGallery: () -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            enabled = !scanning
+        ) {
+            if (scanning) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(20.dp),
+                    strokeWidth = 2.dp,
+                    color = Primary
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.QrCodeScanner,
+                    contentDescription = "Scan the model or part label",
+                    tint = Primary
+                )
+            }
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text("Take a photo") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.PhotoCamera,
+                        contentDescription = null,
+                        tint = OnSurfaceVariant
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    onScanWithCamera()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Choose from gallery") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.PhotoLibrary,
+                        contentDescription = null,
+                        tint = OnSurfaceVariant
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    onScanFromGallery()
+                }
+            )
+        }
+    }
+}
+
 @Composable
 private fun ConditionSection(condition: String, onConditionChange: (String) -> Unit) {
     SectionCard {
@@ -842,19 +988,30 @@ private fun NarrativeSection(
     description: String,
     onDescriptionChange: (String) -> Unit,
     descriptionError: Boolean,
+    polishing: Boolean,
     onPolish: () -> Unit
 ) {
     SectionCard {
         StepHeader(number = 4, title = "Item Narrative & Past Repairs") {
-            TextButton(onClick = onPolish, enabled = description.isNotBlank()) {
-                Icon(
-                    imageVector = Icons.Default.AutoAwesome,
-                    contentDescription = null,
-                    modifier = Modifier.size(14.dp)
-                )
+            TextButton(
+                onClick = onPolish,
+                enabled = description.isNotBlank() && !polishing
+            ) {
+                if (polishing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "AI Polish",
+                    text = if (polishing) "Polishing..." else "AI Polish",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -902,6 +1059,10 @@ private fun PricingSection(
     priceInput: String,
     onPriceChange: (String) -> Unit,
     priceError: Boolean,
+    estimate: PriceEstimate?,
+    estimating: Boolean,
+    onEstimate: () -> Unit,
+    onUseEstimate: (Double) -> Unit,
     pickup: Boolean,
     onPickupChange: (Boolean) -> Unit,
     shipping: Boolean,
@@ -945,38 +1106,12 @@ private fun PricingSection(
             }
         }
 
-        priceInput.toDoubleOrNull()?.takeIf { it > 0 }?.let { price ->
-            val low = (price * 0.85).roundToInt()
-            val high = (price * 1.15).roundToInt()
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SurfaceContainerHigh.copy(alpha = 0.6f))
-                    .padding(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Insights,
-                    contentDescription = null,
-                    tint = Primary,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = "Suggested community range: ${formatMoney(low.toDouble())} - ${formatMoney(high.toDouble())}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = OnSurface,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = "Comparable listings usually sell within 15% of your asking price.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OnSurfaceVariant
-                    )
-                }
-            }
-        }
+        AiEstimateCard(
+            estimate = estimate,
+            estimating = estimating,
+            onEstimate = onEstimate,
+            onUseEstimate = onUseEstimate
+        )
 
         FormLabel("Handover / Delivery Methods")
 
@@ -1026,7 +1161,7 @@ private fun PricingSection(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = "Added at checkout",
+                    text = "Added to the total",
                     style = MaterialTheme.typography.bodySmall,
                     color = OnSurfaceVariant
                 )
@@ -1039,6 +1174,95 @@ private fun PricingSection(
                 style = MaterialTheme.typography.bodySmall,
                 color = Error
             )
+        }
+    }
+}
+
+/** AI valuation box: sends the whole form to the backend and shows its range. */
+@Composable
+private fun AiEstimateCard(
+    estimate: PriceEstimate?,
+    estimating: Boolean,
+    onEstimate: () -> Unit,
+    onUseEstimate: (Double) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SurfaceContainerHigh.copy(alpha = 0.6f))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(verticalAlignment = Alignment.Top) {
+            Icon(
+                imageVector = Icons.Default.Insights,
+                contentDescription = null,
+                tint = Primary,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = "AI price estimate",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = OnSurface,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = "Uses the title, description, category, brand, model and condition you entered.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OnSurfaceVariant
+                )
+            }
+        }
+
+        estimate?.let { value ->
+            Text(
+                text = "${formatMoney(value.low)} - ${formatMoney(value.high)} ${value.currency}",
+                style = MaterialTheme.typography.titleMedium,
+                color = OnSurface,
+                fontWeight = FontWeight.Bold
+            )
+            if (value.rationale.isNotBlank()) {
+                Text(
+                    text = value.rationale,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OnSurfaceVariant
+                )
+            }
+            TextButton(
+                onClick = { onUseEstimate((value.low + value.high) / 2) },
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+            ) {
+                Text(
+                    text = "Use the middle price (${formatMoney((value.low + value.high) / 2)})",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+
+        Button(
+            onClick = onEstimate,
+            enabled = !estimating,
+            modifier = Modifier.fillMaxWidth().height(44.dp),
+            shape = RoundedCornerShape(10.dp)
+        ) {
+            if (estimating) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(16.dp),
+                    strokeWidth = 2.dp,
+                    color = OnPrimary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Estimating...", style = MaterialTheme.typography.labelLarge)
+            } else {
+                Text(
+                    text = if (estimate == null) "Calculate a fair price" else "Recalculate",
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
         }
     }
 }
@@ -1113,6 +1337,7 @@ private fun HandoverCard(
 @Composable
 private fun PublishBar(
     priceLabel: String,
+    breakdown: String?,
     submitting: Boolean,
     published: Boolean,
     onPublish: () -> Unit
@@ -1131,7 +1356,7 @@ private fun PublishBar(
         ) {
             Column {
                 Text(
-                    text = "Final Price",
+                    text = "Total",
                     style = MaterialTheme.typography.bodySmall,
                     color = OnSurfaceVariant
                 )
@@ -1141,6 +1366,13 @@ private fun PublishBar(
                     color = OnSurface,
                     fontWeight = FontWeight.Bold
                 )
+                breakdown?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = OnSurfaceVariant
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(16.dp))
             Button(
