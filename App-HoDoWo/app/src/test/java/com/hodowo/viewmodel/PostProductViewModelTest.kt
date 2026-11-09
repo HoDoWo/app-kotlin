@@ -160,6 +160,19 @@ class PostProductViewModelTest {
     }
 
     @Test
+    fun polishTrimsWhitespaceCapitalisesSentencesAndAddsAFullStop() {
+        assertEquals(
+            "Genuine OEM motor. Brushes replaced 6 months ago.",
+            polishListingDescription("  genuine   OEM motor.  brushes replaced 6 months ago  ")
+        )
+        assertEquals("", polishListingDescription("   "))
+        assertEquals(
+            "Already tidied.",
+            polishListingDescription("Already tidied.")
+        )
+    }
+
+    @Test
     fun submitUploadsImagesAndCreatesListingOnValidInput() = runTest(dispatcher) {
         var successCalled = false
         val product = MarketplaceProduct(id = "p-100", title = "Bosch Drain Pump", description = "Valid description long enough for 30 characters", price = 25.0)
