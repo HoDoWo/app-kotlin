@@ -14,9 +14,10 @@ import kotlin.math.roundToInt
 /**
  * Shrinks a camera photo before it is uploaded.
  *
- * Vercel rejects requests larger than about 4.5 MB, while a full-size camera
- * photo can be bigger. The longest side is reduced to [MAX_SIDE] pixels and
- * the image is saved as JPEG, which keeps it well under the limit.
+ * Listing photos are stored in Firestore, where one document cannot exceed
+ * 1 MiB, so the longest side is reduced to [MAX_SIDE] pixels and the image is
+ * saved as JPEG at [JPEG_QUALITY]. That keeps a photo around 100-300 KB,
+ * which is also well under Vercel's request-size limit.
  */
 class ImageCompressor(private val context: Context) {
 
@@ -68,7 +69,7 @@ class ImageCompressor(private val context: Context) {
     }
 
     private companion object {
-        const val MAX_SIDE = 1600
-        const val JPEG_QUALITY = 80
+        const val MAX_SIDE = 1280
+        const val JPEG_QUALITY = 75
     }
 }

@@ -192,7 +192,11 @@ fun HoDoWoApp(
                                 onNavigateArCore = { currentTab = AppNavTab.AR_CORE },
                                 onNavigateProfile = { currentTab = AppNavTab.PROFILE },
                                 onOpenApplianceManuals = { showApplianceManuals = true },
-                                onOpenMyListings = { showMyListings = true }
+                                onOpenMyListings = { showMyListings = true },
+                                onPostProduct = {
+                                    currentTab = AppNavTab.MARKET
+                                    showPostProduct = true
+                                }
                             )
                         }
                     }

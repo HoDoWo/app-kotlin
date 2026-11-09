@@ -48,7 +48,8 @@ fun ProfileScreen(
     onNavigateArCore: () -> Unit = {},
     onNavigateProfile: () -> Unit = {},
     onOpenApplianceManuals: () -> Unit = {},
-    onOpenMyListings: () -> Unit = {}
+    onOpenMyListings: () -> Unit = {},
+    onPostProduct: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val currentUser = authManager?.currentUser?.collectAsState()?.value
@@ -91,7 +92,6 @@ fun ProfileScreen(
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showAddApplianceDialog by remember { mutableStateOf(false) }
     var showAccountDialog by remember { mutableStateOf(false) }
-    var showPostToSellComingSoonDialog by remember { mutableStateOf(false) }
     var selectedGuideForDetails by remember { mutableStateOf<ManualGuide?>(null) }
 
     var editNameInput by remember(defaultName) { mutableStateOf(defaultName) }
@@ -334,7 +334,7 @@ fun ProfileScreen(
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.clickable { showPostToSellComingSoonDialog = true }
+                        modifier = Modifier.clickable { onPostProduct() }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -482,24 +482,6 @@ fun ProfileScreen(
         )
     }
 
-    // Posting a new listing (#145) isn't built yet.
-    if (showPostToSellComingSoonDialog) {
-        AlertDialog(
-            onDismissRequest = { showPostToSellComingSoonDialog = false },
-            title = { Text("Post an appliance to sell") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Coming Soon!", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text(
-                        "The post-to-sell form is still being built. You'll be able to add photos, " +
-                            "details and a price for your appliance here.",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            },
-            confirmButton = { Button(onClick = { showPostToSellComingSoonDialog = false }) { Text("Got it") } }
-        )
-    }
 }
 
 /** Shared by Profile (bookmarks) and ApplianceManualsScreen. [onRemove] null = no Remove button. */
