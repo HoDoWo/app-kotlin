@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -34,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.hodowo.ui.adaptive.LocalAppLayout
 import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLowest
@@ -43,6 +45,9 @@ import java.util.Locale
 
 /**
  * AI Diagnostic Response Box matching the HTML mock with enlarged typography.
+ *
+ * In landscape / wide layouts the diagram image is shown beside the step list
+ * instead of below it, making better use of horizontal space.
  */
 @Composable
 fun ManualGuideCard(
@@ -54,6 +59,8 @@ fun ManualGuideCard(
     onToggleBookmark: () -> Unit,
     onImageClick: (String) -> Unit
 ) {
+    val isWide = LocalAppLayout.current.isWide
+
     Surface(
         shape = RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
         color = SurfaceContainerLowest,
@@ -117,73 +124,57 @@ fun ManualGuideCard(
                 fontSize = 16.sp
             )
 
-            // Step-by-Step Instructions
-            if (guide.steps.isNotEmpty()) {
-                Text(
-                    text = "Follow these repair steps:",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontSize = 17.sp
-                )
-
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    guide.steps.forEach { step ->
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.Top
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = Primary,
-                                modifier = Modifier.size(28.dp).padding(top = 1.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = "${step.number}",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                            }
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = buildString {
-                                        append(step.title)
-                                        if (step.description.isNotBlank()) {
-                                            append(": ")
-                                            append(step.description)
-                                        }
-                                    },
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    lineHeight = 23.sp,
-                                    fontSize = 15.sp
-                                )
-                            }
-                        }
+            // Step-by-Step Instructions + optional side image in wide layout
+            if (isWide && guide.imageUrl != null) {
+                // Landscape: steps on the left, image on the right
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Steps column (takes remaining space)
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        StepsSection(guide)
                     }
-                }
-            }
 
-            // Visual Manual Diagram Image
-            guide.imageUrl?.let { url ->
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageData(url))
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Step-by-step visual diagram",
-                    contentScale = ContentScale.FillWidth,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(12.dp))
-                        .clickable { onImageClick(url) }
-                )
+                    // Diagram image (fixed width beside steps)
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(imageData(guide.imageUrl))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Step-by-step visual diagram",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .width(200.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(12.dp))
+                            .clickable { onImageClick(guide.imageUrl) }
+                    )
+                }
+            } else {
+                // Portrait: steps, then image below
+                if (guide.steps.isNotEmpty()) {
+                    StepsSection(guide)
+                }
+
+                guide.imageUrl?.let { url ->
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(imageData(url))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Step-by-step visual diagram",
+                        contentScale = ContentScale.FillWidth,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(12.dp))
+                            .clickable { onImageClick(url) }
+                    )
+                }
             }
 
             HorizontalDivider(color = SurfaceContainerHigh.copy(alpha = 0.6f))
@@ -215,6 +206,61 @@ fun ManualGuideCard(
                         isSelected = feedback == Feedback.DISLIKE,
                         selectedColor = MaterialTheme.colorScheme.error,
                         onClick = onDislike
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** Numbered step list, shared between portrait and landscape layouts. */
+@Composable
+private fun StepsSection(guide: ManualGuide) {
+    if (guide.steps.isEmpty()) return
+
+    Text(
+        text = "Follow these repair steps:",
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurface,
+        fontSize = 17.sp
+    )
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        guide.steps.forEach { step ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = Primary,
+                    modifier = Modifier.size(28.dp).padding(top = 1.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "${step.number}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = buildString {
+                            append(step.title)
+                            if (step.description.isNotBlank()) {
+                                append(": ")
+                                append(step.description)
+                            }
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        lineHeight = 23.sp,
+                        fontSize = 15.sp
                     )
                 }
             }
