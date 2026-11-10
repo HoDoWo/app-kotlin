@@ -1,4 +1,4 @@
-﻿package com.hodowo.ui
+package com.hodowo.ui
 
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -102,6 +102,7 @@ fun ProfileScreen(
     var selectedGuideForDetails by remember { mutableStateOf<ManualGuide?>(null) }
 
     var editNameInput by remember(defaultName) { mutableStateOf(defaultName) }
+    var editLocationInput by remember(profile?.location) { mutableStateOf(profile?.location.orEmpty()) }
     var newApplianceName by remember { mutableStateOf("") }
     var newApplianceBrand by remember { mutableStateOf("") }
     var newApplianceRoom by remember { mutableStateOf("") }
@@ -125,7 +126,7 @@ fun ProfileScreen(
                     id = "active_session",
                     title = listOfNotNull(app.brand, app.name).joinToString(" "),
                     manualCount = "Active session",
-                    subtitle = "Identified via photo • ${(app.confidence * 100).toInt()}% match",
+                    subtitle = "Identified via photo � ${(app.confidence * 100).toInt()}% match",
                     icon = Icons.Default.LocalLaundryService,
                     isPrimary = true,
                     isUserRegistered = false,
@@ -146,7 +147,7 @@ fun ProfileScreen(
                     id = app.id,
                     title = app.name,
                     manualCount = "${app.manualCount} manual${if (app.manualCount != 1) "s" else ""}",
-                    subtitle = app.subtitle ?: listOfNotNull(app.brand, "Registered in profile").joinToString(" • "),
+                    subtitle = app.subtitle ?: listOfNotNull(app.brand, "Registered in profile").joinToString(" � "),
                     icon = icon,
                     isPrimary = false,
                     isUserRegistered = true,
@@ -174,6 +175,7 @@ fun ProfileScreen(
                         photoUrl = photoUrl,
                         onClick = {
                             editNameInput = defaultName
+                            editLocationInput = profile?.location.orEmpty()
                             showEditProfileDialog = true
                         }
                     )
@@ -225,9 +227,38 @@ fun ProfileScreen(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(defaultName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 Text(displayEmail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Spacer(Modifier.height(4.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.clip(RoundedCornerShape(4.dp)).clickable {
+                                        editNameInput = defaultName
+                                        editLocationInput = profile?.location.orEmpty()
+                                        showEditProfileDialog = true
+                                    }
+                                ) {
+                                    Icon(
+                                        Icons.Default.Place,
+                                        contentDescription = "Location",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Text(
+                                        text = if (profile?.location.isNullOrBlank()) "Set location (e.g. Lleida, 25005)" else profile!!.location!!,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (profile?.location.isNullOrBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = if (profile?.location.isNullOrBlank()) FontWeight.Medium else FontWeight.Normal,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                             IconButton(
-                                onClick = { editNameInput = defaultName; showEditProfileDialog = true },
+                                onClick = {
+                                    editNameInput = defaultName
+                                    editLocationInput = profile?.location.orEmpty()
+                                    showEditProfileDialog = true
+                                },
                                 modifier = Modifier.size(32.dp)
                             ) {
                                 Icon(Icons.Default.Edit, "Edit Profile", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
@@ -496,6 +527,17 @@ fun ProfileScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                    OutlinedTextField(
+                        value = editLocationInput,
+                        onValueChange = { editLocationInput = it },
+                        label = { Text("Location (City or Postal Code)") },
+                        placeholder = { Text("e.g. Lleida, 25005 or Barcelona") },
+                        leadingIcon = {
+                            Icon(Icons.Default.Place, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             },
             confirmButton = {
@@ -503,8 +545,12 @@ fun ProfileScreen(
                     val name = editNameInput.trim()
                     if (name.isNotBlank() && name != defaultName) {
                         viewModel?.updateUserDisplayName(name)
-                        Toast.makeText(context, "Profile updated!", Toast.LENGTH_SHORT).show()
                     }
+                    val loc = editLocationInput.trim()
+                    if (loc != (profile?.location ?: "")) {
+                        viewModel?.updateUserLocation(loc)
+                    }
+                    Toast.makeText(context, "Profile updated!", Toast.LENGTH_SHORT).show()
                     showEditProfileDialog = false
                 }) { Text("Save") }
             },
@@ -872,7 +918,7 @@ private fun ProfileListingCard(
                 }
 
                 Text(
-                    text = "${listing.condition} • ${listing.postedAgo}",
+                    text = "${listing.condition} � ${listing.postedAgo}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
