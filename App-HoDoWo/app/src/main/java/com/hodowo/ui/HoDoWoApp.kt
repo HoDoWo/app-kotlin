@@ -1,4 +1,4 @@
-package com.hodowo.ui
+﻿package com.hodowo.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -56,6 +56,8 @@ import com.hodowo.ui.adaptive.appLayoutInfoFor
 import com.hodowo.ui.components.AppNavTab
 import com.hodowo.ui.components.AppNavigationRail
 import com.hodowo.ui.components.BottomNavBar
+import com.hodowo.ui.components.NotificationIconButton
+import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.ui.components.NewChatButton
 import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SecondaryContainer
@@ -167,6 +169,25 @@ fun HoDoWoApp(
                                 showCart = false
                                 selectedMarketProduct = null
                                 currentTab = it
+                            },
+                            bottomActions = {
+                                NotificationIconButton(onClick = {
+                                    Toast.makeText(context, "No notifications yet", Toast.LENGTH_SHORT).show()
+                                })
+                                ProfileAvatar(
+                                    name = "",
+                                    size = 34,
+                                    onClick = {
+                                        showApplianceManuals = false
+                                        showMarketplaceSearch = false
+                                        showPostProduct = false
+                                        showMyListings = false
+                                        showCart = false
+                                        selectedMarketProduct = null
+                                        currentTab = AppNavTab.PROFILE
+                                    },
+                                    photoUrl = chatState.userProfile?.photoUrl
+                                )
                             }
                         )
                     }

@@ -1,4 +1,4 @@
-package com.hodowo.ui
+﻿package com.hodowo.ui
 
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -69,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.hodowo.ui.adaptive.AdaptiveContent
+import com.hodowo.ui.adaptive.LocalAppLayout
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.components.ProfileAvatar
@@ -130,7 +131,8 @@ fun MarketplaceHomeScreen(
             .background(MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Same top bar as Home: real logo, "MARKETPLACE" and the signed-in user's photo.
+            // Top bar: search + cart always visible; profile avatar moves to the rail in landscape.
+            val useRail = LocalAppLayout.current.useNavigationRail
             AppTopBar(
                 subtitle = "MARKETPLACE",
                 actions = {
@@ -163,7 +165,10 @@ fun MarketplaceHomeScreen(
                             )
                         }
                     }
-                    ProfileAvatar(name = "", size = 34, onClick = onOpenProfile, photoUrl = profilePhotoUrl)
+                    // Profile avatar is in the rail footer in landscape — skip here to avoid duplication
+                    if (!useRail) {
+                        ProfileAvatar(name = "", size = 34, onClick = onOpenProfile, photoUrl = profilePhotoUrl)
+                    }
                 }
             )
 

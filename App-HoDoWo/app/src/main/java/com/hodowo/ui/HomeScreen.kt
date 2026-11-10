@@ -1,4 +1,4 @@
-package com.hodowo.ui
+﻿package com.hodowo.ui
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -137,15 +137,20 @@ fun HomeScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
     ) {
+        // In landscape/tablet the rail already shows the notification button and
+        // profile avatar at its bottom, so we suppress them here to avoid duplication.
+        val useRail = LocalAppLayout.current.useNavigationRail
         AppTopBar(
             subtitle = "HOME",
             actions = {
-                NotificationIconButton(
-                    onClick = {
-                        Toast.makeText(context, "No notifications yet", Toast.LENGTH_SHORT).show()
-                    }
-                )
-                ProfileAvatar(name = "", size = 34, onClick = onOpenProfile, photoUrl = profilePhotoUrl)
+                if (!useRail) {
+                    NotificationIconButton(
+                        onClick = {
+                            Toast.makeText(context, "No notifications yet", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                    ProfileAvatar(name = "", size = 34, onClick = onOpenProfile, photoUrl = profilePhotoUrl)
+                }
             }
         )
 
