@@ -45,7 +45,10 @@ data class MarketplaceProduct(
     val warrantyInfo: String? = null,
     val isPart: Boolean = true,
     val isRefurbished: Boolean = false,
-    val handoverMethods: List<String> = emptyList()
+    val handoverMethods: List<String> = emptyList(),
+    val sellerId: String? = null,
+    val partnerTier: Int? = null,
+    val location: String? = null
 )
 
 /** Backend for the marketplace Product Detail screen (issue #140) and Marketplace items. */
@@ -405,6 +408,12 @@ class RemoteMarketplaceService(
         val imageUrl = item.optJSONArray("image_urls")?.optString(0)?.takeIf { it.isNotBlank() }
             ?: item.optString("image_url").takeIf { it.isNotBlank() }
 
+        val locationVal = item.optString("location").takeIf { it.isNotBlank() }
+            ?: item.optString("pickup_zip").takeIf { it.isNotBlank() }
+        val sellerIdVal = item.optString("seller_id").takeIf { it.isNotBlank() }
+            ?: item.optString("owner_uid").takeIf { it.isNotBlank() }
+        val partnerTierVal = if (item.has("partner_tier") && !item.isNull("partner_tier")) item.optInt("partner_tier") else null
+
         return MarketplaceProduct(
             id = item.optString("id"),
             title = item.optString("title").ifBlank { item.optString("name", "Marketplace item") },
@@ -427,7 +436,10 @@ class RemoteMarketplaceService(
             distanceKm = if (item.has("distance_km") && !item.isNull("distance_km")) item.optDouble("distance_km") else null,
             warrantyInfo = item.optString("warranty_info").takeIf { it.isNotBlank() },
             isPart = isPartVal,
-            isRefurbished = isRefurbishedVal
+            isRefurbished = isRefurbishedVal,
+            sellerId = sellerIdVal,
+            partnerTier = partnerTierVal,
+            location = locationVal
         )
     }
 
