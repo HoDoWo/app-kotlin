@@ -30,6 +30,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -114,6 +115,17 @@ fun HoDoWoApp(
         } else {
             Toast.makeText(context, "Camera permission denied", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    // The marketplace list is loaded once when the app starts: when the user
+    // comes back from the sell form (after publishing a second-hand listing) it
+    // is stale, so it is reloaded to show the new community item right away.
+    var wasPostProductOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(showPostProduct) {
+        if (wasPostProductOpen && !showPostProduct) {
+            marketplaceViewModel.refresh()
+        }
+        wasPostProductOpen = showPostProduct
     }
 
     /** "New chat" button of every section: starts an empty chat and shows it. */

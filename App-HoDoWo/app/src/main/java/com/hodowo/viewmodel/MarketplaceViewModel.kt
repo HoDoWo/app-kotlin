@@ -123,6 +123,11 @@ class MarketplaceViewModel(
         _cartMessage.value = null
     }
 
+    /** Reloads the marketplace results (after posting a listing, filters changed…). */
+    fun refresh() {
+        performSearch()
+    }
+
     /** Loads the cart, so the badge is right when the marketplace opens. */
     fun refreshCart() {
         viewModelScope.launch {

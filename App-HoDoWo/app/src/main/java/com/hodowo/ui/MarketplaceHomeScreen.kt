@@ -1,4 +1,4 @@
-package com.hodowo.ui
+﻿package com.hodowo.ui
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -39,23 +39,30 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -120,19 +127,27 @@ fun MarketplaceHomeScreen(
         }
     }
 
-    var selectedTypeChip by remember { mutableStateOf("All") }
-    var selectedStateChip by remember { mutableStateOf("All") }
+    var selectedTypeChip by rememberSaveable { mutableStateOf("All") }
+    var selectedStateChip by rememberSaveable { mutableStateOf("All") }
+    var showFilterSheet by rememberSaveable { mutableStateOf(false) }
+
+    // Filter button badge: how many filters are active
+    val activeFilterCount = remember(selectedTypeChip, selectedStateChip) {
+        (if (selectedTypeChip != "All") 1 else 0) + (if (selectedStateChip != "All") 1 else 0)
+    }
 
     // Filter out current user's own listings from community marketplace
     val visibleProducts = remember(products, currentUserId) {
         products.filter { currentUserId == null || it.sellerId != currentUserId }
     }
 
-    // Partition products into Partner Deals (new from official vendors) and Community Deals
+    // Partition using backend 	ype field as canonical classifier:
+    //   "new"  -> partner_products (Official Partner Deals)
+    //   "part" -> parts collection  (also Official Partner Deals)
+    //   "used" -> listings collection (Community & Pre-Owned Deals)
     val partnerDealsAll = remember(visibleProducts) {
         visibleProducts
-            .filter { it.partnerName != null || it.type == "new" || it.condition in listOf("new", "unopened", "brand-new") }
-            // Ordered by partner ranking (sponsored first, then partner_tier descending, then rating)
+            .filter { it.type == "new" || it.type == "part" }
             .sortedWith(
                 compareByDescending<MarketplaceProduct> { it.sponsored }
                     .thenByDescending { it.partnerTier ?: 0 }
@@ -141,9 +156,7 @@ fun MarketplaceHomeScreen(
     }
 
     val communityDealsAll = remember(visibleProducts) {
-        visibleProducts.filter {
-            it.partnerName == null && it.type != "new" && it.condition !in listOf("new", "unopened", "brand-new")
-        }
+        visibleProducts.filter { it.type == "used" }
     }
 
     // Filter by Type Chip
@@ -273,94 +286,67 @@ fun MarketplaceHomeScreen(
                                 }
                             }
 
-                            // Category & State Filters
-                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                // Row 1: Type
-                                Row(
+                            // Filter button – opens bottom sheet
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        .clip(CircleShape)
+                                        .clickable { showFilterSheet = true },
+                                    color = if (activeFilterCount > 0) Primary else SurfaceContainerLowest,
+                                    shape = CircleShape,
+                                    shadowElevation = 1.dp
                                 ) {
-                                    Text(
-                                        text = "TYPE:",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Outline,
-                                        letterSpacing = 0.5.sp,
-                                        modifier = Modifier.padding(end = 4.dp)
-                                    )
-                                    listOf("All", "Full Appliances", "Replacement Parts").forEach { chip ->
-                                        val isSelected = selectedTypeChip == chip
-                                        Surface(
-                                            modifier = Modifier
-                                                .clip(CircleShape)
-                                                .clickable {
-                                                    selectedTypeChip = chip
-                                                    val mappedType = when (chip) {
-                                                        "Full Appliances" -> "appliance"
-                                                        "Replacement Parts" -> "part"
-                                                        else -> "all"
-                                                    }
-                                                    viewModel.setClassification(mappedType)
-                                                },
-                                            color = if (isSelected) Primary else SurfaceContainerLowest,
-                                            shape = CircleShape,
-                                            shadowElevation = 1.dp
-                                        ) {
-                                            Text(
-                                                text = chip,
-                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = if (isSelected) OnPrimary else OnSurfaceVariant
-                                            )
-                                        }
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Tune,
+                                            contentDescription = "Filters",
+                                            tint = if (activeFilterCount > 0) OnPrimary else OnSurfaceVariant,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = if (activeFilterCount > 0) "Filters (${activeFilterCount})" else "Filter",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (activeFilterCount > 0) OnPrimary else OnSurfaceVariant
+                                        )
                                     }
                                 }
-
-                                // Row 2: State
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Text(
-                                        text = "STATE:",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Outline,
-                                        letterSpacing = 0.5.sp,
-                                        modifier = Modifier.padding(end = 4.dp)
-                                    )
-                                    listOf(
-                                        "All" to "all",
-                                        "Brand New (Partners)" to "new",
-                                        "Second-Hand (Community)" to "used"
-                                    ).forEach { (label, value) ->
-                                        val isSelected = selectedStateChip == label
-                                        Surface(
-                                            modifier = Modifier
-                                                .clip(CircleShape)
-                                                .clickable {
-                                                    selectedStateChip = label
-                                                    viewModel.setCondition(value)
-                                                },
-                                            color = if (isSelected) Primary else SurfaceContainerLowest,
-                                            shape = CircleShape,
-                                            shadowElevation = 1.dp
-                                        ) {
-                                            Text(
-                                                text = label,
-                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = if (isSelected) OnPrimary else OnSurfaceVariant
-                                            )
-                                        }
+                                if (selectedTypeChip != "All") {
+                                    Surface(
+                                        modifier = Modifier.clip(CircleShape),
+                                        color = PrimaryFixed,
+                                        shape = CircleShape
+                                    ) {
+                                        Text(
+                                            text = selectedTypeChip,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Primary
+                                        )
+                                    }
+                                }
+                                if (selectedStateChip != "All") {
+                                    Surface(
+                                        modifier = Modifier.clip(CircleShape),
+                                        color = PrimaryFixed,
+                                        shape = CircleShape
+                                    ) {
+                                        Text(
+                                            text = selectedStateChip,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Primary
+                                        )
                                     }
                                 }
                             }
@@ -529,12 +515,153 @@ fun MarketplaceHomeScreen(
             }
         }
     }
+
+    // The filters live in a bottom sheet: they are hidden until the user asks
+    // for them with the "Filter" button, so the deals sections stay clean.
+    if (showFilterSheet) {
+        FilterSheet(
+            selectedTypeChip = selectedTypeChip,
+            selectedStateChip = selectedStateChip,
+            onSelectType = { value ->
+                selectedTypeChip = when (value) {
+                    "appliance" -> "Full Appliances"
+                    "part" -> "Replacement Parts"
+                    else -> "All"
+                }
+                viewModel.setClassification(value)
+            },
+            onSelectState = { value ->
+                selectedStateChip = when (value) {
+                    "new" -> "Brand New (Partners)"
+                    "used" -> "Second-Hand (Community)"
+                    else -> "All"
+                }
+                viewModel.setCondition(value)
+            },
+            onClear = {
+                selectedTypeChip = "All"
+                selectedStateChip = "All"
+                viewModel.setClassification("all")
+                viewModel.setCondition("all")
+            },
+            onDismiss = { showFilterSheet = false }
+        )
+    }
 }
 
 /**
- * Featured Partner Sponsored Banner ("Ad")
- * Matches the HTML design with real partner data, verified badge, rating, ambient gradient, and Add to Cart button.
+ * Filter submenu of the marketplace home: the type and the condition (state)
+ * of the items to show. Every option is a plain "submenu" entry; applying one
+ * refreshes the deals lists.
  */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FilterSheet(
+    selectedTypeChip: String,
+    selectedStateChip: String,
+    onSelectType: (String) -> Unit,
+    onSelectState: (String) -> Unit,
+    onClear: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                text = "Filters",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = OnSurface
+            )
+            Text(
+                text = "Choose what the community sections show.",
+                style = MaterialTheme.typography.bodySmall,
+                color = OnSurfaceVariant
+            )
+
+            Text(
+                text = "Type",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = OnSurface
+            )
+            FilterOptions(
+                options = listOf(
+                    "All" to "all",
+                    "Full Appliances" to "appliance",
+                    "Replacement Parts" to "part"
+                ),
+                selectedValue = if (selectedTypeChip == "All") "all" else if (selectedTypeChip == "Full Appliances") "appliance" else "part",
+                onSelect = onSelectType
+            )
+
+            Text(
+                text = "Condition",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = OnSurface
+            )
+            FilterOptions(
+                options = listOf(
+                    "All" to "all",
+                    "Brand New (Partners)" to "new",
+                    "Second-Hand (Community)" to "used"
+                ),
+                selectedValue = when (selectedStateChip) {
+                    "Brand New (Partners)" -> "new"
+                    "Second-Hand (Community)" -> "used"
+                    else -> "all"
+                },
+                onSelect = onSelectState
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onClear, modifier = Modifier.weight(1f)) { Text("Clear") }
+                Button(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Done") }
+            }
+        }
+    }
+}
+
+/** One row of filter choices inside the filter submenu. */
+@Composable
+private fun FilterOptions(
+    options: List<Pair<String, String>>,
+    selectedValue: String,
+    onSelect: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        options.forEach { (label, value) ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onSelect(value) },
+                shape = RoundedCornerShape(12.dp),
+                color = if (selectedValue == value) Primary else SurfaceContainerLowest,
+                border = BorderStroke(1.dp, if (selectedValue == value) Primary else OutlineVariant.copy(alpha = 0.4f))
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = if (selectedValue == value) FontWeight.Bold else FontWeight.Medium,
+                    color = if (selectedValue == value) OnPrimary else OnSurface,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                )
+            }
+        }
+    }
+}
 @Composable
 private fun FeaturedPartnerBanner(
     product: MarketplaceProduct,
