@@ -1,4 +1,4 @@
-package com.hodowo.ui
+﻿package com.hodowo.ui
 
 import android.net.Uri
 import android.widget.Toast
@@ -86,6 +86,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
+import com.hodowo.ui.adaptive.AdaptiveContent
+import com.hodowo.ui.adaptive.LocalAppLayout
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.theme.Error
 import com.hodowo.ui.theme.InverseOnSurface
@@ -320,11 +322,12 @@ fun PostProductScreen(
                 }
             )
 
-            LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            AdaptiveContent(modifier = Modifier.weight(1f), maxWidth = 900.dp) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 item { AuxiliaryBar() }
 
                 item {
@@ -415,6 +418,7 @@ fun PostProductScreen(
                         onShippingInputChange = { shippingInput = sanitizeMoney(it) },
                         handoverError = handoverError
                     )
+                    }
                 }
             }
 
@@ -504,12 +508,14 @@ private fun PhotoGrid(
     onAdd: () -> Unit,
     onRemove: (Uri) -> Unit
 ) {
+    // Use more columns in landscape / wide layouts so the grid fills horizontal space
+    val columns = if (LocalAppLayout.current.isWide) 5 else 3
     val slots = buildList<Uri?> {
         if (images.size < MAX_LISTING_PHOTOS) add(null)
         addAll(images)
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        slots.chunked(4).forEach { row ->
+        slots.chunked(columns).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { uri ->
                     if (uri == null) {
@@ -522,7 +528,7 @@ private fun PhotoGrid(
                         )
                     }
                 }
-                repeat(4 - row.size) {
+                repeat(columns - row.size) {
                     Spacer(modifier = Modifier.weight(1f))
                 }
             }
