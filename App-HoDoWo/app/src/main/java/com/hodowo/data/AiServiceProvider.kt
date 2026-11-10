@@ -15,6 +15,7 @@ import com.hodowo.viewmodel.MarketplaceViewModel
 import com.hodowo.viewmodel.PostProductViewModel
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
+import com.hodowo.viewmodel.MessagesViewModel
 import com.hodowo.viewmodel.ProductForumViewModel
 import com.hodowo.viewmodel.greetingName
 import java.io.File
@@ -57,6 +58,21 @@ object AiServiceProvider {
         }
     }
 
+    /** Messages and offers between buyers and sellers, shared by the inbox and the product pages. */
+    val messagesService: MessagesService by lazy {
+        val backendUrl = BuildConfig.BACKEND_URL
+        if (backendUrl.isBlank()) UnavailableMessagesService
+        else RemoteMessagesService(backendUrl, FirebaseTokenProvider()::token)
+    }
+
+    /** Factory that builds [MessagesViewModel]: inbox, conversations and offers. */
+    fun messagesViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                MessagesViewModel(service = messagesService, cartStore = cartStore)
+            }
+        }
+
     fun create(context: Context): HoDoWoAiService {
         val backendUrl = BuildConfig.BACKEND_URL
 
@@ -93,9 +109,13 @@ object AiServiceProvider {
                     aiService = create(context),
                     firebaseRepository = firebaseRepository,
                     authManager = authManager,
-                    chatHistory = FileChatHistoryStore(
-                        directory = File(context.filesDir, "chat_history"),
-                        openImage = { uri -> context.applicationContext.contentResolver.openInputStream(uri) }
+                    chatHistory = SyncedChatHistoryStore(
+                        local = FileChatHistoryStore(
+                            directory = File(context.filesDir, "chat_history"),
+                            openImage = { uri -> context.applicationContext.contentResolver.openInputStream(uri) }
+                        ),
+                        remote = FirestoreChatHistory(),
+                        uploader = FirebaseChatImageUploader(compress = { uri -> compressor.compress(uri) })
                     ),
                     profilePhotoStore = ProfilePhotoStore(context.applicationContext),
                     encodeProfilePhoto = { uri ->
