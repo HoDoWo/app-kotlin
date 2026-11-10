@@ -1,4 +1,4 @@
-package com.hodowo.data
+﻿package com.hodowo.data
 
 import android.net.Uri
 import android.util.Log
@@ -287,7 +287,8 @@ class FirebaseRepository(
                 displayName = doc.getString("displayName") ?: "",
                 email = doc.getString("email") ?: "",
                 photoUrl = doc.getString("photoUrl"),
-                memberSince = doc.getLong("memberSince") ?: System.currentTimeMillis()
+                memberSince = doc.getLong("memberSince") ?: System.currentTimeMillis(),
+                location = doc.getString("location")
             )
         } catch (e: Exception) {
             Log.w(TAG, "Failed to get user profile: ${e.message}")
@@ -390,11 +391,12 @@ class FirebaseRepository(
     }
 
     /** Partial update of users/{uid}: only the fields you pass are written. */
-    suspend fun updateProfileFields(userId: String, displayName: String? = null, photoUrl: String? = null): Boolean {
+    suspend fun updateProfileFields(userId: String, displayName: String? = null, photoUrl: String? = null, location: String? = null): Boolean {
         return try {
             val data = hashMapOf<String, Any>("updatedAt" to System.currentTimeMillis())
             displayName?.let { data["displayName"] = it }
             photoUrl?.let { data["photoUrl"] = it }
+            location?.let { data["location"] = it }
             firestore.collection("users").document(userId).set(data, SetOptions.merge()).await()
             true
         } catch (e: Exception) {

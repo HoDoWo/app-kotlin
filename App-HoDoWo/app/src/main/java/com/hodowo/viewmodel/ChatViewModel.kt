@@ -1,4 +1,4 @@
-package com.hodowo.viewmodel
+﻿package com.hodowo.viewmodel
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
@@ -134,7 +134,8 @@ data class UserProfile(
     val displayName: String,
     val email: String,
     val photoUrl: String? = null,
-    val memberSince: Long = System.currentTimeMillis()
+    val memberSince: Long = System.currentTimeMillis(),
+    val location: String? = null
 )
 
 /**
@@ -782,6 +783,22 @@ class ChatViewModel(
         viewModelScope.launch {
             firebaseRepository?.deleteAppliance(userId, applianceId)
             refreshAppliances()
+        }
+    }
+
+        fun updateUserLocation(location: String) {
+        val cleanLocation = location.trim()
+        val uid = currentUid() ?: return
+        _uiState.update { state ->
+            state.copy(
+                userProfile = state.userProfile?.copy(location = cleanLocation)
+                    ?: UserProfile(uid, "", authManager?.currentUser?.value?.email.orEmpty(), location = cleanLocation)
+            )
+        }
+        viewModelScope.launch {
+            if (firebaseRepository?.updateProfileFields(uid, location = cleanLocation) != true) {
+                _userMessages.emit("Couldn't save your location. Check your connection.")
+            }
         }
     }
 
