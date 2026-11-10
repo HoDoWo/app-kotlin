@@ -90,7 +90,9 @@ fun ProductDetailScreen(
     /** Community questions about this product (app #150); null hides the section. */
     forumViewModel: ProductForumViewModel? = null,
     /** "Buy now" put the product in the cart: show the cart to pay. */
-    onOpenCart: () -> Unit = {}
+    onOpenCart: () -> Unit = {},
+    /** Second-hand listings: message the seller, or make an offer (true). Null hides the buttons. */
+    onContactSeller: ((makeOffer: Boolean) -> Unit)? = null
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -156,7 +158,7 @@ fun ProductDetailScreen(
                 }
                 state.product != null -> {
                     AdaptiveContent(maxWidth = 1000.dp) {
-                        ProductDetailContent(product = state.product!!) {
+                        ProductDetailContent(product = state.product!!, onContactSeller = onContactSeller) {
                             if (forumViewModel != null && forumState != null) {
                                 ProductForumSection(state = forumState, viewModel = forumViewModel)
                             }
@@ -183,7 +185,11 @@ fun ProductDetailScreen(
 }
 
 @Composable
-private fun ProductDetailContent(product: ProductDetail, forum: @Composable () -> Unit = {}) {
+private fun ProductDetailContent(
+    product: ProductDetail,
+    onContactSeller: ((makeOffer: Boolean) -> Unit)? = null,
+    forum: @Composable () -> Unit = {}
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -232,7 +238,7 @@ private fun ProductDetailContent(product: ProductDetail, forum: @Composable () -
 
         when (product) {
             is ProductDetail.New -> NewProductSections(product)
-            is ProductDetail.SecondHand -> SecondHandSection(product)
+            is ProductDetail.SecondHand -> SecondHandSection(product, onContactSeller)
             is ProductDetail.Part -> PartSection(product)
         }
 
@@ -471,7 +477,7 @@ private fun StarRow(rating: Int) {
 // ---------- Second-hand ----------
 
 @Composable
-private fun SecondHandSection(product: ProductDetail.SecondHand) {
+private fun SecondHandSection(product: ProductDetail.SecondHand, onContactSeller: ((makeOffer: Boolean) -> Unit)?) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = RoundedCornerShape(12.dp),
@@ -496,6 +502,17 @@ private fun SecondHandSection(product: ProductDetail.SecondHand) {
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+            }
+            if (onContactSeller != null) {
+                // Like Vinted: ask the seller, or propose a price they can accept.
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { onContactSeller(false) }, modifier = Modifier.weight(1f)) {
+                        Text("Message seller")
+                    }
+                    OutlinedButton(onClick = { onContactSeller(true) }, modifier = Modifier.weight(1f)) {
+                        Text("Make an offer")
+                    }
+                }
             }
         }
     }

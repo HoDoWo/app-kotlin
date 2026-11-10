@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -102,7 +103,11 @@ fun MarketplaceHomeScreen(
     /** Opens the Product Detail page (#140) with its community forum (#150). */
     onOpenProduct: (MarketplaceProduct) -> Unit = {},
     /** Photo of the signed-in user, as on the Home top bar. */
-    profilePhotoUrl: String? = null
+    profilePhotoUrl: String? = null,
+    /** Opens the messages with buyers and sellers; null hides the icon. */
+    onOpenMessages: (() -> Unit)? = null,
+    /** Unread messages, shown on the messages icon. */
+    unreadMessages: Int = 0
 ) {
     val context = LocalContext.current
     val products by viewModel.products.collectAsState()
@@ -142,6 +147,30 @@ fun MarketplaceHomeScreen(
                             contentDescription = "Search",
                             tint = OnSurfaceVariant
                         )
+                    }
+                    if (onOpenMessages != null) {
+                        BadgedBox(
+                            badge = {
+                                if (unreadMessages > 0) {
+                                    Badge(containerColor = Primary) {
+                                        Text(
+                                            text = "$unreadMessages",
+                                            color = OnPrimary,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            IconButton(onClick = onOpenMessages) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ChatBubbleOutline,
+                                    contentDescription = "Messages",
+                                    tint = OnSurfaceVariant
+                                )
+                            }
+                        }
                     }
                     BadgedBox(
                         badge = {
