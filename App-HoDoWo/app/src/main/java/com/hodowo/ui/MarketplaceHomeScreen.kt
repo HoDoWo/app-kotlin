@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Favorite
@@ -99,6 +100,8 @@ fun MarketplaceHomeScreen(
     onPostProduct: () -> Unit,
     onOpenProfile: () -> Unit = {},
     onCartClick: () -> Unit = {},
+    /** Opens the sponsored partners page (#141). */
+    onOpenSponsored: () -> Unit = {},
     /** Opens the Product Detail page (#140) with its community forum (#150). */
     onOpenProduct: (MarketplaceProduct) -> Unit = {},
     /** Photo of the signed-in user, as on the Home top bar. */
@@ -140,6 +143,13 @@ fun MarketplaceHomeScreen(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search",
+                            tint = OnSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = onOpenSponsored) {
+                        Icon(
+                            imageVector = Icons.Default.Campaign,
+                            contentDescription = "Sponsored partners",
                             tint = OnSurfaceVariant
                         )
                     }
@@ -323,7 +333,10 @@ fun MarketplaceHomeScreen(
                 // Featured Partner Sponsored Banner
                 item {
                     FeaturedPartnerBanner(
-                        onViewPartDetails = onOpenSearch
+                        onViewPartDetails = {
+                            // Opens a real part when the catalogue has one; otherwise the search.
+                            products.firstOrNull { it.type == "part" }?.let(onOpenProduct) ?: onOpenSearch()
+                        }
                     )
                 }
 

@@ -26,7 +26,9 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DocumentScanner
@@ -111,6 +113,8 @@ fun HomeScreen(
     onOpenArCore: () -> Unit,
     onOpenMarket: () -> Unit,
     onOpenProfile: () -> Unit,
+    /** Opens the sponsored partners page (#141). */
+    onOpenSponsored: () -> Unit = {},
     onAskAboutManual: (ManualGuide) -> Unit,
     onOpenManualChat: (ManualGuide) -> Unit = onAskAboutManual,
     /** Photo of the signed-in user for the top bar; null shows the default avatar. */
@@ -172,6 +176,7 @@ fun HomeScreen(
                         onOpenMarket = onOpenMarket
                     )
                 }
+                item { SponsoredPartnersCard(onClick = onOpenSponsored) }
                 item { HelpfulTipCard(state.tip) }
                 item {
                     SectionHeader(section = state.section, onSelect = viewModel::selectSection)
@@ -453,6 +458,40 @@ private fun QuickActionButton(
             subtitle?.let {
                 Text(text = it, style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
             }
+        }
+    }
+}
+
+/** Entry to the sponsored partners page (#141). */
+@Composable
+private fun SponsoredPartnersCard(onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = SurfaceContainerLowest,
+        border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.3f)),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Campaign, contentDescription = null, tint = Primary)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Sponsored partners",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Offers from our partners",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceVariant
+                )
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = OnSurfaceVariant)
         }
     }
 }
