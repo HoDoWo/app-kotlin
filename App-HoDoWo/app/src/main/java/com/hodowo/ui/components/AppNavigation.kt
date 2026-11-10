@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
@@ -126,12 +127,20 @@ fun BottomNavBar(
  *
  * It shows the same tabs and the same selected pill as [BottomNavBar], so the
  * app keeps one visual language in both orientations.
+ *
+ * In landscape mode the top bar no longer shows the brand logo or the
+ * notification / profile actions — those would be redundant and visually
+ * cluttered next to the rail. Instead this rail renders [bottomActions] below a
+ * thin divider at the foot of the column, so the user still has quick access to
+ * notifications and their profile photo.
  */
 @Composable
 fun AppNavigationRail(
     currentTab: AppNavTab,
     onTabSelected: (AppNavTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Composable slot rendered at the very bottom of the rail (e.g. notification icon, avatar). */
+    bottomActions: @Composable () -> Unit = {}
 ) {
     Surface(
         modifier = modifier.fillMaxHeight(),
@@ -142,6 +151,7 @@ fun AppNavigationRail(
         NavigationRail(
             containerColor = Color.Transparent,
             header = {
+                // Brand logo at the top — replaces the one that was in AppTopBar
                 Box(
                     modifier = Modifier.padding(top = 8.dp, bottom = 12.dp),
                     contentAlignment = Alignment.Center
@@ -185,6 +195,22 @@ fun AppNavigationRail(
             }
 
             Spacer(modifier = Modifier.weight(1f))
+
+            // Bottom action strip: notification icon + profile avatar, separated
+            // from the nav items by a subtle divider.
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 12.dp),
+                color = SurfaceContainerHigh.copy(alpha = 0.8f)
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                bottomActions()
+            }
         }
     }
 }
