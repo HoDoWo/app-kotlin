@@ -51,3 +51,7 @@ timestamp,issue,title,type,delta_hours
 2026-11-09T13:17:45+00:00,35,Second-hand listing CRUD and ownership,completed,-7.0
 2026-11-09T13:52:41+00:00,24,Partner catalogue import from CSV/JSON feeds,completed,-6.0
 2026-11-09T13:16:07+00:00,39,Official partner product API with partner-only writes,completed,-8.0
+2026-11-10T17:15:58+00:00,145,"Post-to-sell form (photos, details and validation)",completed,-10.0
+2026-11-10T17:16:04+00:00,138,Marketplace tab and entry points,completed,-4.0
+2026-11-10T17:16:06+00:00,40,"Unified product search: new, second-hand and spare parts",completed,-10.0
+2026-11-10T19:28:30+00:00,141,Ads / sponsored partners page,completed,-5.0

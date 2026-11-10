@@ -2,7 +2,7 @@
 <!-- generated:2026-11-10 -->
 <rect width="100%" height="100%" fill="white"/>
 <text x="60" y="26" font-size="17" font-weight="bold">Burndown - Sprint 2</text>
-<text x="60" y="46" fill="#555">Remaining now: 101 h  |  Initial scope: 190 h</text>
+<text x="60" y="46" fill="#555">Remaining now: 72 h  |  Initial scope: 190 h</text>
 <line x1="60" y1="400.0" x2="870" y2="400.0" stroke="#eee"/>
 <text x="52" y="404.0" text-anchor="end">0 h</text>
 <line x1="60" y1="334.0" x2="870" y2="334.0" stroke="#eee"/>
@@ -47,9 +47,9 @@
 <text x="870.0" y="418" text-anchor="middle">25/11</text>
 <line x1="60" y1="400" x2="870" y2="400" stroke="#888"/>
 <line x1="60" y1="70" x2="60" y2="400" stroke="#888"/>
-<line x1="443.1" y1="70" x2="443.1" y2="400" stroke="#bbb" stroke-dasharray="2 3"/>
+<line x1="461.6" y1="70" x2="461.6" y2="400" stroke="#bbb" stroke-dasharray="2 3"/>
 <polyline points="60.0,101.4 870.0,400.0" fill="none" stroke="#999" stroke-dasharray="6 4" stroke-width="2"/>
-<polyline points="60.0,101.4 228.2,101.4 228.2,109.3 230.4,109.3 230.4,115.6 255.0,115.6 255.0,107.7 256.1,107.7 256.1,118.7 259.4,118.7 259.4,123.4 259.4,123.4 259.4,132.9 279.6,132.9 279.6,139.1 282.5,139.1 282.5,145.4 283.1,145.4 283.1,140.7 283.1,140.7 283.1,131.3 310.4,131.3 310.4,142.3 310.4,142.3 310.4,153.3 339.5,153.3 339.5,158.0 339.5,158.0 339.5,165.9 339.5,165.9 339.5,184.7 342.0,184.7 342.0,198.9 423.1,198.9 423.1,211.4 423.2,211.4 423.2,222.4 423.9,222.4 423.9,231.9 423.9,231.9 423.9,241.3 443.1,241.3" fill="none" stroke="#2da44e" stroke-width="3"/>
+<polyline points="60.0,101.4 228.2,101.4 228.2,109.3 230.4,109.3 230.4,115.6 255.0,115.6 255.0,107.7 256.1,107.7 256.1,118.7 259.4,118.7 259.4,123.4 259.4,123.4 259.4,132.9 279.6,132.9 279.6,139.1 282.5,139.1 282.5,145.4 283.1,145.4 283.1,140.7 283.1,140.7 283.1,131.3 310.4,131.3 310.4,142.3 310.4,142.3 310.4,153.3 339.5,153.3 339.5,158.0 339.5,158.0 339.5,165.9 339.5,165.9 339.5,184.7 342.0,184.7 342.0,198.9 423.1,198.9 423.1,211.4 423.2,211.4 423.2,222.4 423.9,222.4 423.9,231.9 423.9,231.9 423.9,241.3 456.9,241.3 456.9,257.0 456.9,257.0 456.9,263.3 456.9,263.3 456.9,279.0 459.5,279.0 459.5,286.9 461.6,286.9" fill="none" stroke="#2da44e" stroke-width="3"/>
 <circle cx="228.2" cy="109.3" r="5" fill="#2da44e"><title>02/11 19:34 | #42 Cart API | completed -5 h</title></circle>
 <circle cx="230.4" cy="115.6" r="5" fill="#2da44e"><title>02/11 21:21 | #147 Search suggestions and recent searches | removed -4 h</title></circle>
 <circle cx="255.0" cy="107.7" r="5" fill="#d1242f"><title>03/11 17:47 | #42 Cart API | reopened +5 h</title></circle>
@@ -70,6 +70,10 @@
 <circle cx="423.2" cy="222.4" r="5" fill="#2da44e"><title>09/11 13:17 | #35 Second-hand listing CRUD and ownership | completed -7 h</title></circle>
 <circle cx="423.9" cy="231.9" r="5" fill="#2da44e"><title>09/11 13:52 | #24 Partner catalogue import from CSV/JSON feeds | completed -6 h</title></circle>
 <circle cx="423.9" cy="241.3" r="5" fill="#2da44e"><title>09/11 13:52 | #142 Cart page and cart state | completed -6 h</title></circle>
+<circle cx="456.9" cy="257.0" r="5" fill="#2da44e"><title>10/11 17:15 | #145 Post-to-sell form (photos, details and validation) | completed -10 h</title></circle>
+<circle cx="456.9" cy="263.3" r="5" fill="#2da44e"><title>10/11 17:16 | #138 Marketplace tab and entry points | completed -4 h</title></circle>
+<circle cx="456.9" cy="279.0" r="5" fill="#2da44e"><title>10/11 17:16 | #40 Unified product search: new, second-hand and spare parts | completed -10 h</title></circle>
+<circle cx="459.5" cy="286.9" r="5" fill="#2da44e"><title>10/11 19:28 | #141 Ads / sponsored partners page | completed -5 h</title></circle>
 <circle cx="60.0" cy="101.4" r="5" fill="#2da44e"/>
 <text x="570" y="26" fill="#999">--- Ideal</text>
 <text x="640" y="26" fill="#2da44e">— Actual</text>

@@ -1,4 +1,22 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzhCeYMc": {
+  "c": 0.0,
+  "done": false,
+  "issue": 27,
+  "title": "Second-hand listings API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Lk": {
+  "c": 3.0,
+  "done": false,
+  "issue": 32,
+  "title": "Security rules for marketplace and forum collections"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeYkc": {
+  "c": 0.0,
+  "done": false,
+  "issue": 29,
+  "title": "Search ranking: partner sponsorship and personalisation"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-7q-U": {
   "c": 0.0,
   "done": true,
@@ -47,29 +65,23 @@
   "issue": 143,
   "title": "Payment section (Stripe test checkout UI)"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4iY": {
-  "c": 10.0,
-  "done": false,
-  "issue": 145,
-  "title": "Post-to-sell form (photos, details and validation)"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW9jY": {
   "c": 6.0,
   "done": false,
   "issue": 122,
   "title": "Mockups: marketplace, ads and cart pages"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4b0": {
-  "c": 4.0,
+ "PVTI_lADOFCkyKM4Bl88jzhDW4Q0": {
+  "c": 7.0,
   "done": false,
-  "issue": 138,
-  "title": "Marketplace tab and entry points"
+  "issue": 37,
+  "title": "Spare parts search and filter API"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4UQ": {
-  "c": 10.0,
+ "PVTI_lADOFCkyKM4Bl88jzhDW4WQ": {
+  "c": 6.0,
   "done": false,
-  "issue": 40,
-  "title": "Unified product search: new, second-hand and spare parts"
+  "issue": 41,
+  "title": "Partner tiers, sponsored ranking and 'for me' ordering"
  },
  "PVTI_lADOFCkyKM4Bl88jzhCeXzk": {
   "c": 0.0,
@@ -82,6 +94,24 @@
   "done": true,
   "issue": 31,
   "title": "Marketplace Firestore schema and ER diagram"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4iY": {
+  "c": 0.0,
+  "done": true,
+  "issue": 145,
+  "title": "Post-to-sell form (photos, details and validation)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4b0": {
+  "c": 0.0,
+  "done": true,
+  "issue": 138,
+  "title": "Marketplace tab and entry points"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4UQ": {
+  "c": 0.0,
+  "done": true,
+  "issue": 40,
+  "title": "Unified product search: new, second-hand and spare parts"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-7rNk": {
   "c": 4.0,
@@ -107,24 +137,6 @@
   "issue": 30,
   "title": "Diagnosis to suggested spare part"
  },
- "PVTI_lADOFCkyKM4Bl88jzhCeYMc": {
-  "c": 0.0,
-  "done": false,
-  "issue": 27,
-  "title": "Second-hand listings API"
- },
- "PVTI_lADOFCkyKM4Bl88jzhCeYkc": {
-  "c": 0.0,
-  "done": false,
-  "issue": 29,
-  "title": "Search ranking: partner sponsorship and personalisation"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4Lk": {
-  "c": 3.0,
-  "done": false,
-  "issue": 32,
-  "title": "Security rules for marketplace and forum collections"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Nw": {
   "c": 2.0,
   "done": false,
@@ -137,23 +149,11 @@
   "issue": 36,
   "title": "Listing image upload and compression"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4Q0": {
-  "c": 7.0,
-  "done": false,
-  "issue": 37,
-  "title": "Spare parts search and filter API"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Rk": {
   "c": 5.0,
   "done": false,
   "issue": 38,
   "title": "Part detail and compatibility resolution API"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4WQ": {
-  "c": 6.0,
-  "done": false,
-  "issue": 41,
-  "title": "Partner tiers, sponsored ranking and 'for me' ordering"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Ys": {
   "c": 0.0,
@@ -198,8 +198,8 @@
   "title": "Product search page with new / second-hand / parts filters"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4eY": {
-  "c": 5.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 141,
   "title": "Ads / sponsored partners page"
  },
