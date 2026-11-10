@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -25,6 +26,9 @@ import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -112,6 +116,75 @@ fun BottomNavBar(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Vertical navigation rail used in landscape and on tablets, where the bottom
+ * bar would waste the little vertical space the display has.
+ *
+ * It shows the same tabs and the same selected pill as [BottomNavBar], so the
+ * app keeps one visual language in both orientations.
+ */
+@Composable
+fun AppNavigationRail(
+    currentTab: AppNavTab,
+    onTabSelected: (AppNavTab) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.fillMaxHeight(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, SurfaceContainerHigh.copy(alpha = 0.6f))
+    ) {
+        NavigationRail(
+            containerColor = Color.Transparent,
+            header = {
+                Box(
+                    modifier = Modifier.padding(top = 8.dp, bottom = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    HoDoWoLogo(size = 38.dp)
+                }
+            }
+        ) {
+            Spacer(modifier = Modifier.weight(1f))
+
+            AppNavTab.values().forEach { tab ->
+                val isSelected = currentTab == tab
+
+                NavigationRailItem(
+                    selected = isSelected,
+                    onClick = { onTabSelected(tab) },
+                    icon = {
+                        Icon(
+                            imageVector = tab.icon,
+                            contentDescription = tab.label,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = tab.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1
+                        )
+                    },
+                    alwaysShowLabel = true,
+                    colors = NavigationRailItemDefaults.colors(
+                        selectedIconColor = Primary,
+                        selectedTextColor = Primary,
+                        indicatorColor = SecondaryContainer,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
