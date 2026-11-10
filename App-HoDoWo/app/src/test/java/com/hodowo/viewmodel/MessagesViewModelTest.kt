@@ -247,4 +247,87 @@ class MessagesViewModelTest {
         vm.consumeMessage()
         assertNull(vm.uiState.value.message)
     }
+
+    @Test
+    fun nothingIsSentWithoutAnOpenConversationOrText() = runTest(dispatcher) {
+        val vm = MessagesViewModel(service)
+
+        vm.send("Hello")
+        assertFalse(vm.makeOffer("85"))
+        vm.acceptOffer()
+        vm.payOffer()
+        vm.refreshOpen()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { service.send(any(), any()) }
+        coVerify(exactly = 0) { service.answerOffer(any(), any()) }
+        coVerify(exactly = 0) { service.open(any()) }
+    }
+
+    @Test
+    fun aBlankMessageIsNotSent() = runTest(dispatcher) {
+        coEvery { service.open("fridge__b1") } returns conversation()
+        val vm = MessagesViewModel(service)
+        vm.openConversation("fridge__b1")
+        advanceUntilIdle()
+
+        vm.send("   ")
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { service.send(any(), any()) }
+    }
+
+    @Test
+    fun anErrorWhileOpeningOrRefreshingIsHandled() = runTest(dispatcher) {
+        coEvery { service.open("fridge__b1") } returnsMany listOf(conversation()) andThenThrows IOException("offline")
+        val vm = MessagesViewModel(service)
+        vm.openConversation("fridge__b1")
+        advanceUntilIdle()
+
+        vm.refreshOpen()
+        advanceUntilIdle()
+        // The conversation stays on screen; the next refresh tries again.
+        assertEquals("fridge__b1", vm.uiState.value.open?.id)
+
+        vm.openConversation("fridge__b1")
+        advanceUntilIdle()
+        assertEquals("offline", vm.uiState.value.message)
+        assertFalse(vm.uiState.value.isOpening)
+    }
+
+    @Test
+    fun anOfferThatCannotBePaidIsNotPutInTheCart() = runTest(dispatcher) {
+        coEvery { service.open("fridge__b1") } returns conversation(offer = accepted().copy(canPay = false))
+        val vm = MessagesViewModel(service, cartStore)
+        vm.openConversation("fridge__b1")
+        advanceUntilIdle()
+
+        vm.payOffer()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { cartService.addItem(any(), any(), any()) }
+        assertFalse(vm.uiState.value.openCart)
+    }
+
+    @Test
+    fun anOfferAlreadyInTheCartRefreshesItsPrice() = runTest(dispatcher) {
+        val line = com.hodowo.data.CartLine(
+            cartItemId = "c1", productType = "used", productId = "fridge", title = "Old fridge", imageUrl = null,
+            quantity = 1, unitPriceCents = 10000, priceCents = 10000, addedPriceCents = 10000,
+            priceChanged = false, available = true, unavailableReason = null
+        )
+        coEvery { cartService.getCart() } returnsMany listOf(Cart(items = listOf(line)), Cart(items = listOf(line)))
+        cartStore.refresh()
+        coEvery { service.open("fridge__b1") } returns conversation(offer = accepted())
+        val vm = MessagesViewModel(service, cartStore)
+        vm.openConversation("fridge__b1")
+        advanceUntilIdle()
+
+        vm.payOffer()
+        advanceUntilIdle()
+
+        coVerify(exactly = 0) { cartService.addItem(any(), any(), any()) }
+        coVerify(exactly = 2) { cartService.getCart() }
+        assertTrue(vm.uiState.value.openCart)
+    }
 }
