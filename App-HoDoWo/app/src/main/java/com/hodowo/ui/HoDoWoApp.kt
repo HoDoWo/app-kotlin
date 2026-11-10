@@ -48,6 +48,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hodowo.data.AiServiceProvider
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.cartProductType
+import com.hodowo.data.toMarketplaceProduct
 import com.hodowo.data.AuthManager
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
@@ -67,6 +68,7 @@ import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.CheckoutViewModel
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
+import com.hodowo.viewmodel.PartsCatalogueViewModel
 import com.hodowo.viewmodel.PostProductViewModel
 
 /**
@@ -93,6 +95,9 @@ fun HoDoWoApp(
     )
     val cartViewModel: CartViewModel = viewModel(factory = AiServiceProvider.cartViewModelFactory())
     val checkoutViewModel: CheckoutViewModel = viewModel(factory = AiServiceProvider.checkoutViewModelFactory())
+    val partsCatalogueViewModel: PartsCatalogueViewModel = viewModel(
+        factory = AiServiceProvider.partsCatalogueViewModelFactory(context)
+    )
     val myListingsViewModel: MyListingsViewModel = viewModel(factory = AiServiceProvider.myListingsViewModelFactory())
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
@@ -102,6 +107,7 @@ fun HoDoWoApp(
     var showPostProduct by remember { mutableStateOf(false) }
     var showMarketplaceSearch by remember { mutableStateOf(false) }
     var showMyListings by remember { mutableStateOf(false) }
+    var showParts by remember { mutableStateOf(false) }
     var showCart by remember { mutableStateOf(false) }
     // Product opened from a marketplace card: its Product Detail page (#140) with the forum (#150).
     var selectedMarketProduct by remember { mutableStateOf<MarketplaceProduct?>(null) }
@@ -168,6 +174,7 @@ fun HoDoWoApp(
                                 showMarketplaceSearch = false
                                 showPostProduct = false
                                 showMyListings = false
+                                showParts = false
                                 showCart = false
                                 selectedMarketProduct = null
                                 currentTab = it
@@ -184,6 +191,7 @@ fun HoDoWoApp(
                                         showMarketplaceSearch = false
                                         showPostProduct = false
                                         showMyListings = false
+                                        showParts = false
                                         showCart = false
                                         selectedMarketProduct = null
                                         currentTab = AppNavTab.PROFILE
@@ -208,6 +216,10 @@ fun HoDoWoApp(
                             onOpenArCore = { currentTab = AppNavTab.AR_CORE },
                             onOpenMarket = { currentTab = AppNavTab.MARKET },
                             onOpenProfile = { currentTab = AppNavTab.PROFILE },
+                            onOpenParts = {
+                                showParts = true
+                                currentTab = AppNavTab.MARKET
+                            },
                             onAskAboutManual = { guide ->
                                 currentTab = AppNavTab.AI_CHAT
                                 chatViewModel.sendTextMessage(
@@ -221,7 +233,12 @@ fun HoDoWoApp(
                         ChatScreen(
                             viewModel = chatViewModel,
                             onOpenCamera = ::openCamera,
-                            onOpenAuth = { showAuthDialog = true }
+                            onOpenAuth = { showAuthDialog = true },
+                            onBuyPart = { part ->
+                                showParts = false
+                                selectedMarketProduct = part.toMarketplaceProduct()
+                                currentTab = AppNavTab.MARKET
+                            }
                         )
                     }
                     AppNavTab.PROFILE -> {
@@ -302,6 +319,13 @@ fun HoDoWoApp(
                                 onBack = { showPostProduct = false },
                                 onOpenCart = { showCart = true }
                             )
+                        } else if (showParts) {
+                            BackHandler { showParts = false }
+                            PartsCatalogueScreen(
+                                viewModel = partsCatalogueViewModel,
+                                onBack = { showParts = false },
+                                onOpenPart = { selectedMarketProduct = it }
+                            )
                         } else if (showMarketplaceSearch) {
                             ProductSearchAndFiltersScreen(
                                 viewModel = marketplaceViewModel,
@@ -354,6 +378,7 @@ fun HoDoWoApp(
                         showMarketplaceSearch = false
                         showPostProduct = false
                         showMyListings = false
+                        showParts = false
                         showCart = false
                         selectedMarketProduct = null
                         currentTab = it

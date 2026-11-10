@@ -2,6 +2,7 @@ package com.hodowo.data
 
 import com.hodowo.viewmodel.PartCompatibility
 import com.hodowo.viewmodel.ProductDetail
+import com.hodowo.viewmodel.SuggestedPart
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -42,8 +43,7 @@ fun MarketplaceProduct.toProductDetail(): ProductDetail {
         "part" -> ProductDetail.Part(
             id = id, title = title, priceLabel = priceLabel, images = images, description = text,
             sku = partNumber ?: id,
-            // The compatibility check against the user's appliance is not connected yet.
-            compatibility = PartCompatibility.UNKNOWN,
+            compatibility = compatibility,
             compatibilityEvidence = null,
             specs = specs
         )
@@ -61,6 +61,19 @@ fun MarketplaceProduct.toProductDetail(): ProductDetail {
 }
 
 private const val CENTS = 100
+
+/** The part a diagnosis suggests, so "Buy part" opens its Product Detail page (#149). */
+fun SuggestedPart.toMarketplaceProduct(): MarketplaceProduct = MarketplaceProduct(
+    id = id,
+    title = name,
+    description = "",
+    type = "part",
+    condition = "new",
+    price = (priceCents ?: 0) / CENTS.toDouble(),
+    imageUrl = imageUrl,
+    isPart = true,
+    compatibility = compatibility
+)
 
 private fun conditionLabel(condition: String): String = when (condition) {
     "unopened" -> "Unopened"

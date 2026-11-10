@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DocumentScanner
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Kitchen
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.ShoppingBag
@@ -110,6 +111,8 @@ fun HomeScreen(
     onOpenArCore: () -> Unit,
     onOpenMarket: () -> Unit,
     onOpenProfile: () -> Unit,
+    /** Opens the spare parts catalogue (#148). */
+    onOpenParts: () -> Unit = {},
     onAskAboutManual: (ManualGuide) -> Unit,
     /** Photo of the signed-in user for the top bar; null shows the default avatar. */
     profilePhotoUrl: String? = null
@@ -167,7 +170,8 @@ fun HomeScreen(
                     QuickActions(
                         onDiagnose = onDiagnose,
                         onOpenArCore = onOpenArCore,
-                        onOpenMarket = onOpenMarket
+                        onOpenMarket = onOpenMarket,
+                        onOpenParts = onOpenParts
                     )
                 }
                 item { HelpfulTipCard(state.tip) }
@@ -373,7 +377,8 @@ private fun HomeSearchBar(onSearch: (String) -> Unit) {
 private fun QuickActions(
     onDiagnose: () -> Unit,
     onOpenArCore: () -> Unit,
-    onOpenMarket: () -> Unit
+    onOpenMarket: () -> Unit,
+    onOpenParts: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -402,6 +407,14 @@ private fun QuickActions(
             iconTint = Tertiary,
             iconBackground = TertiaryFixed,
             onClick = onOpenMarket,
+            modifier = Modifier.weight(1f)
+        )
+        QuickActionButton(
+            label = "Parts",
+            icon = Icons.Outlined.Build,
+            iconTint = Primary,
+            iconBackground = Primary.copy(alpha = 0.1f),
+            onClick = onOpenParts,
             modifier = Modifier.weight(1f)
         )
     }

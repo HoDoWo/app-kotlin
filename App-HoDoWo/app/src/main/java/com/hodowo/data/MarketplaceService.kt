@@ -45,7 +45,9 @@ data class MarketplaceProduct(
     val warrantyInfo: String? = null,
     val isPart: Boolean = true,
     val isRefurbished: Boolean = false,
-    val handoverMethods: List<String> = emptyList()
+    val handoverMethods: List<String> = emptyList(),
+    /** Whether the part fits the user's appliance; unknown until the backend can tell (Backend#38). */
+    val compatibility: PartCompatibility = PartCompatibility.UNKNOWN
 )
 
 /** Backend for the marketplace Product Detail screen (issue #140) and Marketplace items. */
@@ -427,7 +429,8 @@ class RemoteMarketplaceService(
             distanceKm = if (item.has("distance_km") && !item.isNull("distance_km")) item.optDouble("distance_km") else null,
             warrantyInfo = item.optString("warranty_info").takeIf { it.isNotBlank() },
             isPart = isPartVal,
-            isRefurbished = isRefurbishedVal
+            isRefurbished = isRefurbishedVal,
+            compatibility = parseProductCompatibility(item)
         )
     }
 
@@ -471,6 +474,16 @@ class RemoteMarketplaceService(
                 item.price <= maxPrice
             }
             matchQuery && matchType && matchCondition && matchBrand && matchPrice
+        }
+    }
+
+    /** `compatible: true | false | null`; anything else (or nothing) is unknown, never "fits". */
+    private fun parseProductCompatibility(item: JSONObject): PartCompatibility {
+        if (item.isNull("compatible")) return PartCompatibility.UNKNOWN
+        return when (item.opt("compatible")) {
+            true -> PartCompatibility.FITS
+            false -> PartCompatibility.DOES_NOT_FIT
+            else -> PartCompatibility.UNKNOWN
         }
     }
 
