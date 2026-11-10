@@ -18,11 +18,11 @@ sonar {
         )
         property(
             "sonar.coverage.exclusions",
-            "**/*Test.kt,**/src/test/**,**/ui/**,**/ui/theme/**,app/src/main/java/com/hodowo/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt",
+            "**/*Test.kt,**/src/test/**,**/ui/**,**/adaptive/**,**/components/**,**/ui/theme/**,app/src/main/java/com/hodowo/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt",
         )
         property(
             "sonar.cpd.exclusions",
-            "**/*Test.kt,**/src/test/**,**/ui/**,**/ui/theme/**,app/src/main/java/com/hodowo/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt,**/MarketplaceService.kt",
+            "**/*Test.kt,**/src/test/**,**/ui/**,**/adaptive/**,**/components/**,**/ui/theme/**,app/src/main/java/com/hodowo/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt,**/MarketplaceService.kt",
         )
     }
 }

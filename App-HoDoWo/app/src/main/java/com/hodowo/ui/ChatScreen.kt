@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.hodowo.ui.adaptive.AdaptiveContent
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.components.NotificationIconButton
 import com.hodowo.ui.components.ProfileAvatar
@@ -145,15 +146,15 @@ fun ChatScreen(
             )
 
             // --- CHAT MESSAGE STREAM ---
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            AdaptiveContent(modifier = Modifier.weight(1f), maxWidth = 1000.dp) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 // Telemetry Timestamp Anchor
                 item {
                     Box(
@@ -208,6 +209,7 @@ fun ChatScreen(
                         )
                     }
                 }
+            }
             }
 
             // --- ERROR BANNER (if any) ---

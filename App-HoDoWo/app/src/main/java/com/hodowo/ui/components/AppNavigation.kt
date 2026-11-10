@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -23,8 +24,12 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -111,6 +116,107 @@ fun BottomNavBar(
                         color = if (isSelected) Primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Vertical navigation rail used in landscape and on tablets, where the bottom
+ * bar would waste the little vertical space the display has.
+ *
+ * It has a fixed width of 80.dp to stay pinned to the left edge of the screen,
+ * leaving the rest of the display for the main screen content.
+ *
+ * In landscape mode the top bar no longer shows the brand logo or the
+ * notification / profile actions — those would be redundant and visually
+ * cluttered next to the rail. Instead this rail renders [bottomActions] below a
+ * thin divider at the foot of the column, so the user still has quick access to
+ * notifications and their profile photo.
+ */
+@Composable
+fun AppNavigationRail(
+    currentTab: AppNavTab,
+    onTabSelected: (AppNavTab) -> Unit,
+    modifier: Modifier = Modifier,
+    /** Composable slot rendered at the very bottom of the rail (e.g. notification icon, avatar). */
+    bottomActions: @Composable () -> Unit = {}
+) {
+    Surface(
+        modifier = modifier
+            .width(80.dp)
+            .fillMaxHeight(),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, SurfaceContainerHigh.copy(alpha = 0.6f))
+    ) {
+        NavigationRail(
+            modifier = Modifier
+                .width(80.dp)
+                .fillMaxHeight(),
+            containerColor = Color.Transparent,
+            header = {
+                // Brand logo at the top — replaces the one that was in AppTopBar
+                Box(
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    HoDoWoLogo(size = 32.dp)
+                }
+            }
+        ) {
+            Spacer(modifier = Modifier.weight(1f))
+
+            AppNavTab.values().forEach { tab ->
+                val isSelected = currentTab == tab
+
+                NavigationRailItem(
+                    selected = isSelected,
+                    onClick = { onTabSelected(tab) },
+                    icon = {
+                        Icon(
+                            imageVector = tab.icon,
+                            contentDescription = tab.label,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    },
+                    label = {
+                        Text(
+                            text = tab.label,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            maxLines = 1
+                        )
+                    },
+                    alwaysShowLabel = false,
+                    colors = NavigationRailItemDefaults.colors(
+                        selectedIconColor = Primary,
+                        selectedTextColor = Primary,
+                        indicatorColor = SecondaryContainer,
+                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Bottom action strip: notification icon + profile avatar, separated
+            // from the nav items by a subtle divider.
+            HorizontalDivider(
+                modifier = Modifier
+                    .width(48.dp)
+                    .padding(vertical = 4.dp),
+                color = SurfaceContainerHigh.copy(alpha = 0.8f)
+            )
+            Column(
+                modifier = Modifier
+                    .width(80.dp)
+                    .padding(bottom = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                bottomActions()
             }
         }
     }

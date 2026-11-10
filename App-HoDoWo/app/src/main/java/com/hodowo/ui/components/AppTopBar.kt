@@ -24,14 +24,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hodowo.ui.adaptive.LocalAppLayout
 import com.hodowo.ui.theme.Primary
 
 /**
  * Single top banner shared by every main section of the app.
  *
- * It always shows the Howdowo brand mark, the app name and the section name
- * (e.g. "HOME", "AI CHAT", "PROFILE"). Screens add their own controls through
- * [actions], and detail screens can show a back arrow through [navigationIcon].
+ * It always shows the app name and the section name (e.g. "HOME", "AI CHAT").
+ * The HoDoWo logo is shown only when the vertical navigation rail is **not**
+ * active — in landscape/tablet mode the rail already carries the brand mark,
+ * so showing it twice would be redundant and odd-looking.
+ *
+ * Screens add their own controls through [actions]. When the rail is active,
+ * the notification button and profile avatar live at the bottom of the rail
+ * instead, so screens should suppress those actions in that mode.
  *
  * The banner handles the status-bar inset itself, so screens must not add
  * `statusBarsPadding()` to the container that holds it.
@@ -41,10 +47,13 @@ fun AppTopBar(
     subtitle: String,
     modifier: Modifier = Modifier,
     title: String = "Howdowo",
-    showLogo: Boolean = true,
     navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
+    // Hide the logo when the navigation rail is visible — it already carries
+    // the brand mark in its header, and duplicating it looks cluttered.
+    val showLogo = !LocalAppLayout.current.useNavigationRail
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),

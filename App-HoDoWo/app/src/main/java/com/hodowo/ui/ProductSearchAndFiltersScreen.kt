@@ -76,6 +76,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.hodowo.ui.adaptive.AdaptiveContent
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.ui.theme.InverseOnSurface
 import com.hodowo.ui.theme.InverseSurface
@@ -619,48 +620,50 @@ fun ProductSearchAndFiltersScreen(
                         )
                     }
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        item { Spacer(modifier = Modifier.height(4.dp)) }
+                    AdaptiveContent(maxWidth = 1100.dp) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            item { Spacer(modifier = Modifier.height(4.dp)) }
 
-                        items(products, key = { it.id }) { product ->
-                            if (product.sponsored) {
-                                TopPromotedOemHeroCard(
-                                    product = product,
-                                    onOpen = { onOpenProduct(product) },
-                                    onAddToCart = {
-                                        viewModel.addToCart(product)
-                                    },
-                                    onViewSpecs = {
-                                        Toast.makeText(context, "Specs: ${product.title}", Toast.LENGTH_SHORT).show()
-                                    }
-                                )
-                            } else if (product.partnerName != null && product.condition.contains("new", ignoreCase = true)) {
-                                OfficialPartnerAccessoryCard(
-                                    product = product,
-                                    onOpen = { onOpenProduct(product) },
-                                    onAddToCart = {
-                                        viewModel.addToCart(product)
-                                    }
-                                )
-                            } else {
-                                CommunityListingCard(
-                                    product = product,
-                                    onOpen = { onOpenProduct(product) },
-                                    onChat = {
-                                        Toast.makeText(context, "Chat with ${product.sellerName}", Toast.LENGTH_SHORT).show()
-                                    },
-                                    onBuyOrPickup = {
-                                        viewModel.addToCart(product)
-                                    }
-                                )
+                            items(products, key = { it.id }) { product ->
+                                if (product.sponsored) {
+                                    TopPromotedOemHeroCard(
+                                        product = product,
+                                        onOpen = { onOpenProduct(product) },
+                                        onAddToCart = {
+                                            viewModel.addToCart(product)
+                                        },
+                                        onViewSpecs = {
+                                            Toast.makeText(context, "Specs: ${product.title}", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+                                } else if (product.partnerName != null && product.condition.contains("new", ignoreCase = true)) {
+                                    OfficialPartnerAccessoryCard(
+                                        product = product,
+                                        onOpen = { onOpenProduct(product) },
+                                        onAddToCart = {
+                                            viewModel.addToCart(product)
+                                        }
+                                    )
+                                } else {
+                                    CommunityListingCard(
+                                        product = product,
+                                        onOpen = { onOpenProduct(product) },
+                                        onChat = {
+                                            Toast.makeText(context, "Chat with ${product.sellerName}", Toast.LENGTH_SHORT).show()
+                                        },
+                                        onBuyOrPickup = {
+                                            viewModel.addToCart(product)
+                                        }
+                                    )
+                                }
                             }
-                        }
 
-                        // Bottom padding for floating map button
-                        item { Spacer(modifier = Modifier.height(72.dp)) }
+                            // Bottom padding for floating map button
+                            item { Spacer(modifier = Modifier.height(72.dp)) }
+                        }
                     }
                 }
 

@@ -4,7 +4,6 @@ import com.hodowo.viewmodel.Listing
 import com.hodowo.viewmodel.ListingStatus
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -24,38 +23,15 @@ interface ListingsService {
 }
 
 /**
- * In-memory sample data, used until the backend has the marketplace endpoints
- * (Backend#38, Backend#40) and the real publish form (#145) exists.
+ * Used when the app has no backend URL. It fails loudly instead of showing
+ * sample listings: the screen then offers a retry instead of pretending the
+ * user has posted appliances.
  */
-class DemoListingsService : ListingsService {
+class UnavailableListingsService(
+    private val reason: String = "The marketplace backend is not configured."
+) : ListingsService {
 
-    private val listings = mutableListOf(
-        Listing(
-            id = "listing-espresso",
-            title = "De'Longhi Dedica Espresso",
-            description = "Refurbished pump, descaled, works like new.",
-            condition = "Refurbished",
-            priceLabel = "$85.00",
-            status = ListingStatus.ACTIVE,
-            inquiryCount = 2,
-            postedAgo = "3d ago"
-        ),
-        Listing(
-            id = "listing-airfryer",
-            title = "Philips Airfryer XL",
-            description = "Like new, original basket & manual included.",
-            condition = "Like new",
-            priceLabel = "$45.00",
-            status = ListingStatus.ACTIVE,
-            inquiryCount = 1,
-            postedAgo = "1w ago"
-        )
-    )
-
-    override suspend fun myListings(): List<Listing> {
-        delay(DEMO_DELAY_MS)
-        return listings.toList()
-    }
+    override suspend fun myListings(): List<Listing> = throw IOException(reason)
 
     override suspend fun updateListing(
         id: String,
@@ -63,42 +39,11 @@ class DemoListingsService : ListingsService {
         description: String,
         condition: String,
         priceLabel: String
-    ): Listing {
-        delay(DEMO_DELAY_MS)
-        val updated = existing(id).copy(
-            title = title,
-            description = description,
-            condition = condition,
-            priceLabel = priceLabel
-        )
-        replace(updated)
-        return updated
-    }
+    ): Listing = throw IOException(reason)
 
-    override suspend fun markAsSold(id: String): Listing {
-        delay(DEMO_DELAY_MS)
-        val updated = existing(id).copy(status = ListingStatus.SOLD)
-        replace(updated)
-        return updated
-    }
+    override suspend fun markAsSold(id: String): Listing = throw IOException(reason)
 
-    override suspend fun deleteListing(id: String) {
-        delay(DEMO_DELAY_MS)
-        existing(id)
-        listings.removeAll { it.id == id }
-    }
-
-    private fun existing(id: String): Listing =
-        listings.find { it.id == id } ?: throw IOException("Unknown listing id: $id")
-
-    private fun replace(listing: Listing) {
-        val index = listings.indexOfFirst { it.id == listing.id }
-        listings[index] = listing
-    }
-
-    companion object {
-        private const val DEMO_DELAY_MS = 300L
-    }
+    override suspend fun deleteListing(id: String) = throw IOException(reason)
 }
 
 /**
@@ -210,12 +155,15 @@ class RemoteListingsService(
             val images = json.optJSONArray("image_urls")
             val firstImage = images?.optString(0)?.takeIf { it.isNotBlank() }
                 ?: json.optString("image_url").takeIf { it.isNotBlank() }
+            // The backend stores keys such as "used-good" but also sends the
+            // human label; fall back to the key for older responses.
+            val conditionLabel = json.optString("condition_label").takeIf { it.isNotBlank() }
 
             return Listing(
                 id = json.optString("id"),
                 title = json.optString("title"),
                 description = json.optString("description"),
-                condition = json.optString("condition"),
+                condition = conditionLabel ?: json.optString("condition"),
                 priceLabel = "$" + String.format(java.util.Locale.US, "%.2f", json.optDouble("price", 0.0)),
                 status = if (json.optString("status") == "sold") ListingStatus.SOLD else ListingStatus.ACTIVE,
                 inquiryCount = json.optInt("inquiry_count", 0),
