@@ -101,6 +101,7 @@ private val TertiaryFixed = Color(0xFFFFDDB8)
  * @param onSearch sends the text to the AI chat as a question.
  * @param onDiagnose opens the camera to photograph an appliance.
  * @param onAskAboutManual opens the chat with a question about a manual.
+ * @param onOpenManualChat opens the chat in which one of the user's recent manuals was written.
  */
 @Composable
 fun HomeScreen(
@@ -111,6 +112,7 @@ fun HomeScreen(
     onOpenMarket: () -> Unit,
     onOpenProfile: () -> Unit,
     onAskAboutManual: (ManualGuide) -> Unit,
+    onOpenManualChat: (ManualGuide) -> Unit = onAskAboutManual,
     /** Photo of the signed-in user for the top bar; null shows the default avatar. */
     profilePhotoUrl: String? = null
 ) {
@@ -177,7 +179,12 @@ fun HomeScreen(
                 manualsSection(
                     state = state,
                     isWide = layoutInfo.isWide,
-                    onOpen = { openedManual = it },
+                    onOpen = { manual ->
+                        // Your own manuals reopen their chat, as in a chat app; the most
+                        // popular ones are other users' guides and open as a card.
+                        if (state.section == ManualsSection.RECENT) onOpenManualChat(manual.guide)
+                        else openedManual = manual
+                    },
                     onImageClick = { viewerUrl = it },
                     onRetry = viewModel::refresh,
                     onDiagnose = onDiagnose
