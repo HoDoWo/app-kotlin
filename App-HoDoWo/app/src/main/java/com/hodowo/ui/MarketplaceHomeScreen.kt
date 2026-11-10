@@ -68,6 +68,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.hodowo.ui.adaptive.AdaptiveContent
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.components.ProfileAvatar
@@ -167,12 +168,13 @@ fun MarketplaceHomeScreen(
             )
 
             // Main Scrollable Content
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            AdaptiveContent(maxWidth = 1100.dp) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 // Interactive Search & Scan Action Strip + Filter Chips
                 item {
                     Column(
@@ -462,6 +464,7 @@ fun MarketplaceHomeScreen(
             }
         }
     }
+}
 }
 
 /**

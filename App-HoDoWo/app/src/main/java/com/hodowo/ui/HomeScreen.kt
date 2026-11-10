@@ -70,6 +70,8 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.hodowo.ui.adaptive.AdaptiveContent
+import com.hodowo.ui.adaptive.LocalAppLayout
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.components.NotificationIconButton
 import com.hodowo.ui.components.ProfileAvatar
@@ -116,6 +118,7 @@ fun HomeScreen(
     var openedManual by remember { mutableStateOf<RecentManual?>(null) }
     var viewerUrl by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val layoutInfo = LocalAppLayout.current
 
     // Reload every time Home is shown, so manuals created in the chat appear.
     LaunchedEffect(Unit) { viewModel.refresh() }
@@ -146,32 +149,35 @@ fun HomeScreen(
             }
         )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            // Extra space at the bottom, so the "New chat" button never covers a card.
-            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            item { Greeting(state.userName) }
-            item { HomeSearchBar(onSearch = onSearch) }
-            item {
-                QuickActions(
-                    onDiagnose = onDiagnose,
-                    onOpenArCore = onOpenArCore,
-                    onOpenMarket = onOpenMarket
+        AdaptiveContent(maxWidth = 980.dp) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                // Extra space at the bottom, so the "New chat" button never covers a card.
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                item { Greeting(state.userName) }
+                item { HomeSearchBar(onSearch = onSearch) }
+                item {
+                    QuickActions(
+                        onDiagnose = onDiagnose,
+                        onOpenArCore = onOpenArCore,
+                        onOpenMarket = onOpenMarket
+                    )
+                }
+                item { HelpfulTipCard(state.tip) }
+                item {
+                    SectionHeader(section = state.section, onSelect = viewModel::selectSection)
+                }
+                manualsSection(
+                    state = state,
+                    isWide = layoutInfo.isWide,
+                    onOpen = { openedManual = it },
+                    onImageClick = { viewerUrl = it },
+                    onRetry = viewModel::refresh,
+                    onDiagnose = onDiagnose
                 )
             }
-            item { HelpfulTipCard(state.tip) }
-            item {
-                SectionHeader(section = state.section, onSelect = viewModel::selectSection)
-            }
-            manualsSection(
-                state = state,
-                onOpen = { openedManual = it },
-                onImageClick = { viewerUrl = it },
-                onRetry = viewModel::refresh,
-                onDiagnose = onDiagnose
-            )
         }
     }
 
@@ -194,6 +200,7 @@ fun HomeScreen(
 
 private fun LazyListScope.manualsSection(
     state: HomeUiState,
+    isWide: Boolean,
     onOpen: (RecentManual) -> Unit,
     onImageClick: (String) -> Unit,
     onRetry: () -> Unit,
@@ -214,6 +221,7 @@ private fun LazyListScope.manualsSection(
                     now = state.now,
                     highlighted = index % 2 == 0,
                     isPopular = isPopular,
+                    isWide = isWide,
                     onClick = { onOpen(manual) },
                     onImageClick = onImageClick
                 )
@@ -474,10 +482,12 @@ private fun RecentManualCard(
     now: Long,
     highlighted: Boolean,
     isPopular: Boolean,
+    isWide: Boolean,
     onClick: () -> Unit,
     onImageClick: (String) -> Unit
 ) {
     val guide = manual.guide
+    val imageUrl = guide.imageUrl
 
     Surface(
         onClick = onClick,
@@ -487,48 +497,103 @@ private fun RecentManualCard(
         border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.2f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        if (isWide && imageUrl != null) {
+            // Landscape / tablet: the picture sits beside the text so the card
+            // stays short and two guides fit on screen.
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                ApplianceChip(name = guide.applianceName, highlighted = highlighted, modifier = Modifier.weight(1f, fill = false))
-                if (isPopular) {
-                    PopularityLabel(searches = manual.searchCount, saves = manual.saveCount)
-                } else generatedLabel(manual.createdAtMillis, now)?.let { label ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(Icons.Outlined.Schedule, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = label, style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
-                    }
-                }
-            }
-
-            Column {
-                Text(
-                    text = guide.issueTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                if (guide.overview.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = guide.overview,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                        color = OnSurfaceVariant,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ManualCardHeader(
+                        guide = guide,
+                        manual = manual,
+                        now = now,
+                        highlighted = highlighted,
+                        isPopular = isPopular
                     )
+                    ManualCardText(guide = guide)
                 }
-            }
 
-            guide.imageUrl?.let { url -> GuideImage(url = url, onClick = { onImageClick(url) }) }
+                GuideImage(
+                    url = imageUrl,
+                    onClick = { onImageClick(imageUrl) },
+                    modifier = Modifier
+                        .width(260.dp)
+                        .height(170.dp),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        } else {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                ManualCardHeader(
+                    guide = guide,
+                    manual = manual,
+                    now = now,
+                    highlighted = highlighted,
+                    isPopular = isPopular
+                )
+                ManualCardText(guide = guide)
+                imageUrl?.let { url -> GuideImage(url = url, onClick = { onImageClick(url) }) }
+            }
+        }
+    }
+}
+
+/** Appliance chip and the "generated 2h ago" / popularity line of a manual card. */
+@Composable
+private fun ManualCardHeader(
+    guide: ManualGuide,
+    manual: RecentManual,
+    now: Long,
+    highlighted: Boolean,
+    isPopular: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ApplianceChip(name = guide.applianceName, highlighted = highlighted, modifier = Modifier.weight(1f, fill = false))
+        if (isPopular) {
+            PopularityLabel(searches = manual.searchCount, saves = manual.saveCount)
+        } else generatedLabel(manual.createdAtMillis, now)?.let { label ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(Icons.Outlined.Schedule, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = label, style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
+            }
+        }
+    }
+}
+
+/** Title and short summary of a manual card. */
+@Composable
+private fun ManualCardText(guide: ManualGuide) {
+    Column {
+        Text(
+            text = guide.issueTitle,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        if (guide.overview.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = guide.overview,
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = OnSurfaceVariant,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -574,15 +639,19 @@ private fun ApplianceChip(name: String, highlighted: Boolean, modifier: Modifier
     }
 }
 
-/** Guide image at full width; tapping it opens the full-screen viewer (zoom, download). */
+/** Guide image; tapping it opens the full-screen viewer (zoom, download). */
 @Composable
-private fun GuideImage(url: String, onClick: () -> Unit) {
+private fun GuideImage(
+    url: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    contentScale: ContentScale = ContentScale.FillWidth
+) {
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current).data(imageData(url)).crossfade(true).build(),
         contentDescription = "Guide image, tap to enlarge",
-        contentScale = ContentScale.FillWidth,
-        modifier = Modifier
-            .fillMaxWidth()
+        contentScale = contentScale,
+        modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(SurfaceContainerHigh)
             .clickable(onClick = onClick)

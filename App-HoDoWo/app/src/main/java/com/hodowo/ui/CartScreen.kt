@@ -79,6 +79,7 @@ import com.hodowo.data.CartGroup
 import com.hodowo.data.CartLine
 import com.hodowo.data.CartSummary
 import com.hodowo.data.CheckoutSession
+import com.hodowo.ui.adaptive.AdaptiveContent
 import com.hodowo.data.DeliveryOption
 import com.hodowo.data.PAYMENT_CARD
 import com.hodowo.data.PAYMENT_GOOGLE_PAY
@@ -199,7 +200,9 @@ fun CartScreen(
                         modifier = Modifier.align(Alignment.Center)
                     )
 
-                else -> CartContent(state = state, viewModel = viewModel)
+                else -> AdaptiveContent(maxWidth = 1000.dp) {
+                    CartContent(state = state, viewModel = viewModel)
+                }
             }
         }
 

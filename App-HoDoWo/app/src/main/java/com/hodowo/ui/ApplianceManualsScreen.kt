@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.hodowo.ui.adaptive.AdaptiveContent
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.viewmodel.Appliance
 import com.hodowo.viewmodel.ChatViewModel
@@ -66,14 +67,14 @@ fun ApplianceManualsScreen(
             )
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
+        AdaptiveContent(modifier = Modifier.padding(padding), maxWidth = 980.dp) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
             // Header
             Card(
                 shape = RoundedCornerShape(12.dp),
@@ -226,6 +227,7 @@ fun ApplianceManualsScreen(
                     BookmarkedGuideCard(guide = guide, onClick = { selectedGuide = guide })
                 }
             }
+        }
         }
     }
 

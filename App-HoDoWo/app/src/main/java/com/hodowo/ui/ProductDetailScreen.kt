@@ -61,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.hodowo.ui.adaptive.AdaptiveContent
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.theme.Error
 import com.hodowo.ui.theme.OutlineVariant
@@ -154,9 +155,11 @@ fun ProductDetailScreen(
                     )
                 }
                 state.product != null -> {
-                    ProductDetailContent(product = state.product!!) {
-                        if (forumViewModel != null && forumState != null) {
-                            ProductForumSection(state = forumState, viewModel = forumViewModel)
+                    AdaptiveContent(maxWidth = 1000.dp) {
+                        ProductDetailContent(product = state.product!!) {
+                            if (forumViewModel != null && forumState != null) {
+                                ProductForumSection(state = forumState, viewModel = forumViewModel)
+                            }
                         }
                     }
                 }
