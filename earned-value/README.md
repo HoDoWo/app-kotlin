@@ -1,10 +1,10 @@
 # Earned Value – HoDoWo
 
-Status on **2026-11-09** (generated 2026-11-09 13:56 UTC).
+Status on **2026-11-10** (generated 2026-11-10 13:29 UTC).
 
 | KPI | Name | Formula | Sprint 2 | Cumulative | Hours (cumulative) |
 |---|---|---|---:|---:|---:|
-| **PV** | Planned Value | % planned × BAC | 1,648 € | 4,522 € | 201.4 h |
+| **PV** | Planned Value | % planned × BAC | 1,775 € | 4,649 € | 207.1 h |
 | **EV** | Earned Value | % completed × BAC | 1,908 € | 4,895 € | 218.0 h |
 | **AC** | Actual Cost | hours spent × rate + services | 1,010 € | 3,587 € | 173.7 h |
 | **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 4,311 € | 9,879 € | 440.0 h |
@@ -12,19 +12,19 @@ Status on **2026-11-09** (generated 2026-11-09 13:56 UTC).
 | **ETC** | Estimate to Complete | EAC − AC | 1,271 € | 3,653 € | 148.8 h |
 | **VAC** | Variance at Completion | BAC − EAC | 2,031 € | 2,639 € | 117.5 h |
 | **CPI** | Cost Performance Index | EV / AC | 1.89 | 1.36 | – |
-| **SPI** | Schedule Performance Index | EV / PV | 1.16 | 1.08 | – |
+| **SPI** | Schedule Performance Index | EV / PV | 1.08 | 1.05 | – |
 
 ## Reading
 
 - CPI 1.36: under budget (the completed work cost less than planned)
-- SPI 1.08: ahead of or on schedule
+- SPI 1.05: ahead of or on schedule
 - VAC 2,639 €: saving money
 - Sprint 2: budget 4,311 € (its share of the BAC), EAC 2,280 € with the current CPI, so VAC 2,031 € (saving money).
 
 ## Inputs
 
 - BAC: 9,879 € (total cost estimated in Sprint 0), 440 h planned for the whole project.
-- % planned: 201.4 h of the Sprint 0 baseline by 2026-11-09 → 45.8%.
+- % planned: 207.1 h of the Sprint 0 baseline by 2026-11-10 → 47.1%.
 - % completed: 218.0 h estimated on the items in Done → 49.5%.
 - AC: 173.7 h spent × 20 €/h + 113 € of services.
 - Hypothetical costs: the team uses free tiers and pays nothing. Each service counts with the price planned in Sprint 0 from the date it is used.
@@ -52,7 +52,6 @@ Status on **2026-11-09** (generated 2026-11-09 13:56 UTC).
   - #25 Marketplace: data model and seed data – In Progress (0 h estimated, 0 h spent)
   - #26 Marketplace catalogue and search API – In Progress (0 h estimated, 0 h spent)
   - #111 Marketplace app screens – In Progress (0 h estimated, 0 h spent)
-  - #17 Forum about concrete home appliances – In preview (0 h estimated, 0 h spent)
   - #40 Unified product search: new, second-hand and spare parts – In preview (10 h estimated, 0 h spent)
   - #122 Mockups: marketplace, ads and cart pages – In preview (6 h estimated, 0 h spent)
   - #138 Marketplace tab and entry points – In preview (4 h estimated, 0 h spent)
