@@ -57,6 +57,20 @@ class RemoteListingsServiceTest {
     }
 
     @Test
+    fun aConditionKeyIsShownWithItsHumanLabel() = runTest {
+        server.enqueue(
+            json(
+                """{"results": [{"id": "l1", "title": "Airfryer", "price": 45.0,
+                    "condition": "used-good", "condition_label": "Used, good", "status": "active"}]}"""
+            )
+        )
+
+        val listing = service.myListings().single()
+
+        assertEquals("Used, good", listing.condition)
+    }
+
+    @Test
     fun updateListingSendsAPatchWithTheNewFields() = runTest {
         server.enqueue(
             json("""{"id": "l1", "title": "New title", "price": 99.0, "condition": "Like new", "status": "active"}""")

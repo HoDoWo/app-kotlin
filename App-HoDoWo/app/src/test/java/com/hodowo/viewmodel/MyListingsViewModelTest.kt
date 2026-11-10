@@ -119,6 +119,24 @@ class MyListingsViewModelTest {
         assertEquals("Listing updated", state.message)
     }
 
+    @Test
+    fun aFailedEditKeepsTheDialogOpenAndReportsWhy() = runTest(dispatcher) {
+        service.listings = listOf(listing("l1"))
+        val vm = viewModel()
+        vm.load()
+        advanceUntilIdle()
+        vm.startEditing(vm.uiState.value.listings.single())
+        service.actionError = IOException("Server error 422")
+
+        vm.saveEdit("New title", "New description", "like-new", "$99.00")
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals("l1", state.editingListing?.id)
+        assertEquals("De'Longhi Dedica Espresso", state.listings.single().title)
+        assertEquals("Server error 422", state.message)
+    }
+
     // ---------- mark as sold ----------
 
     @Test
@@ -198,6 +216,23 @@ class MyListingsViewModelTest {
     }
 
     @Test
+    fun aFailedDeleteKeepsTheListingAndReportsWhy() = runTest(dispatcher) {
+        service.listings = listOf(listing("l1"))
+        val vm = viewModel()
+        vm.load()
+        advanceUntilIdle()
+        vm.requestDelete(vm.uiState.value.listings.single())
+        service.actionError = IOException("Server error 503")
+
+        vm.confirmDelete()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals("l1", state.listings.single().id)
+        assertEquals("Server error 503", state.message)
+    }
+
+    @Test
     fun dismissingDeleteDoesNotTouchTheService() = runTest(dispatcher) {
         service.listings = listOf(listing("l1"))
         val vm = viewModel()
@@ -229,10 +264,12 @@ class MyListingsViewModelTest {
     }
 }
 
-/** Fake [ListingsService] that records calls and mutates an in-memory list like the real Demo one. */
+/** Fake [ListingsService] that records calls and mutates an in-memory list like the real backend. */
 private class FakeListingsService : ListingsService {
     var listings: List<Listing> = emptyList()
     var loadError: Exception? = null
+    /** When set, edit / mark-as-sold / delete throw it. */
+    var actionError: Exception? = null
     var updateCalls = 0
     var markAsSoldCalls = 0
     var deleteCalls = 0
@@ -244,6 +281,7 @@ private class FakeListingsService : ListingsService {
 
     override suspend fun updateListing(id: String, title: String, description: String, condition: String, priceLabel: String): Listing {
         updateCalls++
+        actionError?.let { throw it }
         val updated = listings.first { it.id == id }
             .copy(title = title, description = description, condition = condition, priceLabel = priceLabel)
         listings = listings.map { if (it.id == id) updated else it }
@@ -252,6 +290,7 @@ private class FakeListingsService : ListingsService {
 
     override suspend fun markAsSold(id: String): Listing {
         markAsSoldCalls++
+        actionError?.let { throw it }
         val updated = listings.first { it.id == id }.copy(status = ListingStatus.SOLD)
         listings = listings.map { if (it.id == id) updated else it }
         return updated
@@ -259,6 +298,7 @@ private class FakeListingsService : ListingsService {
 
     override suspend fun deleteListing(id: String) {
         deleteCalls++
+        actionError?.let { throw it }
         listings = listings.filterNot { it.id == id }
     }
 }
