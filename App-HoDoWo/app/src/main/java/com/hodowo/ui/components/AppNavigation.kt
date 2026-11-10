@@ -125,8 +125,8 @@ fun BottomNavBar(
  * Vertical navigation rail used in landscape and on tablets, where the bottom
  * bar would waste the little vertical space the display has.
  *
- * It shows the same tabs and the same selected pill as [BottomNavBar], so the
- * app keeps one visual language in both orientations.
+ * It has a fixed width of 80.dp to stay pinned to the left edge of the screen,
+ * leaving the rest of the display for the main screen content.
  *
  * In landscape mode the top bar no longer shows the brand logo or the
  * notification / profile actions — those would be redundant and visually
@@ -143,20 +143,25 @@ fun AppNavigationRail(
     bottomActions: @Composable () -> Unit = {}
 ) {
     Surface(
-        modifier = modifier.fillMaxHeight(),
+        modifier = modifier
+            .width(80.dp)
+            .fillMaxHeight(),
         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.97f),
         shadowElevation = 4.dp,
         border = BorderStroke(1.dp, SurfaceContainerHigh.copy(alpha = 0.6f))
     ) {
         NavigationRail(
+            modifier = Modifier
+                .width(80.dp)
+                .fillMaxHeight(),
             containerColor = Color.Transparent,
             header = {
                 // Brand logo at the top — replaces the one that was in AppTopBar
                 Box(
-                    modifier = Modifier.padding(top = 8.dp, bottom = 12.dp),
+                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    HoDoWoLogo(size = 38.dp)
+                    HoDoWoLogo(size = 32.dp)
                 }
             }
         ) {
@@ -183,7 +188,7 @@ fun AppNavigationRail(
                             maxLines = 1
                         )
                     },
-                    alwaysShowLabel = true,
+                    alwaysShowLabel = false,
                     colors = NavigationRailItemDefaults.colors(
                         selectedIconColor = Primary,
                         selectedTextColor = Primary,
@@ -199,13 +204,15 @@ fun AppNavigationRail(
             // Bottom action strip: notification icon + profile avatar, separated
             // from the nav items by a subtle divider.
             HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 12.dp),
+                modifier = Modifier
+                    .width(48.dp)
+                    .padding(vertical = 4.dp),
                 color = SurfaceContainerHigh.copy(alpha = 0.8f)
             )
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
+                    .width(80.dp)
+                    .padding(bottom = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
