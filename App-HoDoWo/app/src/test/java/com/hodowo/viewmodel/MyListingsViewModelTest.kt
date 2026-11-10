@@ -78,6 +78,17 @@ class MyListingsViewModelTest {
         assertEquals("offline", state.error)
     }
 
+    @Test
+    fun aFailedLoadWithNullMessageFallback() = runTest(dispatcher) {
+        service.loadError = Exception()
+        val vm = viewModel()
+
+        vm.load()
+        advanceUntilIdle()
+
+        assertEquals("Could not load your listings", vm.uiState.value.error)
+    }
+
     // ---------- edit ----------
 
     @Test
@@ -98,6 +109,15 @@ class MyListingsViewModelTest {
         vm.cancelEditing()
 
         assertNull(vm.uiState.value.editingListing)
+        assertEquals(0, service.updateCalls)
+    }
+
+    @Test
+    fun saveEditWithoutEditingListingReturnsImmediately() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.saveEdit("Title", "Description", "New", "$10")
+        advanceUntilIdle()
+
         assertEquals(0, service.updateCalls)
     }
 
@@ -137,6 +157,21 @@ class MyListingsViewModelTest {
         assertEquals("Server error 422", state.message)
     }
 
+    @Test
+    fun aFailedEditWithNullMessageFallback() = runTest(dispatcher) {
+        service.listings = listOf(listing("l1"))
+        val vm = viewModel()
+        vm.load()
+        advanceUntilIdle()
+        vm.startEditing(vm.uiState.value.listings.single())
+        service.actionError = Exception()
+
+        vm.saveEdit("New title", "New description", "like-new", "$99.00")
+        advanceUntilIdle()
+
+        assertEquals("Could not update the listing", vm.uiState.value.message)
+    }
+
     // ---------- mark as sold ----------
 
     @Test
@@ -149,6 +184,15 @@ class MyListingsViewModelTest {
         vm.requestMarkAsSold(vm.uiState.value.listings.single())
 
         assertEquals("l1", vm.uiState.value.pendingMarkAsSold?.id)
+        assertEquals(0, service.markAsSoldCalls)
+    }
+
+    @Test
+    fun confirmMarkAsSoldWithoutPendingReturnsImmediately() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.confirmMarkAsSold()
+        advanceUntilIdle()
+
         assertEquals(0, service.markAsSoldCalls)
     }
 
@@ -167,6 +211,21 @@ class MyListingsViewModelTest {
         assertNull(state.pendingMarkAsSold)
         assertEquals(ListingStatus.SOLD, state.listings.single().status)
         assertEquals(1, service.markAsSoldCalls)
+    }
+
+    @Test
+    fun aFailedMarkAsSoldWithNullMessageFallback() = runTest(dispatcher) {
+        service.listings = listOf(listing("l1"))
+        val vm = viewModel()
+        vm.load()
+        advanceUntilIdle()
+        vm.requestMarkAsSold(vm.uiState.value.listings.single())
+        service.actionError = Exception()
+
+        vm.confirmMarkAsSold()
+        advanceUntilIdle()
+
+        assertEquals("Could not mark the listing as sold", vm.uiState.value.message)
     }
 
     @Test
@@ -195,6 +254,15 @@ class MyListingsViewModelTest {
         vm.requestDelete(vm.uiState.value.listings.single())
 
         assertEquals("l1", vm.uiState.value.pendingDelete?.id)
+        assertEquals(0, service.deleteCalls)
+    }
+
+    @Test
+    fun confirmDeleteWithoutPendingReturnsImmediately() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.confirmDelete()
+        advanceUntilIdle()
+
         assertEquals(0, service.deleteCalls)
     }
 
@@ -230,6 +298,21 @@ class MyListingsViewModelTest {
         val state = vm.uiState.value
         assertEquals("l1", state.listings.single().id)
         assertEquals("Server error 503", state.message)
+    }
+
+    @Test
+    fun aFailedDeleteWithNullMessageFallback() = runTest(dispatcher) {
+        service.listings = listOf(listing("l1"))
+        val vm = viewModel()
+        vm.load()
+        advanceUntilIdle()
+        vm.requestDelete(vm.uiState.value.listings.single())
+        service.actionError = Exception()
+
+        vm.confirmDelete()
+        advanceUntilIdle()
+
+        assertEquals("Could not delete the listing", vm.uiState.value.message)
     }
 
     @Test
