@@ -129,7 +129,9 @@ fun CartScreen(
     viewModel: CartViewModel,
     checkoutViewModel: CheckoutViewModel,
     onBack: () -> Unit,
-    onBrowse: () -> Unit
+    onBrowse: () -> Unit,
+    /** Opens the Product Detail page of a cart line (#111). */
+    onOpenProduct: (CartLine) -> Unit = {}
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
@@ -201,7 +203,7 @@ fun CartScreen(
                     )
 
                 else -> AdaptiveContent(maxWidth = 1000.dp) {
-                    CartContent(state = state, viewModel = viewModel)
+                    CartContent(state = state, viewModel = viewModel, onOpenProduct = onOpenProduct)
                 }
             }
         }
@@ -219,7 +221,7 @@ fun CartScreen(
 }
 
 @Composable
-private fun CartContent(state: CartUiState, viewModel: CartViewModel) {
+private fun CartContent(state: CartUiState, viewModel: CartViewModel, onOpenProduct: (CartLine) -> Unit) {
     val cart = state.cart
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -245,7 +247,8 @@ private fun CartContent(state: CartUiState, viewModel: CartViewModel) {
                     onToggle = { viewModel.toggleSelected(line) },
                     onIncrease = { viewModel.increase(line) },
                     onDecrease = { viewModel.decrease(line) },
-                    onRemove = { viewModel.remove(line) }
+                    onRemove = { viewModel.remove(line) },
+                    onOpen = { onOpenProduct(line) }
                 )
             }
             item(key = "delivery-${group.sellerId}") {
@@ -268,7 +271,8 @@ private fun CartContent(state: CartUiState, viewModel: CartViewModel) {
                 onToggle = { viewModel.toggleSelected(line) },
                 onIncrease = { viewModel.increase(line) },
                 onDecrease = { viewModel.decrease(line) },
-                onRemove = { viewModel.remove(line) }
+                onRemove = { viewModel.remove(line) },
+                onOpen = { onOpenProduct(line) }
             )
         }
         val unavailable = state.unavailableLines
@@ -282,7 +286,8 @@ private fun CartContent(state: CartUiState, viewModel: CartViewModel) {
                     onToggle = {},
                     onIncrease = {},
                     onDecrease = { viewModel.decrease(line) },
-                    onRemove = { viewModel.remove(line) }
+                    onRemove = { viewModel.remove(line) },
+                    onOpen = { onOpenProduct(line) }
                 )
             }
         }
@@ -473,7 +478,8 @@ private fun CartLineCard(
     onToggle: () -> Unit,
     onIncrease: () -> Unit,
     onDecrease: () -> Unit,
-    onRemove: () -> Unit
+    onRemove: () -> Unit,
+    onOpen: () -> Unit = {}
 ) {
     val badge = when (line.productType) {
         "used" -> "USED"
@@ -497,7 +503,10 @@ private fun CartLineCard(
                 colors = CheckboxDefaults.colors(checkedColor = Primary)
             )
             Row(
-                modifier = Modifier.weight(1f).alpha(if (line.selected || !line.available) 1f else 0.6f),
+                modifier = Modifier
+                    .weight(1f)
+                    .alpha(if (line.selected || !line.available) 1f else 0.6f)
+                    .clickable(onClickLabel = "Open product", onClick = onOpen),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Box(

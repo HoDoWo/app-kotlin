@@ -1,4 +1,4 @@
-﻿package com.hodowo.ui
+package com.hodowo.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -30,7 +30,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,10 +48,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hodowo.data.AiServiceProvider
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.cartProductType
+import com.hodowo.data.toMarketplaceProduct
 import com.hodowo.data.AuthManager
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
-import com.hodowo.viewmodel.MessagesViewModel
 import com.hodowo.viewmodel.ProductForumViewModel
 import com.hodowo.ui.adaptive.LocalAppLayout
 import com.hodowo.ui.adaptive.appLayoutInfoFor
@@ -70,6 +69,7 @@ import com.hodowo.viewmodel.CheckoutViewModel
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
 import com.hodowo.viewmodel.PostProductViewModel
+import com.hodowo.viewmodel.SponsoredPartnersViewModel
 
 /**
  * Root composable of the application.
@@ -95,6 +95,9 @@ fun HoDoWoApp(
     )
     val cartViewModel: CartViewModel = viewModel(factory = AiServiceProvider.cartViewModelFactory())
     val checkoutViewModel: CheckoutViewModel = viewModel(factory = AiServiceProvider.checkoutViewModelFactory())
+    val sponsoredPartnersViewModel: SponsoredPartnersViewModel = viewModel(
+        factory = AiServiceProvider.sponsoredPartnersViewModelFactory()
+    )
     val myListingsViewModel: MyListingsViewModel = viewModel(factory = AiServiceProvider.myListingsViewModelFactory())
     var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
     var showCamera by remember { mutableStateOf(false) }
@@ -104,15 +107,8 @@ fun HoDoWoApp(
     var showPostProduct by remember { mutableStateOf(false) }
     var showMarketplaceSearch by remember { mutableStateOf(false) }
     var showMyListings by remember { mutableStateOf(false) }
+    var showSponsored by remember { mutableStateOf(false) }
     var showCart by remember { mutableStateOf(false) }
-    // Messages and offers with buyers and sellers of second-hand listings.
-    var showMessages by remember { mutableStateOf(false) }
-    val messagesViewModel: MessagesViewModel = viewModel(factory = AiServiceProvider.messagesViewModelFactory())
-    val messagesState by messagesViewModel.uiState.collectAsState()
-    // The unread badge on the marketplace: refreshed every time the marketplace is shown.
-    LaunchedEffect(currentTab) {
-        if (currentTab == AppNavTab.MARKET) messagesViewModel.loadInbox()
-    }
     // Product opened from a marketplace card: its Product Detail page (#140) with the forum (#150).
     var selectedMarketProduct by remember { mutableStateOf<MarketplaceProduct?>(null) }
 
@@ -178,8 +174,8 @@ fun HoDoWoApp(
                                 showMarketplaceSearch = false
                                 showPostProduct = false
                                 showMyListings = false
+                                showSponsored = false
                                 showCart = false
-                                showMessages = false
                                 selectedMarketProduct = null
                                 currentTab = it
                             },
@@ -195,6 +191,7 @@ fun HoDoWoApp(
                                         showMarketplaceSearch = false
                                         showPostProduct = false
                                         showMyListings = false
+                                        showSponsored = false
                                         showCart = false
                                         selectedMarketProduct = null
                                         currentTab = AppNavTab.PROFILE
@@ -219,6 +216,10 @@ fun HoDoWoApp(
                             onOpenArCore = { currentTab = AppNavTab.AR_CORE },
                             onOpenMarket = { currentTab = AppNavTab.MARKET },
                             onOpenProfile = { currentTab = AppNavTab.PROFILE },
+                            onOpenSponsored = {
+                                showSponsored = true
+                                currentTab = AppNavTab.MARKET
+                            },
                             onAskAboutManual = { guide ->
                                 currentTab = AppNavTab.AI_CHAT
                                 chatViewModel.sendTextMessage(
@@ -257,6 +258,11 @@ fun HoDoWoApp(
                                     showMyListings = false
                                     currentTab = AppNavTab.MARKET
                                     showPostProduct = true
+                                },
+                                onOpenListing = { listing ->
+                                    showMyListings = false
+                                    currentTab = AppNavTab.MARKET
+                                    selectedMarketProduct = listing.toMarketplaceProduct()
                                 }
                             )
                         } else {
@@ -281,13 +287,7 @@ fun HoDoWoApp(
                     }
                     AppNavTab.MARKET -> {
                         val product = selectedMarketProduct
-                        if (showMessages && !showCart) {
-                            MessagesScreen(
-                                viewModel = messagesViewModel,
-                                onBack = { showMessages = false },
-                                onOpenCart = { showCart = true }
-                            )
-                        } else if (showCart) {
+                        if (showCart) {
                             BackHandler { showCart = false }
                             CartScreen(
                                 viewModel = cartViewModel,
@@ -296,6 +296,10 @@ fun HoDoWoApp(
                                 onBrowse = {
                                     showCart = false
                                     showMarketplaceSearch = true
+                                },
+                                onOpenProduct = { line ->
+                                    showCart = false
+                                    selectedMarketProduct = line.toMarketplaceProduct()
                                 }
                             )
                         } else if (product != null) {
@@ -313,13 +317,7 @@ fun HoDoWoApp(
                                     )
                                 },
                                 onBack = { selectedMarketProduct = null },
-                                onOpenCart = { showCart = true },
-                                onContactSeller = if (product.type == "used") {
-                                    { makeOffer: Boolean ->
-                                        messagesViewModel.contactSeller(product.id, makeOffer)
-                                        showMessages = true
-                                    }
-                                } else null
+                                onOpenCart = { showCart = true }
                             )
                         } else if (showPostProduct) {
                             PostProductScreen(
@@ -328,6 +326,13 @@ fun HoDoWoApp(
                                 onPublished = { showPostProduct = false },
                                 onBack = { showPostProduct = false },
                                 onOpenCart = { showCart = true }
+                            )
+                        } else if (showSponsored) {
+                            BackHandler { showSponsored = false }
+                            SponsoredPartnersScreen(
+                                viewModel = sponsoredPartnersViewModel,
+                                onBack = { showSponsored = false },
+                                onOpenProduct = { selectedMarketProduct = it }
                             )
                         } else if (showMarketplaceSearch) {
                             ProductSearchAndFiltersScreen(
@@ -343,10 +348,9 @@ fun HoDoWoApp(
                                 onPostProduct = { showPostProduct = true },
                                 onOpenProfile = { currentTab = AppNavTab.PROFILE },
                                 onCartClick = { showCart = true },
+                                onOpenSponsored = { showSponsored = true },
                                 onOpenProduct = { selectedMarketProduct = it },
-                                profilePhotoUrl = chatState.userProfile?.photoUrl,
-                                onOpenMessages = { showMessages = true },
-                                unreadMessages = messagesState.unread
+                                profilePhotoUrl = chatState.userProfile?.photoUrl
                             )
                         }
                     }
@@ -362,7 +366,7 @@ fun HoDoWoApp(
                 // The chat has its own "+" in the header. Product Detail, the cart and the sell
                 // form have their own sticky bar at the bottom, which this button would overlap.
                 if (currentTab != AppNavTab.AI_CHAT && selectedMarketProduct == null && !showCart &&
-                    !showPostProduct && !(showMessages && currentTab == AppNavTab.MARKET)
+                    !showPostProduct
                 ) {
                     NewChatButton(
                         onClick = { startNewChat() },
@@ -383,8 +387,8 @@ fun HoDoWoApp(
                         showMarketplaceSearch = false
                         showPostProduct = false
                         showMyListings = false
+                        showSponsored = false
                         showCart = false
-                        showMessages = false
                         selectedMarketProduct = null
                         currentTab = it
                     }
