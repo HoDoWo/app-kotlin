@@ -333,7 +333,10 @@ fun MarketplaceHomeScreen(
                 // Featured Partner Sponsored Banner
                 item {
                     FeaturedPartnerBanner(
-                        onViewPartDetails = onOpenSearch
+                        onViewPartDetails = {
+                            // Opens a real part when the catalogue has one; otherwise the search.
+                            products.firstOrNull { it.type == "part" }?.let(onOpenProduct) ?: onOpenSearch()
+                        }
                     )
                 }
 
