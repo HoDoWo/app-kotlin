@@ -39,12 +39,11 @@ object AiServiceProvider {
     }
 
     /**
-     * The listings service, kept as a singleton so edits/mark-as-sold/delete done through
-     * [DemoListingsService]'s in-memory data survive navigating away from the screen.
+     * The listings service, kept as a singleton so edits/mark-as-sold/delete
+     * survive navigating away from the screen.
      *
-     * Like [marketplaceService], this doesn't switch on [BuildConfig.BACKEND_URL] yet: the
-     * marketplace routes (Backend#38, Backend#40) aren't deployed. Switch to
-     * [RemoteListingsService] once they are.
+     * Without a backend URL there is no data source, so
+     * [UnavailableListingsService] reports an error instead of fake listings.
      */
     val listingsService: ListingsService by lazy {
         val backendUrl = BuildConfig.BACKEND_URL
@@ -54,7 +53,7 @@ object AiServiceProvider {
                 tokenProvider = FirebaseTokenProvider()::token
             )
         } else {
-            DemoListingsService()
+            UnavailableListingsService()
         }
     }
 

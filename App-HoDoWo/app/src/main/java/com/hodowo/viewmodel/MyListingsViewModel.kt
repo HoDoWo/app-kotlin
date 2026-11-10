@@ -2,7 +2,6 @@ package com.hodowo.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hodowo.data.DemoListingsService
 import com.hodowo.data.ListingsService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +29,7 @@ data class MyListingsUiState(
  * edit, mark as sold or delete one, with a confirmation step for the latter two.
  */
 class MyListingsViewModel(
-    private val service: ListingsService = DemoListingsService()
+    private val service: ListingsService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(MyListingsUiState())
@@ -63,12 +62,20 @@ class MyListingsViewModel(
         val id = _uiState.value.editingListing?.id ?: return
 
         viewModelScope.launch {
-            val updated = service.updateListing(id, title, description, condition, priceLabel)
-            _uiState.value = _uiState.value.copy(
-                editingListing = null,
-                listings = _uiState.value.listings.map { if (it.id == id) updated else it },
-                message = "Listing updated"
-            )
+            try {
+                val updated = service.updateListing(id, title, description, condition, priceLabel)
+                _uiState.value = _uiState.value.copy(
+                    editingListing = null,
+                    listings = _uiState.value.listings.map { if (it.id == id) updated else it },
+                    message = "Listing updated"
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    message = e.message ?: "Could not update the listing"
+                )
+            }
         }
     }
 
@@ -84,12 +91,20 @@ class MyListingsViewModel(
         val id = _uiState.value.pendingMarkAsSold?.id ?: return
 
         viewModelScope.launch {
-            val updated = service.markAsSold(id)
-            _uiState.value = _uiState.value.copy(
-                pendingMarkAsSold = null,
-                listings = _uiState.value.listings.map { if (it.id == id) updated else it },
-                message = "Marked as sold"
-            )
+            try {
+                val updated = service.markAsSold(id)
+                _uiState.value = _uiState.value.copy(
+                    pendingMarkAsSold = null,
+                    listings = _uiState.value.listings.map { if (it.id == id) updated else it },
+                    message = "Marked as sold"
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    message = e.message ?: "Could not mark the listing as sold"
+                )
+            }
         }
     }
 
@@ -105,12 +120,20 @@ class MyListingsViewModel(
         val id = _uiState.value.pendingDelete?.id ?: return
 
         viewModelScope.launch {
-            service.deleteListing(id)
-            _uiState.value = _uiState.value.copy(
-                pendingDelete = null,
-                listings = _uiState.value.listings.filterNot { it.id == id },
-                message = "Listing deleted"
-            )
+            try {
+                service.deleteListing(id)
+                _uiState.value = _uiState.value.copy(
+                    pendingDelete = null,
+                    listings = _uiState.value.listings.filterNot { it.id == id },
+                    message = "Listing deleted"
+                )
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    message = e.message ?: "Could not delete the listing"
+                )
+            }
         }
     }
 
