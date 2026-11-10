@@ -28,6 +28,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,15 +42,33 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hodowo.data.AiServiceProvider
 import com.hodowo.data.AuthManager
+import com.hodowo.data.model.cartProductType
+import com.hodowo.data.cartProductType as marketplaceCartProductType
 import com.hodowo.ui.components.AppNavTab
 import com.hodowo.ui.components.BottomNavBar
 import com.hodowo.ui.components.NewChatButton
 import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SecondaryContainer
 import com.hodowo.ui.ProductSearchScreen
+import com.hodowo.viewmodel.CartViewModel
 import com.hodowo.viewmodel.ChatViewModel
+import com.hodowo.viewmodel.CheckoutViewModel
 import com.hodowo.viewmodel.HomeViewModel
+import com.hodowo.viewmodel.MarketplaceViewModel
+import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.ProductViewModel
+
+/** Inner navigation of the Market tab. */
+private sealed interface MarketRoute {
+    data object Home : MarketRoute
+    data object Search : MarketRoute
+    data class Detail(
+        val productId: String,
+        val productType: String?,
+        val backTo: MarketRoute
+    ) : MarketRoute
+    data class Cart(val backTo: MarketRoute) : MarketRoute
+}
 
 /**
  * Root composable of the application.
@@ -73,11 +93,14 @@ fun HoDoWoApp(
     authManager: AuthManager = AiServiceProvider.authManager
 ) {
     val context = LocalContext.current
-    var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
-    var showCamera by remember { mutableStateOf(false) }
+    var currentTab by rememberSaveable { mutableStateOf(AppNavTab.HOME) }
+    var showCamera by rememberSaveable { mutableStateOf(false) }
     val chatState by chatViewModel.uiState.collectAsState()
-    var showAuthDialog by remember { mutableStateOf(false) }
-    var showApplianceManuals by remember { mutableStateOf(false) }
+    var showAuthDialog by rememberSaveable { mutableStateOf(false) }
+    var showApplianceManuals by rememberSaveable { mutableStateOf(false) }
+    var marketRoute by rememberSaveable(stateSaver = MarketRouteSaver) {
+        mutableStateOf<MarketRoute>(MarketRoute.Home)
+    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -135,7 +158,10 @@ fun HoDoWoApp(
                             },
                             onDiagnose = ::openCamera,
                             onOpenArCore = { currentTab = AppNavTab.AR_CORE },
-                            onOpenMarket = { currentTab = AppNavTab.MARKET },
+                            onOpenMarket = {
+                                marketRoute = MarketRoute.Home
+                                currentTab = AppNavTab.MARKET
+                            },
                             onOpenProfile = { currentTab = AppNavTab.PROFILE },
                             onAskAboutManual = { guide ->
                                 currentTab = AppNavTab.AI_CHAT
@@ -170,7 +196,10 @@ fun HoDoWoApp(
                                 onOpenAuth = { showAuthDialog = true },
                                 onNavigateHome = { currentTab = AppNavTab.HOME },
                                 onNavigateAiChat = { currentTab = AppNavTab.AI_CHAT },
-                                onNavigateMarket = { currentTab = AppNavTab.MARKET },
+                                onNavigateMarket = {
+                                    marketRoute = MarketRoute.Home
+                                    currentTab = AppNavTab.MARKET
+                                },
                                 onNavigateArCore = { currentTab = AppNavTab.AR_CORE },
                                 onNavigateProfile = { currentTab = AppNavTab.PROFILE },
                                 onOpenApplianceManuals = { showApplianceManuals = true }
@@ -178,11 +207,75 @@ fun HoDoWoApp(
                         }
                     }
                     AppNavTab.MARKET -> {
-                        ProductSearchScreen(
-                            viewModel = productViewModel,
-                            onBack = { currentTab = AppNavTab.HOME },
-                            onCart = { currentTab = AppNavTab.AI_CHAT }
-                        )
+                        when (val route = marketRoute) {
+                            MarketRoute.Home -> {
+                                val marketplaceViewModel: MarketplaceViewModel = viewModel(
+                                    key = "marketplace-home",
+                                    factory = AiServiceProvider.marketplaceViewModelFactory()
+                                )
+                                MarketplaceHomeScreen(
+                                    viewModel = marketplaceViewModel,
+                                    onOpenSearch = { marketRoute = MarketRoute.Search },
+                                    onPostProduct = { marketRoute = MarketRoute.Search },
+                                    onOpenProfile = { currentTab = AppNavTab.PROFILE },
+                                    onCartClick = { marketRoute = MarketRoute.Cart(MarketRoute.Home) },
+                                    onOpenProduct = { product ->
+                                        marketRoute = MarketRoute.Detail(
+                                            productId = product.id,
+                                            productType = product.marketplaceCartProductType(),
+                                            backTo = MarketRoute.Home
+                                        )
+                                    },
+                                    profilePhotoUrl = chatState.userProfile?.photoUrl
+                                )
+                            }
+
+                            MarketRoute.Search -> ProductSearchScreen(
+                                viewModel = productViewModel,
+                                onBack = { marketRoute = MarketRoute.Home },
+                                onCart = { marketRoute = MarketRoute.Cart(MarketRoute.Search) },
+                                onProductClick = { product ->
+                                    marketRoute = MarketRoute.Detail(
+                                        productId = product.id,
+                                        productType = product.cartProductType(),
+                                        backTo = MarketRoute.Search
+                                    )
+                                }
+                            )
+
+                            is MarketRoute.Detail -> {
+                                val detailViewModel: ProductDetailViewModel = viewModel(
+                                    key = "product-detail-${route.productId}",
+                                    factory = AiServiceProvider.productDetailViewModelFactory(
+                                        productId = route.productId,
+                                        productType = route.productType
+                                    )
+                                )
+                                ProductDetailScreen(
+                                    viewModel = detailViewModel,
+                                    onBack = { marketRoute = route.backTo },
+                                    onOpenCart = { marketRoute = MarketRoute.Cart(route) }
+                                )
+                            }
+
+                            is MarketRoute.Cart -> {
+                                val cartViewModel: CartViewModel = viewModel(
+                                    factory = AiServiceProvider.cartViewModelFactory()
+                                )
+                                val checkoutViewModel: CheckoutViewModel = viewModel(
+                                    factory = AiServiceProvider.checkoutViewModelFactory()
+                                )
+                                CartScreen(
+                                    viewModel = cartViewModel,
+                                    checkoutViewModel = checkoutViewModel,
+                                    onBack = { marketRoute = route.backTo },
+                                    onBrowse = {
+                                        marketRoute = MarketRoute.Search
+                                        currentTab = AppNavTab.MARKET
+                                    }
+                                )
+                            }
+                        }
                     }
                     AppNavTab.AR_CORE -> {
                         NotImplementedScreen(
@@ -209,6 +302,7 @@ fun HoDoWoApp(
                 currentTab = currentTab,
                 onTabSelected = {
                     showApplianceManuals = false
+                    marketRoute = MarketRoute.Home
                     currentTab = it
                 }
             )
@@ -287,4 +381,53 @@ private fun NotImplementedScreen(
             Text("Go to AI Chat")
         }
     }
+}
+
+/** Saves the Market navigation across configuration changes (rotation). */
+private val MarketRouteSaver: Saver<MarketRoute, String> = Saver(
+    save = { route -> route.encode() },
+    restore = { encoded -> decodeMarketRoute(encoded) }
+)
+
+private fun encodePart(value: String): String =
+    java.net.URLEncoder.encode(value, "UTF-8")
+
+private fun decodePart(value: String): String =
+    runCatching { java.net.URLDecoder.decode(value, "UTF-8") }.getOrDefault(value)
+
+private fun MarketRoute.encode(): String = when (this) {
+    MarketRoute.Home -> "home"
+    MarketRoute.Search -> "search"
+    is MarketRoute.Detail -> listOf(
+        "detail",
+        encodePart(productId),
+        productType?.let(::encodePart) ?: "",
+        backTo.encode()
+    ).joinToString("|")
+
+    is MarketRoute.Cart -> "cart|" + backTo.encode()
+}
+
+private fun decodeMarketRoute(encoded: String): MarketRoute? = when {
+    encoded == "home" -> MarketRoute.Home
+    encoded == "search" -> MarketRoute.Search
+    encoded.startsWith("detail|") -> {
+        val parts = encoded.split("|", limit = 4)
+        val backTo = parts.getOrNull(3)?.let(::decodeMarketRoute)
+        if (parts.size == 4 && backTo != null) {
+            MarketRoute.Detail(
+                productId = decodePart(parts[1]),
+                productType = parts[2].takeIf { it.isNotEmpty() }?.let(::decodePart),
+                backTo = backTo
+            )
+        } else {
+            null
+        }
+    }
+
+    encoded.startsWith("cart|") -> {
+        decodeMarketRoute(encoded.substringAfter("cart|"))?.let { MarketRoute.Cart(it) }
+    }
+
+    else -> null
 }

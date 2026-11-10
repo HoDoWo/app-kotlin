@@ -29,9 +29,18 @@ data class Product(
     val distanceKm: Double? = null,
     /** True when this result is a sponsored / promoted placement. */
     val sponsored: Boolean = false,
+    /** True when the listing is refurbished (community). */
+    val refurbished: Boolean = false,
     /** Optional discount badge shown on second-hand listings. */
     val discountPercent: Int? = null
 )
+
+/** Maps a search result to the `product_type` expected by the cart endpoint. */
+fun Product.cartProductType(): String? = when {
+    condition == ProductCondition.SECOND_HAND -> "used"
+    type == ProductType.REPLACEMENT_PART -> "part"
+    else -> "new"
+}
 
 /** Result page returned by the repository, using cursor pagination. */
 data class ProductPage(

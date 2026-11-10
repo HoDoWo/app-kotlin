@@ -2,7 +2,12 @@ package com.hodowo.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hodowo.data.CartException
+import com.hodowo.data.CartStore
 import com.hodowo.data.ProductRepository
+import com.hodowo.data.ProductSearchService
+import com.hodowo.data.UnavailableCartService
+import com.hodowo.data.model.cartProductType
 import com.hodowo.data.model.Product
 import com.hodowo.data.model.ProductCondition
 import com.hodowo.data.model.ProductFilters
@@ -12,15 +17,20 @@ import com.hodowo.data.model.ProductUiState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
+import java.io.IOException
 
 class ProductViewModel(
-    private val repository: ProductRepository = ProductRepository()
+    private val repository: ProductSearchService = ProductRepository(),
+    private val cart: CartStore = CartStore(UnavailableCartService)
 ) : ViewModel() {
 
     private val _filters = MutableStateFlow(ProductFilters())
@@ -30,12 +40,59 @@ class ProductViewModel(
     val filters: ProductFilters
         get() = _filters.value
 
+    /** Items in the shared cart, for the header badge. */
+    val cartCount: StateFlow<Int> = cart.cart
+        .map { it.itemCount }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, cart.cart.value.itemCount)
+
+    /** One-off "Added to cart" / error feedback for the search screen. */
+    private val _message = MutableStateFlow<String?>(null)
+    val message: StateFlow<String?> = _message.asStateFlow()
+
     private var currentCursor: String? = null
     private var isLoadingMore = false
     private var searchJob: kotlinx.coroutines.Job? = null
 
     init {
         load(ProductFilters(), null, true)
+        refreshCart()
+    }
+
+    fun addToCart(product: Product) {
+        val productType = product.cartProductType()
+        if (productType == null) {
+            _message.value = "This product cannot be bought yet"
+            return
+        }
+        viewModelScope.launch {
+            _message.value = try {
+                cart.add(productType, product.id)
+                "Added to cart: ${product.title}"
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: CartException) {
+                "Could not add to cart: ${e.message}"
+            } catch (e: IOException) {
+                "Could not add to cart, check your connection"
+            }
+        }
+    }
+
+    fun consumeMessage() {
+        _message.value = null
+    }
+
+    /** Loads the cart so the badge is correct when the search screen opens. */
+    fun refreshCart() {
+        viewModelScope.launch {
+            try {
+                cart.refresh()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: IOException) {
+                // Keep the last known value; the cart screen shows the error.
+            }
+        }
     }
 
     fun onQueryChanged(query: String) {

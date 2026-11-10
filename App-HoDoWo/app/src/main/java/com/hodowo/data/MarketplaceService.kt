@@ -253,6 +253,9 @@ class RemoteMarketplaceService(
         parseIdList(jsonOf(get(SEARCH_PATH)))
 
     override suspend fun getProductDetail(id: String): ProductDetail {
+        val productResponse = runCatching { get("$PRODUCTS_PATH/$id") }
+        productResponse.getOrNull()?.let { return parseProduct(jsonOf(it)) }
+
         val partResponse = runCatching { get("$PARTS_PATH/$id") }
         partResponse.getOrNull()?.let { return parseProduct(jsonOf(it)) }
 
@@ -269,13 +272,10 @@ class RemoteMarketplaceService(
     ): List<MarketplaceProduct> {
         val params = mutableListOf<String>()
         if (query.isNotBlank()) params.add("q=${query.urlEncode()}")
-        if (type.isNotBlank()) params.add("type=${type.urlEncode()}")
-        if (!condition.isNullOrBlank()) params.add("condition=${condition.urlEncode()}")
         if (!category.isNullOrBlank()) params.add("category=${category.urlEncode()}")
         if (!brand.isNullOrBlank()) params.add("brand=${brand.urlEncode()}")
-        if (maxPrice != null && maxPrice > 0) params.add("max_price=$maxPrice")
         val queryStr = if (params.isNotEmpty()) "?" + params.joinToString("&") else ""
-        val path = "/api/marketplace/search$queryStr"
+        val path = "$PRODUCTS_PATH$queryStr"
 
         // Only real catalogue items: the cart and the checkout can buy them (Backend#42, #43).
         // Errors are not hidden behind sample data: the screen shows them.
@@ -483,6 +483,7 @@ class RemoteMarketplaceService(
 
         private val JSON = "application/json".toMediaType()
 
+        internal const val PRODUCTS_PATH = "/api/marketplace/products"
         internal const val PARTS_PATH = "/api/marketplace/parts"
         internal const val LISTINGS_PATH = "/api/marketplace/listings"
         internal const val SEARCH_PATH = "/api/marketplace/search"

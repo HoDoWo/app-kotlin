@@ -10,13 +10,25 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlin.random.Random
 
+/** Source of the product search screen data (demo now, backend through [RemoteProductSearchService]). */
+interface ProductSearchService {
+    fun search(
+        filters: ProductFilters,
+        cursor: String? = null,
+        pageSize: Int = 10
+    ): Flow<ProductPage>
+
+    fun categories(): List<String>
+    fun brands(): List<String>
+}
+
 /**
  * Repository for the marketplace product search.
  *
  * Provides demo data backed by cursor pagination and filters. In a real
  * implementation this would call the backend (see HoDoWo/Backend#40).
  */
-class ProductRepository(private val delayMillis: Long = 600) {
+class ProductRepository(private val delayMillis: Long = 600) : ProductSearchService {
 
     private val products = buildList {
         add(
@@ -163,10 +175,10 @@ class ProductRepository(private val delayMillis: Long = 600) {
      * Changing the [type] filter re-queries the backend instead of filtering
      * locally (the repository applies it server-side).
      */
-    fun search(
+    override fun search(
         filters: ProductFilters,
-        cursor: String? = null,
-        pageSize: Int = 10
+        cursor: String?,
+        pageSize: Int
     ): Flow<ProductPage> = flow {
         delay(delayMillis)
 
@@ -208,8 +220,8 @@ class ProductRepository(private val delayMillis: Long = 600) {
         )
     }
 
-    fun categories(): List<String> = categories
-    fun brands(): List<String> = brands
+    override fun categories(): List<String> = categories
+    override fun brands(): List<String> = brands
 
     companion object {
         private val random = Random(System.currentTimeMillis())

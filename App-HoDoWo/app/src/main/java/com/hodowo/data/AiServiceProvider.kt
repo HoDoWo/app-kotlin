@@ -6,10 +6,14 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.hodowo.BuildConfig
 import com.hodowo.data.ProductRepository
+import com.hodowo.viewmodel.CartViewModel
 import com.hodowo.viewmodel.ChatViewModel
+import com.hodowo.viewmodel.CheckoutViewModel
 import com.hodowo.viewmodel.DemoHoDoWoAiService
 import com.hodowo.viewmodel.HoDoWoAiService
 import com.hodowo.viewmodel.HomeViewModel
+import com.hodowo.viewmodel.MarketplaceViewModel
+import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.ProductViewModel
 import com.hodowo.viewmodel.greetingName
 import java.io.File
@@ -21,6 +25,42 @@ object AiServiceProvider {
 
     val authManager by lazy { AuthManager() }
     val firebaseRepository by lazy { FirebaseRepository() }
+
+    private val tokens by lazy { FirebaseTokenProvider() }
+
+    /** Shared cart state (Backend#42 cart API), so every screen shows the same badge. */
+    val cartStore: CartStore by lazy {
+        val service = if (BuildConfig.BACKEND_URL.isBlank()) {
+            UnavailableCartService
+        } else {
+            RemoteCartService(BuildConfig.BACKEND_URL, { tokens.token() })
+        }
+        CartStore(service)
+    }
+
+    private fun marketplaceService(): MarketplaceService =
+        if (BuildConfig.BACKEND_URL.isBlank()) {
+            DemoMarketplaceService()
+        } else {
+            RemoteMarketplaceService(BuildConfig.BACKEND_URL, { tokens.token() })
+        }
+
+    private fun productSearchService(): ProductSearchService =
+        if (BuildConfig.BACKEND_URL.isBlank()) {
+            ProductRepository()
+        } else {
+            RemoteProductSearchService(BuildConfig.BACKEND_URL, { tokens.token() })
+        }
+
+    private fun checkoutService(): CheckoutService =
+        if (BuildConfig.BACKEND_URL.isBlank()) {
+            object : CheckoutService {
+                override suspend fun startCheckout(selection: CartSelection): CheckoutSession =
+                    throw CheckoutException("Checkout is not available right now")
+            }
+        } else {
+            RemoteCheckoutService(BuildConfig.BACKEND_URL, { tokens.token() })
+        }
 
     fun create(context: Context): HoDoWoAiService {
         val backendUrl = BuildConfig.BACKEND_URL
@@ -72,12 +112,57 @@ object AiServiceProvider {
             }
         }
 
-    /** Factory that builds [ProductViewModel]. */
+    /** Factory for the Marketplace Home screen (partner deals + community items). */
+    fun marketplaceViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                MarketplaceViewModel(
+                    service = marketplaceService(),
+                    cart = cartStore
+                )
+            }
+        }
+
+    /** Factory that builds [ProductViewModel] backed by the marketplace products endpoint. */
     fun productViewModelFactory(context: Context): ViewModelProvider.Factory =
         viewModelFactory {
             initializer {
                 ProductViewModel(
-                    repository = ProductRepository()
+                    repository = productSearchService(),
+                    cart = cartStore
+                )
+            }
+        }
+
+    /** Factory for the Product Detail screen of one product (loads `/api/marketplace/products/{id}`). */
+    fun productDetailViewModelFactory(
+        productId: String,
+        productType: String? = null
+    ): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                ProductDetailViewModel(
+                    productId = productId,
+                    marketplaceService = marketplaceService(),
+                    cartRepository = StoreCartRepository(cartStore, productType)
+                )
+            }
+        }
+
+    /** Factory for the full cart screen (Backend#42 cart API). */
+    fun cartViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer { CartViewModel(cartStore) }
+        }
+
+    /** Factory for the checkout (Stripe PaymentSheet, Backend#43). */
+    fun checkoutViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                CheckoutViewModel(
+                    checkout = checkoutService(),
+                    cart = cartStore,
+                    publishableKey = BuildConfig.STRIPE_PUBLISHABLE_KEY
                 )
             }
         }
