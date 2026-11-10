@@ -48,6 +48,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.hodowo.data.AiServiceProvider
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.cartProductType
+import com.hodowo.data.toMarketplaceProduct
 import com.hodowo.data.AuthManager
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
@@ -242,6 +243,11 @@ fun HoDoWoApp(
                                     showMyListings = false
                                     currentTab = AppNavTab.MARKET
                                     showPostProduct = true
+                                },
+                                onOpenListing = { listing ->
+                                    showMyListings = false
+                                    currentTab = AppNavTab.MARKET
+                                    selectedMarketProduct = listing.toMarketplaceProduct()
                                 }
                             )
                         } else {
@@ -275,6 +281,10 @@ fun HoDoWoApp(
                                 onBrowse = {
                                     showCart = false
                                     showMarketplaceSearch = true
+                                },
+                                onOpenProduct = { line ->
+                                    showCart = false
+                                    selectedMarketProduct = line.toMarketplaceProduct()
                                 }
                             )
                         } else if (product != null) {
