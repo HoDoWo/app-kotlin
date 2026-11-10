@@ -1,6 +1,7 @@
 package com.hodowo.data
 
 import com.hodowo.viewmodel.PartCompatibility
+import com.hodowo.viewmodel.Listing
 import com.hodowo.viewmodel.ProductDetail
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -61,6 +62,32 @@ fun MarketplaceProduct.toProductDetail(): ProductDetail {
 }
 
 private const val CENTS = 100
+
+/** The product a cart row points to, so the row can open its Product Detail page (#111). */
+fun CartLine.toMarketplaceProduct(): MarketplaceProduct = MarketplaceProduct(
+    id = productId,
+    title = title,
+    description = "",
+    type = productType,
+    condition = if (productType == "used") "used-good" else "new",
+    price = (unitPriceCents ?: addedPriceCents ?: 0) / CENTS.toDouble(),
+    sellerName = sellerName ?: "Community seller",
+    partnerName = sellerName.takeIf { sellerKind != SELLER_COMMUNITY },
+    imageUrl = imageUrl,
+    isPart = productType == "part"
+)
+
+/** A seller's own listing as buyers see it (#111): always a second-hand product. */
+fun Listing.toMarketplaceProduct(): MarketplaceProduct = MarketplaceProduct(
+    id = id,
+    title = title,
+    description = description,
+    type = "used",
+    condition = condition.ifBlank { "used-good" },
+    price = priceLabel.filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: 0.0,
+    imageUrl = imageUrl,
+    isPart = false
+)
 
 private fun conditionLabel(condition: String): String = when (condition) {
     "unopened" -> "Unopened"
