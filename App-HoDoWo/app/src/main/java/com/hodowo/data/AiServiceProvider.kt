@@ -94,9 +94,13 @@ object AiServiceProvider {
                     aiService = create(context),
                     firebaseRepository = firebaseRepository,
                     authManager = authManager,
-                    chatHistory = FileChatHistoryStore(
-                        directory = File(context.filesDir, "chat_history"),
-                        openImage = { uri -> context.applicationContext.contentResolver.openInputStream(uri) }
+                    chatHistory = SyncedChatHistoryStore(
+                        local = FileChatHistoryStore(
+                            directory = File(context.filesDir, "chat_history"),
+                            openImage = { uri -> context.applicationContext.contentResolver.openInputStream(uri) }
+                        ),
+                        remote = FirestoreChatHistory(),
+                        uploader = FirebaseChatImageUploader(compress = { uri -> compressor.compress(uri) })
                     ),
                     profilePhotoStore = ProfilePhotoStore(context.applicationContext),
                     encodeProfilePhoto = { uri ->

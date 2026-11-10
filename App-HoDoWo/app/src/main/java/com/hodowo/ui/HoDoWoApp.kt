@@ -1,4 +1,4 @@
-﻿package com.hodowo.ui
+package com.hodowo.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -225,6 +225,10 @@ fun HoDoWoApp(
                                 chatViewModel.sendTextMessage(
                                     "I need help with \"${guide.issueTitle}\" on my ${guide.applianceName}."
                                 )
+                            },
+                            onOpenManualChat = { guide ->
+                                currentTab = AppNavTab.AI_CHAT
+                                chatViewModel.openChatForGuide(guide)
                             },
                             profilePhotoUrl = chatState.userProfile?.photoUrl
                         )
