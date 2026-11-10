@@ -1,4 +1,4 @@
-﻿package com.hodowo.ui
+package com.hodowo.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -317,7 +317,9 @@ fun HoDoWoApp(
                                 onOpenProfile = { currentTab = AppNavTab.PROFILE },
                                 onCartClick = { showCart = true },
                                 onOpenProduct = { selectedMarketProduct = it },
-                                profilePhotoUrl = chatState.userProfile?.photoUrl
+                                profilePhotoUrl = chatState.userProfile?.photoUrl,
+                                userLocation = chatState.userProfile?.location,
+                                currentUserId = authManager.currentUserId
                             )
                         }
                     }
