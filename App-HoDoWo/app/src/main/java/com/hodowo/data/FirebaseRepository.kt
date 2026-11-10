@@ -1,4 +1,4 @@
-﻿package com.hodowo.data
+package com.hodowo.data
 
 import android.net.Uri
 import android.util.Log
@@ -288,7 +288,7 @@ class FirebaseRepository(
                 email = doc.getString("email") ?: "",
                 photoUrl = doc.getString("photoUrl"),
                 memberSince = doc.getLong("memberSince") ?: System.currentTimeMillis(),
-                location = doc.getString("location")
+                location = doc.getString("location")?.takeIf { it.isNotBlank() }
             )
         } catch (e: Exception) {
             Log.w(TAG, "Failed to get user profile: ${e.message}")
