@@ -133,4 +133,79 @@ class RemoteMessagesServiceTest {
         assertEquals(10000, line.listPriceCents)
         assertEquals(8000, line.unitPriceCents)
     }
+
+    @Test
+    fun anExpiredSessionAndTooManyMessagesHaveTheirOwnMessage() = runTest {
+        server.enqueue(MockResponse().setResponseCode(401).setBody("{}"))
+        server.enqueue(MockResponse().setResponseCode(429).setBody("{}"))
+        server.enqueue(MockResponse().setResponseCode(500).setBody("oops"))
+
+        val messages = (1..3).map {
+            try {
+                service.send("fridge__b1", "Hi")
+                null
+            } catch (e: java.io.IOException) {
+                e.message
+            }
+        }
+
+        assertEquals(
+            listOf(
+                "Not authorized: please sign in again",
+                "You are sending too fast, wait a minute",
+                "Messages are unavailable (500)"
+            ),
+            messages
+        )
+    }
+
+    @Test
+    fun anInvalidAnswerIsAnError() = runTest {
+        server.enqueue(ok("not json"))
+
+        try {
+            service.inbox()
+            fail("expected an error")
+        } catch (e: java.io.IOException) {
+            assertEquals("Invalid server response", e.message)
+        }
+    }
+
+    @Test
+    fun withoutATokenNoAuthorizationIsSentAndMissingFieldsGetDefaults() = runTest {
+        val anonymous = RemoteMessagesService(backendUrl = server.url("/").toString(), tokenProvider = { null })
+        server.enqueue(ok("""{"results": [{"id": "c1", "role": "selling", "listing": {}, "unread": 2}]}"""))
+
+        val inbox = anonymous.inbox()
+
+        assertNull(server.takeRequest().getHeader("Authorization"))
+        val row = inbox.conversations.single()
+        assertEquals(2, inbox.unread)
+        assertFalse(row.buying)
+        assertEquals("HoDoWo user", row.otherName)
+        assertEquals("active", row.listing.status)
+        assertNull(row.offer)
+        assertNull(row.lastMessage)
+        assertTrue(row.messages.isEmpty())
+    }
+
+    @Test
+    fun withoutABackendThereAreNoMessages() = runTest {
+        assertEquals(Inbox(emptyList(), 0), UnavailableMessagesService.inbox())
+        val calls: List<suspend () -> Unit> = listOf(
+            { UnavailableMessagesService.open("c") },
+            { UnavailableMessagesService.start("l") },
+            { UnavailableMessagesService.send("c", "t") },
+            { UnavailableMessagesService.offer("c", 1) },
+            { UnavailableMessagesService.answerOffer("c", true) }
+        )
+        calls.forEach { call ->
+            try {
+                call()
+                fail("expected an error")
+            } catch (e: java.io.IOException) {
+                assertEquals("Messages are not available", e.message)
+            }
+        }
+    }
 }
