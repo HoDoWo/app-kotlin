@@ -1,4 +1,10 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzg-7q-U": {
+  "c": 0.0,
+  "done": true,
+  "issue": 17,
+  "title": "Forum about concrete home appliances"
+ },
  "PVTI_lADOFCkyKM4Bl88jzhDW4fI": {
   "c": 0.0,
   "done": true,
@@ -76,12 +82,6 @@
   "done": true,
   "issue": 31,
   "title": "Marketplace Firestore schema and ER diagram"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-7q-U": {
-  "c": 0.0,
-  "done": false,
-  "issue": 17,
-  "title": "Forum about concrete home appliances"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-7rNk": {
   "c": 4.0,
