@@ -2,6 +2,9 @@
 
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -26,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -171,8 +175,10 @@ private val CONDITION_CHOICES = listOf(
 /**
  * "Sell an appliance or part" form (marketplace #147/#148).
  *
- * The five steps mirror the HTML mock: photos, identification, condition,
- * narrative and price/handover. Publishing uploads the photos to Firebase
+ * Four steps, one per screen, like Wallapop (review 10-11): photos, what it
+ * is, condition and description, price and handover. The AI price estimate is
+ * calculated when the user leaves step 3, so the price step already shows it
+ * (and fills the price when it is empty). Publishing uploads the photos to Firebase
  * Storage and POSTs the listing to `/api/marketplace/listings`, which stores it
  * in the `listings` collection of the DB diagram.
  */
@@ -201,6 +207,9 @@ fun PostProductScreen(
     var publishedSuccess by rememberSaveable { mutableStateOf(false) }
     var priceEstimate by remember { mutableStateOf<PriceEstimate?>(null) }
     var pendingLabelPhoto by remember { mutableStateOf<Uri?>(null) }
+    var step by rememberSaveable { mutableIntStateOf(0) }
+    /** The user tried to continue: the errors of the current step are shown. */
+    var stepAttempted by rememberSaveable { mutableStateOf(false) }
 
     val message by viewModel.message.collectAsState()
     val submitting by viewModel.isSubmitting.collectAsState()
@@ -262,11 +271,60 @@ fun PostProductScreen(
     val priceValue = priceInput.toDoubleOrNull()
     val shippingValue = if (shipping) shippingInput.toDoubleOrNull() ?: 0.0 else 0.0
     val totalValue = (priceValue ?: 0.0) + shippingValue
-    val titleError = attempted && title.trim().length < MIN_TITLE_LENGTH
-    val descriptionError = attempted && description.trim().length < MIN_DESCRIPTION_LENGTH
+    val titleError = (attempted || stepAttempted) && title.trim().length < MIN_TITLE_LENGTH
+    val descriptionError = (attempted || stepAttempted) && description.trim().length < MIN_DESCRIPTION_LENGTH
     val priceError = attempted && (priceValue == null || priceValue <= 0)
-    val photosError = attempted && images.isEmpty()
+    val photosError = (attempted || stepAttempted) && images.isEmpty()
     val handoverError = attempted && !pickup && !shipping
+
+    fun listingDetails() = ListingDetails(
+        title = title,
+        description = description,
+        category = APPLIANCE_TYPES.firstOrNull { it.value == applianceType }?.label ?: applianceType,
+        brand = brand,
+        model = modelCode,
+        condition = condition,
+        listingKind = listingKind,
+        photoCount = images.size,
+        pickup = pickup,
+        shipping = shipping,
+        location = pickupZip
+    )
+
+    /** The estimate of the price step; an empty price takes the suggested one. */
+    fun estimate() {
+        viewModel.estimatePrice(listingDetails()) { result ->
+            priceEstimate = result
+            if (priceInput.isBlank() && result != null) {
+                priceInput = String.format(Locale.US, "%.2f", (result.low + result.high) / 2)
+            }
+        }
+    }
+
+    fun stepIsValid(): Boolean = when (step) {
+        0 -> images.isNotEmpty()
+        1 -> title.trim().length >= MIN_TITLE_LENGTH
+        2 -> description.trim().length >= MIN_DESCRIPTION_LENGTH
+        else -> true
+    }
+
+    fun next() {
+        if (!stepIsValid()) {
+            stepAttempted = true
+            return
+        }
+        stepAttempted = false
+        step += 1
+        // Leaving step 3 everything the price depends on is known: calculate it now.
+        if (step == LAST_STEP && priceEstimate == null && !estimating) estimate()
+    }
+
+    fun previous() {
+        stepAttempted = false
+        if (step > 0) step -= 1 else onBack()
+    }
+
+    BackHandler(enabled = step > 0 && !publishedSuccess) { previous() }
 
     fun publish() {
         attempted = true
@@ -303,10 +361,10 @@ fun PostProductScreen(
             AppTopBar(
                 subtitle = "SELL AN APPLIANCE OR PART",
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = ::previous) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Go back",
+                            contentDescription = if (step > 0) "Previous step" else "Go back",
                             tint = OnSurface
                         )
                     }
@@ -322,107 +380,103 @@ fun PostProductScreen(
                 }
             )
 
+            StepProgress(step = step)
+
             AdaptiveContent(modifier = Modifier.weight(1f), maxWidth = 900.dp) {
+                val listState = rememberLazyListState()
+                // Every step starts from its top.
+                LaunchedEffect(step) { listState.scrollToItem(0) }
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                item { AuxiliaryBar() }
+                    if (step == 0) item { AuxiliaryBar() }
 
-                item {
-                    PhotoSection(
-                        images = images,
-                        showError = photosError,
-                        onAdd = { imagePicker.launch("image/*") },
-                        onRemove = { uri -> images = images.filterNot { it == uri } }
-                    )
-                }
+                    if (step == 0) item {
+                        PhotoSection(
+                            images = images,
+                            showError = photosError,
+                            onAdd = { imagePicker.launch("image/*") },
+                            onRemove = { uri -> images = images.filterNot { it == uri } }
+                        )
+                    }
 
-                item {
-                    IdentitySection(
-                        listingKind = listingKind,
-                        onListingKindChange = { listingKind = it },
-                        applianceType = applianceType,
-                        onApplianceTypeChange = { applianceType = it },
-                        brand = brand,
-                        onBrandChange = { brand = it },
-                        modelCode = modelCode,
-                        onModelCodeChange = { modelCode = it },
-                        title = title,
-                        onTitleChange = { title = it.take(120) },
-                        titleError = titleError,
-                        scanning = scanningLabel,
-                        onScanWithCamera = ::scanWithCamera,
-                        onScanFromGallery = { labelGallery.launch("image/*") }
-                    )
-                }
+                    if (step == 1) item {
+                        IdentitySection(
+                            listingKind = listingKind,
+                            onListingKindChange = { listingKind = it },
+                            applianceType = applianceType,
+                            onApplianceTypeChange = { applianceType = it },
+                            brand = brand,
+                            onBrandChange = { brand = it },
+                            modelCode = modelCode,
+                            onModelCodeChange = { modelCode = it },
+                            title = title,
+                            onTitleChange = { title = it.take(120) },
+                            titleError = titleError,
+                            scanning = scanningLabel,
+                            onScanWithCamera = ::scanWithCamera,
+                            onScanFromGallery = { labelGallery.launch("image/*") }
+                        )
+                    }
 
-                item {
-                    ConditionSection(condition = condition, onConditionChange = { condition = it })
-                }
-
-                item {
-                    NarrativeSection(
-                        description = description,
-                        onDescriptionChange = {
-                            description = it.take(MAX_DESCRIPTION_LENGTH)
-                            priceEstimate = null
-                        },
-                        descriptionError = descriptionError,
-                        polishing = polishing,
-                        onPolish = {
-                            viewModel.polishDescription(description) { polished ->
-                                description = polished.take(MAX_DESCRIPTION_LENGTH)
+                    if (step == 2) item {
+                        ConditionSection(
+                            condition = condition,
+                            onConditionChange = {
+                                condition = it
+                                priceEstimate = null
                             }
-                        }
-                    )
-                }
+                        )
+                    }
 
-                item {
-                    PricingSection(
-                        priceInput = priceInput,
-                        onPriceChange = { priceInput = sanitizeMoney(it) },
-                        priceError = priceError,
-                        estimate = priceEstimate,
-                        estimating = estimating,
-                        onEstimate = {
-                            viewModel.estimatePrice(
-                                ListingDetails(
-                                    title = title,
-                                    description = description,
-                                    category = APPLIANCE_TYPES
-                                        .firstOrNull { it.value == applianceType }?.label
-                                        ?: applianceType,
-                                    brand = brand,
-                                    model = modelCode,
-                                    condition = condition,
-                                    listingKind = listingKind,
-                                    photoCount = images.size,
-                                    pickup = pickup,
-                                    shipping = shipping,
-                                    location = pickupZip
-                                )
-                            ) { priceEstimate = it }
-                        },
-                        onUseEstimate = { price ->
-                            priceInput = String.format(Locale.US, "%.2f", price)
-                        },
-                        pickup = pickup,
-                        onPickupChange = { pickup = it },
-                        shipping = shipping,
-                        onShippingChange = { shipping = it },
-                        pickupZip = pickupZip,
-                        onPickupZipChange = { pickupZip = it.take(20) },
-                        shippingInput = shippingInput,
-                        onShippingInputChange = { shippingInput = sanitizeMoney(it) },
-                        handoverError = handoverError
-                    )
+                    if (step == 2) item {
+                        NarrativeSection(
+                            description = description,
+                            onDescriptionChange = {
+                                description = it.take(MAX_DESCRIPTION_LENGTH)
+                                priceEstimate = null
+                            },
+                            descriptionError = descriptionError,
+                            polishing = polishing,
+                            onPolish = {
+                                viewModel.polishDescription(description) { polished ->
+                                    description = polished.take(MAX_DESCRIPTION_LENGTH)
+                                }
+                            }
+                        )
+                    }
+
+                    if (step == LAST_STEP) item {
+                        PricingSection(
+                            priceInput = priceInput,
+                            onPriceChange = { priceInput = sanitizeMoney(it) },
+                            priceError = priceError,
+                            estimate = priceEstimate,
+                            estimating = estimating,
+                            onEstimate = ::estimate,
+                            onUseEstimate = { price ->
+                                priceInput = String.format(Locale.US, "%.2f", price)
+                            },
+                            pickup = pickup,
+                            onPickupChange = { pickup = it },
+                            shipping = shipping,
+                            onShippingChange = { shipping = it },
+                            pickupZip = pickupZip,
+                            onPickupZipChange = { pickupZip = it.take(20) },
+                            shippingInput = shippingInput,
+                            onShippingInputChange = { shippingInput = sanitizeMoney(it) },
+                            handoverError = handoverError
+                        )
                     }
                 }
             }
 
-            PublishBar(
+            if (step < LAST_STEP) {
+                StepNavigationBar(step = step, onBack = ::previous, onNext = ::next)
+            } else PublishBar(
                 priceLabel = formatMoney(totalValue),
                 breakdown = if (shipping && shippingValue > 0 && priceValue != null) {
                     "Item ${formatMoney(priceValue)} + shipping ${formatMoney(shippingValue)}"
@@ -998,7 +1052,7 @@ private fun NarrativeSection(
     onPolish: () -> Unit
 ) {
     SectionCard {
-        StepHeader(number = 4, title = "Item Narrative & Past Repairs") {
+        StepHeader(number = null, title = "Item Narrative & Past Repairs") {
             TextButton(
                 onClick = onPolish,
                 enabled = description.isNotBlank() && !polishing
@@ -1033,7 +1087,7 @@ private fun NarrativeSection(
             placeholder = {
                 Text(
                     "Mention any known issues or past repairs... e.g. 'Pulled from working Bosch " +
-                        "Serie 4 after drum bearing repair. Motor runs smooth and quiet at 1400 RPM.'"
+                            "Serie 4 after drum bearing repair. Motor runs smooth and quiet at 1400 RPM.'"
                 )
             },
             shape = RoundedCornerShape(12.dp)
@@ -1080,7 +1134,7 @@ private fun PricingSection(
     handoverError: Boolean
 ) {
     SectionCard {
-        StepHeader(number = 5, title = "Pricing & Handover Mode")
+        StepHeader(number = 4, title = "Pricing & Handover Mode")
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             FormLabel("Asking Price (USD)")
@@ -1444,12 +1498,13 @@ private fun SectionCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-private fun StepHeader(number: Int, title: String, trailing: (@Composable () -> Unit)? = null) {
+private fun StepHeader(number: Int?, title: String, trailing: (@Composable () -> Unit)? = null) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
+        // A second section of the same step has no number of its own.
+        if (number != null) Box(
             modifier = Modifier
                 .size(26.dp)
                 .clip(CircleShape)
@@ -1463,7 +1518,7 @@ private fun StepHeader(number: Int, title: String, trailing: (@Composable () -> 
                 fontWeight = FontWeight.Bold
             )
         }
-        Spacer(modifier = Modifier.width(8.dp))
+        if (number != null) Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -1496,12 +1551,72 @@ private fun sanitizeMoney(raw: String): String {
         digitsAndDots
     } else {
         digitsAndDots.substring(0, firstDot + 1) +
-            digitsAndDots.substring(firstDot + 1).replace(".", "")
+                digitsAndDots.substring(firstDot + 1).replace(".", "")
     }
     val parts = singleDot.split('.')
     return if (parts.size == 2) {
         parts[0].take(6) + "." + parts[1].take(2)
     } else {
         singleDot.take(6)
+    }
+}
+
+// ---------- steps ----------
+
+private const val LAST_STEP = 3
+private val STEP_TITLES = listOf("Photos", "What it is", "Condition", "Price & delivery")
+
+/** "Step 2 of 4 · What it is" and a bar that fills step by step. */
+@Composable
+private fun StepProgress(step: Int) {
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = "Step ${step + 1} of ${STEP_TITLES.size} · ${STEP_TITLES[step]}",
+            style = MaterialTheme.typography.labelLarge,
+            color = Primary,
+            fontWeight = FontWeight.SemiBold
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            STEP_TITLES.indices.forEach { index ->
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(if (index <= step) Primary else SurfaceContainerLow)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StepNavigationBar(step: Int, onBack: () -> Unit, onNext: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Surface.copy(alpha = 0.97f),
+        shadowElevation = 8.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            if (step > 0) {
+                OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("Back") }
+            }
+            Button(
+                onClick = onNext,
+                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (step == LAST_STEP - 1) "Continue to price" else "Continue")
+            }
+        }
     }
 }
