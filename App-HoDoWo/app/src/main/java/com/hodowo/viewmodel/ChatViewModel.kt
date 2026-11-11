@@ -142,6 +142,23 @@ data class UserAppliance(
 )
 
 /**
+ * True when the appliance of the chat is this registered one, so the profile
+ * does not show it twice ("Active session" and the saved card). The same model
+ * number is enough; otherwise brand, name and model must have the same words,
+ * whatever the case and the order ("candy" + "Candy FIDC X502IT" = "Candy FIDC X502IT").
+ */
+fun Appliance.isSameAs(saved: UserAppliance): Boolean {
+    val model = applianceKey(model)
+    if (model.isNotEmpty() && model == applianceKey(saved.model)) return true
+    return applianceWords(brand, name, this.model) == applianceWords(saved.brand, saved.name, saved.model)
+}
+
+private fun applianceKey(text: String?): String = text.orEmpty().lowercase().filter { it.isLetterOrDigit() }
+
+private fun applianceWords(vararg parts: String?): Set<String> =
+    parts.flatMap { it.orEmpty().lowercase().split(Regex("[^\\p{L}\\p{N}]+")) }.filter { it.isNotEmpty() }.toSet()
+
+/**
  * User profile entity stored in Firestore under users/{userId}.
  */
 data class UserProfile(

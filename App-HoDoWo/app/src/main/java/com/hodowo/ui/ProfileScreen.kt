@@ -32,6 +32,7 @@ import com.hodowo.data.AuthManager
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.components.NotificationIconButton
 import com.hodowo.ui.components.ProfileAvatar
+import com.hodowo.viewmodel.isSameAs
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.ManualGuide
 import com.hodowo.viewmodel.MyListingsViewModel
@@ -119,7 +120,10 @@ fun ProfileScreen(
     // Owned appliances: active session (if any) + persisted Firestore ones. No fake sample data.
     val ownedAppliances = remember(chatState?.appliance, chatState?.userAppliances) {
         val list = mutableListOf<ApplianceItemData>()
-        chatState?.appliance?.let { app ->
+        // The appliance of the chat, unless it is already one of the registered appliances below.
+        chatState?.appliance?.takeUnless { app ->
+            (chatState?.userAppliances ?: emptyList()).any { app.isSameAs(it) }
+        }?.let { app ->
             list.add(
                 ApplianceItemData(
                     id = "active_session",
@@ -189,285 +193,285 @@ fun ProfileScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-            // 1. PROFILE HEADER
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                // 1. PROFILE HEADER
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Box(modifier = Modifier.size(64.dp).clip(CircleShape).clickable { pickPhoto() }) {
-                        ProfileAvatar(name = defaultName, size = 64, photoUrl = photoUrl)
-                        if (uploadingPhoto) {
-                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center).size(28.dp), strokeWidth = 2.dp)
-                        }
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.align(Alignment.BottomEnd).size(22.dp)
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.PhotoCamera, "Change photo", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(13.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Box(modifier = Modifier.size(64.dp).clip(CircleShape).clickable { pickPhoto() }) {
+                            ProfileAvatar(name = defaultName, size = 64, photoUrl = photoUrl)
+                            if (uploadingPhoto) {
+                                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center).size(28.dp), strokeWidth = 2.dp)
                             }
-                        }
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(defaultName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(displayEmail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
-                            IconButton(
-                                onClick = { editNameInput = defaultName; showEditProfileDialog = true },
-                                modifier = Modifier.size(32.dp)
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.align(Alignment.BottomEnd).size(22.dp)
                             ) {
-                                Icon(Icons.Default.Edit, "Edit Profile", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                            }
-                        }
-                        Spacer(Modifier.height(6.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            if (memberSince.isNotBlank()) {
-                                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
-                                    Text(
-                                        text = memberSince,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(Icons.Default.PhotoCamera, "Change photo", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(13.dp))
                                 }
                             }
-                            OutlinedButton(
-                                onClick = { if (isSignedIn) showAccountDialog = true else onOpenAuth() },
-                                shape = CircleShape,
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                                modifier = Modifier.height(26.dp)
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(if (isSignedIn) "Account" else "Sign In", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(defaultName, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(displayEmail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                IconButton(
+                                    onClick = { editNameInput = defaultName; showEditProfileDialog = true },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(Icons.Default.Edit, "Edit Profile", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                                }
+                            }
+                            Spacer(Modifier.height(6.dp))
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                if (memberSince.isNotBlank()) {
+                                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                                        Text(
+                                            text = memberSince,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+                                OutlinedButton(
+                                    onClick = { if (isSignedIn) showAccountDialog = true else onOpenAuth() },
+                                    shape = CircleShape,
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(26.dp)
+                                ) {
+                                    Text(if (isSignedIn) "Account" else "Sign In", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            // 2. SAVED MANUALS
-            if (bookmarkedGuides.isNotEmpty()) {
+                // 2. SAVED MANUALS
+                if (bookmarkedGuides.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                            Column {
+                                Text("Saved Repair Manuals", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                Text("Your bookmarked AI troubleshooting guides", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Text("${bookmarkedGuides.size} saved", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                        }
+                        bookmarkedGuides.forEach { guide ->
+                            BookmarkedGuideCard(guide = guide, onClick = { selectedGuideForDetails = guide })
+                        }
+                    }
+                }
+
+                // 3. OWNED APPLIANCES
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Column {
-                            Text("Saved Repair Manuals", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Text("Your bookmarked AI troubleshooting guides", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Owned Appliances", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text("Manage registered appliances & repair manuals", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                        Text("${bookmarkedGuides.size} saved", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
-                    }
-                    bookmarkedGuides.forEach { guide ->
-                        BookmarkedGuideCard(guide = guide, onClick = { selectedGuideForDetails = guide })
-                    }
-                }
-            }
-
-            // 3. OWNED APPLIANCES
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                    Column {
-                        Text("Owned Appliances", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text("Manage registered appliances & repair manuals", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.clickable {
-                            newApplianceName = ""; newApplianceBrand = ""; newApplianceRoom = ""
-                            showAddApplianceDialog = true
-                        }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Text("Add", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-
-                if (ownedAppliances.isEmpty()) {
-                    Card(
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth().padding(20.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.Kitchen, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("No appliances yet", fontWeight = FontWeight.SemiBold)
-                            Text("Register your appliances to keep their manuals in one place.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Button(onClick = {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            modifier = Modifier.clickable {
                                 newApplianceName = ""; newApplianceBrand = ""; newApplianceRoom = ""
                                 showAddApplianceDialog = true
-                            }) { Text("Add appliance") }
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Text("Add", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                            }
                         }
+                    }
+
+                    if (ownedAppliances.isEmpty()) {
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Default.Kitchen, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("No appliances yet", fontWeight = FontWeight.SemiBold)
+                                Text("Register your appliances to keep their manuals in one place.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Button(onClick = {
+                                    newApplianceName = ""; newApplianceBrand = ""; newApplianceRoom = ""
+                                    showAddApplianceDialog = true
+                                }) { Text("Add appliance") }
+                            }
+                        }
+                    }
+
+                    ownedAppliances.forEach { item ->
+                        ApplianceCard(
+                            icon = item.icon,
+                            title = item.title,
+                            manualCount = item.manualCount,
+                            subtitle = item.subtitle,
+                            badgeColor = if (item.isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
+                            onClick = {
+                                // Opens the appliance screen listing its related manuals
+                                viewModel?.openApplianceManuals(item.id, item.title, item.brand, item.model, item.isUserRegistered)
+                                onOpenApplianceManuals()
+                            }
+                        )
                     }
                 }
 
-                ownedAppliances.forEach { item ->
-                    ApplianceCard(
-                        icon = item.icon,
-                        title = item.title,
-                        manualCount = item.manualCount,
-                        subtitle = item.subtitle,
-                        badgeColor = if (item.isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
-                        onClick = {
-                            // Opens the appliance screen listing its related manuals
-                            viewModel?.openApplianceManuals(item.id, item.title, item.brand, item.model, item.isUserRegistered)
-                            onOpenApplianceManuals()
+                // 4. APPLIANCES POSTED TO SELL
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Appliances Posted to Sell", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text("Manage your marketplace listings", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
-                    )
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            modifier = Modifier.clickable { onPostProduct() }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(Icons.Default.Sell, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Text("+ Sell", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+
+                    when {
+                        !isSignedIn -> {
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                modifier = Modifier.fillMaxWidth().clickable { onOpenAuth() }
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("Sign in to sell", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            "Your posted appliances will appear here.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+
+                        myListingsState?.isLoading == true && listings.isEmpty() -> {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                Text(
+                                    "Loading your listings...",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
+                        listings.isEmpty() -> {
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                modifier = Modifier.fillMaxWidth().clickable { onPostProduct() }
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text("No listings yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                        Text(
+                                            "Tap to post your first appliance.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+
+                        else -> {
+                            val activeCount = listings.count { it.status == ListingStatus.ACTIVE }
+                            val soldCount = listings.count { it.status == ListingStatus.SOLD }
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ListingStatPill(text = "$activeCount active", highlighted = true)
+                                ListingStatPill(text = "$soldCount sold", highlighted = false)
+                                ListingStatPill(text = "${listings.size} total", highlighted = false)
+                            }
+
+                            listings.take(2).forEach { listing ->
+                                ProfileListingCard(listing = listing, onClick = onOpenMyListings)
+                            }
+
+                            Card(
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                                modifier = Modifier.fillMaxWidth().clickable { onOpenMyListings() }
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        Icon(Icons.Default.Sell, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                        Text(
+                                            "Manage your ${listings.size} listing${if (listings.size == 1) "" else "s"}",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                    Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
                 }
             }
-
-            // 4. APPLIANCES POSTED TO SELL
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Appliances Posted to Sell", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        Text("Manage your marketplace listings", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.clickable { onPostProduct() }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(Icons.Default.Sell, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                            Text("+ Sell", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-
-                when {
-                    !isSignedIn -> {
-                        Card(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                            modifier = Modifier.fillMaxWidth().clickable { onOpenAuth() }
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Sign in to sell", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                    Text(
-                                        "Your posted appliances will appear here.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-
-                    myListingsState?.isLoading == true && listings.isEmpty() -> {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            Text(
-                                "Loading your listings...",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    listings.isEmpty() -> {
-                        Card(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                            modifier = Modifier.fillMaxWidth().clickable { onPostProduct() }
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("No listings yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                    Text(
-                                        "Tap to post your first appliance.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-
-                    else -> {
-                        val activeCount = listings.count { it.status == ListingStatus.ACTIVE }
-                        val soldCount = listings.count { it.status == ListingStatus.SOLD }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            ListingStatPill(text = "$activeCount active", highlighted = true)
-                            ListingStatPill(text = "$soldCount sold", highlighted = false)
-                            ListingStatPill(text = "${listings.size} total", highlighted = false)
-                        }
-
-                        listings.take(2).forEach { listing ->
-                            ProfileListingCard(listing = listing, onClick = onOpenMyListings)
-                        }
-
-                        Card(
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                            modifier = Modifier.fillMaxWidth().clickable { onOpenMyListings() }
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Icon(Icons.Default.Sell, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                    Text(
-                                        "Manage your ${listings.size} listing${if (listings.size == 1) "" else "s"}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        }
-                    }
-                }
-            }
-        }
         }
     }
 
