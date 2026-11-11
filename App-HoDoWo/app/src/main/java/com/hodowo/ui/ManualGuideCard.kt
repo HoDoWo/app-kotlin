@@ -152,7 +152,7 @@ fun ManualGuideCard(
 
             // Diagnostic Overview
             Text(
-                text = guide.overview,
+                text = markdownText(guide.overview),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 lineHeight = 24.sp,
@@ -290,13 +290,15 @@ private fun StepsSection(guide: ManualGuide, selectedStep: Int?, onSelectStep: (
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = buildString {
-                            append(step.title)
-                            if (step.description.isNotBlank()) {
-                                append(": ")
-                                append(step.description)
+                        text = markdownText(
+                            buildString {
+                                append(step.title)
+                                if (step.description.isNotBlank()) {
+                                    append(": ")
+                                    append(step.description)
+                                }
                             }
-                        },
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 23.sp,

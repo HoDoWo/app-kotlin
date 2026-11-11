@@ -361,7 +361,7 @@ private fun StepsPane(guide: ManualGuide, selected: Int?, onSelect: (Int) -> Uni
                     )
                     if (guide.overview.isNotBlank()) {
                         Text(
-                            text = guide.overview,
+                            text = markdownText(guide.overview),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -373,7 +373,7 @@ private fun StepsPane(guide: ManualGuide, selected: Int?, onSelect: (Int) -> Uni
             }
             itemsIndexed(guide.warnings) { _, warning ->
                 Text(
-                    text = "⚠️ $warning",
+                    text = markdownText("⚠️ $warning"),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error
                 )
@@ -397,7 +397,7 @@ private fun StepRow(step: ManualStep, isSelected: Boolean, onClick: () -> Unit) 
         StepNumber(step.number)
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
-                text = step.title,
+                text = markdownText(step.title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -405,7 +405,7 @@ private fun StepRow(step: ManualStep, isSelected: Boolean, onClick: () -> Unit) 
             )
             if (step.description.isNotBlank()) {
                 Text(
-                    text = step.description,
+                    text = markdownText(step.description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 15.sp,
@@ -446,7 +446,7 @@ private fun StepCallout(
                 StepNumber(step.number)
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = step.title,
+                    text = markdownText(step.title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -458,7 +458,7 @@ private fun StepCallout(
             }
             if (step.description.isNotBlank()) {
                 Text(
-                    text = step.description,
+                    text = markdownText(step.description),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 15.sp,
