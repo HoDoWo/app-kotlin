@@ -159,6 +159,17 @@ object ManualJson {
         }
     }
 
+    /** A pin as Firestore stores it: `{x, y}`, or null. */
+    fun pinToMap(pin: StepPin?): Map<String, Double>? = pin?.let { mapOf("x" to it.x.toDouble(), "y" to it.y.toDouble()) }
+
+    /** A pin read back from Firestore, or null when missing or outside the image. */
+    fun pinFromMap(value: Any?): StepPin? {
+        val map = value as? Map<*, *> ?: return null
+        val x = (map["x"] as? Number)?.toFloat() ?: return null
+        val y = (map["y"] as? Number)?.toFloat() ?: return null
+        return if (x in 0f..1f && y in 0f..1f) StepPin(x, y) else null
+    }
+
     /** `{"x": 0..1, "y": 0..1}` of a step, or null when missing or outside the image. */
     fun parsePin(json: JSONObject?): StepPin? {
         if (json == null || !json.has("x") || !json.has("y")) return null

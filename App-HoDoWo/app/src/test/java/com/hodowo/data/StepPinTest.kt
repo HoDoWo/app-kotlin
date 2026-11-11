@@ -35,4 +35,15 @@ class StepPinTest {
 
         assertEquals(guide.steps, back?.steps)
     }
+
+    @Test
+    fun pinsSurviveFirestore() {
+        val pin = StepPin(0.5f, 0.25f)
+
+        assertEquals(pin, ManualJson.pinFromMap(ManualJson.pinToMap(pin)))
+        assertNull(ManualJson.pinToMap(null))
+        assertNull(ManualJson.pinFromMap(mapOf("x" to 2.0, "y" to 0.5)))
+        assertNull(ManualJson.pinFromMap(mapOf("x" to 0.5)))
+        assertNull(ManualJson.pinFromMap("not a map"))
+    }
 }
