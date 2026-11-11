@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -100,6 +101,7 @@ fun ProfileScreen(
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showAddApplianceDialog by remember { mutableStateOf(false) }
     var showAccountDialog by remember { mutableStateOf(false) }
+    var showSignOutConfirm by remember { mutableStateOf(false) }
     var selectedGuideForDetails by remember { mutableStateOf<ManualGuide?>(null) }
 
     var editNameInput by remember(defaultName) { mutableStateOf(defaultName) }
@@ -471,6 +473,49 @@ fun ProfileScreen(
                         }
                     }
                 }
+                // 5. ACCOUNT: signing out is a clear action at the end of the profile,
+                // not hidden inside the "Account" details.
+                if (isSignedIn) {
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { showAccountDialog = true }.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Account details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        currentUser?.email ?: "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                            Row(
+                                modifier = Modifier.fillMaxWidth().clickable { showSignOutConfirm = true }.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                Text(
+                                    "Sign out",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -578,14 +623,36 @@ fun ProfileScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        authManager?.signOut()
                         showAccountDialog = false
+                        showSignOutConfirm = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Sign out") }
+            },
+            dismissButton = { TextButton(onClick = { showAccountDialog = false }) { Text("Close") } }
+        )
+    }
+
+    // Sign out, always confirmed: the user knows what happens to their data.
+    if (showSignOutConfirm) {
+        AlertDialog(
+            onDismissRequest = { showSignOutConfirm = false },
+            icon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
+            title = { Text("Sign out?") },
+            text = {
+                Text("Your appliances, chats and manuals stay in your account: sign in again to see them on any phone.")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        authManager?.signOut()
+                        showSignOutConfirm = false
                         Toast.makeText(context, "Signed out", Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Sign Out") }
+                ) { Text("Sign out") }
             },
-            dismissButton = { TextButton(onClick = { showAccountDialog = false }) { Text("Close") } }
+            dismissButton = { TextButton(onClick = { showSignOutConfirm = false }) { Text("Cancel") } }
         )
     }
 
