@@ -167,6 +167,17 @@ class ChatHistoryTest {
     }
 
     @Test
+    fun aManualOfARegisteredApplianceStartsItsChatWithBrandAndModel() = runTest(dispatcher) {
+        val vm = viewModel()
+        val oven = Appliance(name = "Oven", brand = "Indesit", model = "IFW 6530", confidence = 1f)
+
+        vm.openChatForGuide(ManualGuide(applianceName = "Oven", issueTitle = "No heat", overview = "Check the fuse."), oven)
+
+        assertEquals(oven, vm.uiState.value.appliance)
+        assertEquals("No heat", vm.uiState.value.messages.single().manualGuide?.issueTitle)
+    }
+
+    @Test
     fun aReopenedChatKeepsTheApplianceModel() = runTest(dispatcher) {
         store.chats += savedChatOf(
             "old",

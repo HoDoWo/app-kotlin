@@ -12,11 +12,11 @@ import com.hodowo.viewmodel.DemoHoDoWoAiService
 import com.hodowo.viewmodel.HoDoWoAiService
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
-import com.hodowo.viewmodel.PartsCatalogueViewModel
 import com.hodowo.viewmodel.PostProductViewModel
 import com.hodowo.viewmodel.SponsoredPartnersViewModel
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
+import com.hodowo.viewmodel.MessagesViewModel
 import com.hodowo.viewmodel.ProductForumViewModel
 import com.hodowo.viewmodel.greetingName
 import java.io.File
@@ -58,6 +58,21 @@ object AiServiceProvider {
             UnavailableListingsService()
         }
     }
+
+    /** Messages and offers between buyers and sellers, shared by the inbox and the product pages. */
+    val messagesService: MessagesService by lazy {
+        val backendUrl = BuildConfig.BACKEND_URL
+        if (backendUrl.isBlank()) UnavailableMessagesService
+        else RemoteMessagesService(backendUrl, FirebaseTokenProvider()::token)
+    }
+
+    /** Factory that builds [MessagesViewModel]: inbox, conversations and offers. */
+    fun messagesViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                MessagesViewModel(service = messagesService, cartStore = cartStore)
+            }
+        }
 
     fun create(context: Context): HoDoWoAiService {
         val backendUrl = BuildConfig.BACKEND_URL
@@ -182,17 +197,6 @@ object AiServiceProvider {
                     service = RemoteForumService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
                     productType = productType,
                     productId = productId
-                )
-            }
-        }
-
-    /** Factory that builds [PartsCatalogueViewModel] (#148) with the last search kept on the phone. */
-    fun partsCatalogueViewModelFactory(context: Context): ViewModelProvider.Factory =
-        viewModelFactory {
-            initializer {
-                PartsCatalogueViewModel(
-                    MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
-                    SharedPreferencesPartsCache(context.applicationContext)
                 )
             }
         }
