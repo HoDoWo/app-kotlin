@@ -584,6 +584,8 @@ private fun LineNotes(line: CartLine, currency: String) {
     val addedPrice = line.addedPriceCents
     val note = when {
         !line.available -> line.unavailableReason?.replaceFirstChar { it.uppercase() } ?: "This item cannot be bought"
+        line.offerId != null && line.listPriceCents != null ->
+            "Your offer was accepted (listed at ${formatPriceCents(line.listPriceCents, currency)})"
         line.priceChanged && addedPrice != null -> "Price changed: it was ${formatPriceCents(addedPrice, currency)}"
         line.quantity > 1 && unitPrice != null -> "${line.quantity} × ${formatPriceCents(unitPrice, currency)}"
         else -> null

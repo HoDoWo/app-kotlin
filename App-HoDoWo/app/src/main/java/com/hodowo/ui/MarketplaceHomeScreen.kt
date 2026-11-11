@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -105,7 +106,11 @@ fun MarketplaceHomeScreen(
     /** Opens the Product Detail page (#140) with its community forum (#150). */
     onOpenProduct: (MarketplaceProduct) -> Unit = {},
     /** Photo of the signed-in user, as on the Home top bar. */
-    profilePhotoUrl: String? = null
+    profilePhotoUrl: String? = null,
+    /** Opens the messages with buyers and sellers; null hides the icon. */
+    onOpenMessages: (() -> Unit)? = null,
+    /** Unread messages, shown on the messages icon. */
+    unreadMessages: Int = 0
 ) {
     val context = LocalContext.current
     val products by viewModel.products.collectAsState()
@@ -145,6 +150,30 @@ fun MarketplaceHomeScreen(
                             contentDescription = "Search",
                             tint = OnSurfaceVariant
                         )
+                    }
+                    if (onOpenMessages != null) {
+                        BadgedBox(
+                            badge = {
+                                if (unreadMessages > 0) {
+                                    Badge(containerColor = Primary) {
+                                        Text(
+                                            text = "$unreadMessages",
+                                            color = OnPrimary,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        ) {
+                            IconButton(onClick = onOpenMessages) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ChatBubbleOutline,
+                                    contentDescription = "Messages",
+                                    tint = OnSurfaceVariant
+                                )
+                            }
+                        }
                     }
                     IconButton(onClick = onOpenSponsored) {
                         Icon(
@@ -190,291 +219,292 @@ fun MarketplaceHomeScreen(
                         .padding(bottom = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                // Interactive Search & Scan Action Strip + Filter Chips
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        // Search only: the cart is in the top bar, with its badge.
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    // Interactive Search & Scan Action Strip + Filter Chips
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Surface(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clickable { onOpenSearch() },
-                                shape = RoundedCornerShape(12.dp),
-                                color = SurfaceContainerLowest,
-                                shadowElevation = 1.dp
+                            // Search only: the cart is in the top bar, with its badge.
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { onOpenSearch() },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = SurfaceContainerLowest,
+                                    shadowElevation = 1.dp
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Search,
+                                            contentDescription = null,
+                                            tint = Outline,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Text(
+                                            text = if (searchInput.isBlank()) "Model code, OEM part #, or appliance..." else searchInput,
+                                            color = if (searchInput.isBlank()) Outline else OnSurface,
+                                            fontSize = 13.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Category & State Filters
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                // Row 1: Type
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                                        .horizontalScroll(rememberScrollState()),
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "TYPE:",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Outline,
+                                        letterSpacing = 0.5.sp,
+                                        modifier = Modifier.padding(end = 4.dp)
+                                    )
+                                    listOf("All", "Full Appliances", "Replacement Parts").forEach { chip ->
+                                        val isSelected = selectedTypeChip == chip
+                                        Surface(
+                                            modifier = Modifier
+                                                .clip(CircleShape)
+                                                .clickable {
+                                                    selectedTypeChip = chip
+                                                    val mappedType = when (chip) {
+                                                        "Full Appliances" -> "appliance"
+                                                        "Replacement Parts" -> "part"
+                                                        else -> "all"
+                                                    }
+                                                    viewModel.setClassification(mappedType)
+                                                },
+                                            color = if (isSelected) Primary else SurfaceContainerLowest,
+                                            shape = CircleShape,
+                                            shadowElevation = 1.dp
+                                        ) {
+                                            Text(
+                                                text = chip,
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = if (isSelected) OnPrimary else OnSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Row 2: State
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "STATE:",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Outline,
+                                        letterSpacing = 0.5.sp,
+                                        modifier = Modifier.padding(end = 4.dp)
+                                    )
+                                    listOf(
+                                        "All" to "all",
+                                        "Brand New (Partners)" to "new",
+                                        "Second-Hand (Community)" to "used"
+                                    ).forEach { (label, value) ->
+                                        val isSelected = selectedStateChip == label
+                                        Surface(
+                                            modifier = Modifier
+                                                .clip(CircleShape)
+                                                .clickable {
+                                                    selectedStateChip = label
+                                                    viewModel.setCondition(value)
+                                                },
+                                            color = if (isSelected) Primary else SurfaceContainerLowest,
+                                            shape = CircleShape,
+                                            shadowElevation = 1.dp
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = if (isSelected) OnPrimary else OnSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Featured Partner Sponsored Banner
+                    item {
+                        FeaturedPartnerBanner(
+                            onViewPartDetails = {
+                                // Opens a real part when the catalogue has one; otherwise the search.
+                                products.firstOrNull { it.type == "part" }?.let(onOpenProduct) ?: onOpenSearch()
+                            }
+                        )
+                    }
+
+                    // Community Sell Prompt CTA Banner
+                    item {
+                        CommunitySellPromptBanner(
+                            onPostItem = onPostProduct
+                        )
+                    }
+
+                    // Official Partner Deals Section
+                    item {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Search,
+                                        imageVector = Icons.Default.Favorite,
                                         contentDescription = null,
-                                        tint = Outline,
+                                        tint = Primary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Text(
-                                        text = if (searchInput.isBlank()) "Model code, OEM part #, or appliance..." else searchInput,
-                                        color = if (searchInput.isBlank()) Outline else OnSurface,
+                                        text = "Official Partner Deals",
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = OnSurface
+                                    )
+                                }
+                                Row(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .clickable { onOpenSearch() }
+                                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "See all",
                                         fontSize = 13.sp,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Primary
+                                    )
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = null,
+                                        tint = Primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+
+                            // Horizontal Carousel of Partner Cards
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(partnerDeals, key = { it.id }) { item ->
+                                    PartnerDealCarouselCard(
+                                        product = item,
+                                        onOpen = { onOpenProduct(item) },
+                                        onAddToCart = {
+                                            viewModel.addToCart(item)
+                                        }
                                     )
                                 }
                             }
                         }
-
-                        // Category & State Filters
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            // Row 1: Type
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = "TYPE:",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Outline,
-                                    letterSpacing = 0.5.sp,
-                                    modifier = Modifier.padding(end = 4.dp)
-                                )
-                                listOf("All", "Full Appliances", "Replacement Parts").forEach { chip ->
-                                    val isSelected = selectedTypeChip == chip
-                                    Surface(
-                                        modifier = Modifier
-                                            .clip(CircleShape)
-                                            .clickable {
-                                                selectedTypeChip = chip
-                                                val mappedType = when (chip) {
-                                                    "Full Appliances" -> "appliance"
-                                                    "Replacement Parts" -> "part"
-                                                    else -> "all"
-                                                }
-                                                viewModel.setClassification(mappedType)
-                                            },
-                                        color = if (isSelected) Primary else SurfaceContainerLowest,
-                                        shape = CircleShape,
-                                        shadowElevation = 1.dp
-                                    ) {
-                                        Text(
-                                            text = chip,
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = if (isSelected) OnPrimary else OnSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Row 2: State
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .horizontalScroll(rememberScrollState()),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Text(
-                                    text = "STATE:",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Outline,
-                                    letterSpacing = 0.5.sp,
-                                    modifier = Modifier.padding(end = 4.dp)
-                                )
-                                listOf(
-                                    "All" to "all",
-                                    "Brand New (Partners)" to "new",
-                                    "Second-Hand (Community)" to "used"
-                                ).forEach { (label, value) ->
-                                    val isSelected = selectedStateChip == label
-                                    Surface(
-                                        modifier = Modifier
-                                            .clip(CircleShape)
-                                            .clickable {
-                                                selectedStateChip = label
-                                                viewModel.setCondition(value)
-                                            },
-                                        color = if (isSelected) Primary else SurfaceContainerLowest,
-                                        shape = CircleShape,
-                                        shadowElevation = 1.dp
-                                    ) {
-                                        Text(
-                                            text = label,
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = if (isSelected) OnPrimary else OnSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                        }
                     }
-                }
 
-                // Featured Partner Sponsored Banner
-                item {
-                    FeaturedPartnerBanner(
-                        onViewPartDetails = {
-                            // Opens a real part when the catalogue has one; otherwise the search.
-                            products.firstOrNull { it.type == "part" }?.let(onOpenProduct) ?: onOpenSearch()
-                        }
-                    )
-                }
-
-                // Community Sell Prompt CTA Banner
-                item {
-                    CommunitySellPromptBanner(
-                        onPostItem = onPostProduct
-                    )
-                }
-
-                // Official Partner Deals Section
-                item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(
+                    // Community & Pre-Owned Deals Section
+                    item {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Favorite,
-                                    contentDescription = null,
-                                    tint = Primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = "Official Partner Deals",
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = OnSurface
-                                )
-                            }
-                            Row(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .clickable { onOpenSearch() }
-                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
-                                    text = "See all",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Primary
-                                )
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                    contentDescription = null,
-                                    tint = Primary,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = Secondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = "Community & Pre-Owned",
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = OnSurface
+                                    )
+                                }
 
-                        // Horizontal Carousel of Partner Cards
-                        LazyRow(
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(partnerDeals, key = { it.id }) { item ->
-                                PartnerDealCarouselCard(
-                                    product = item,
-                                    onOpen = { onOpenProduct(item) },
-                                    onAddToCart = {
-                                        viewModel.addToCart(item)
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Community & Pre-Owned Deals Section
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Secondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = "Community & Pre-Owned",
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = OnSurface
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .background(SurfaceContainer, CircleShape)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        text = "Near You",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = OnSurfaceVariant
+                                    )
+                                }
                             }
 
-                            Box(
-                                modifier = Modifier
-                                    .background(SurfaceContainer, CircleShape)
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "Near You",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = OnSurfaceVariant
-                                )
-                            }
-                        }
-
-                        // List of Community Items
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            communityDeals.forEach { item ->
-                                CommunityDealRowItem(
-                                    product = item,
-                                    onOpen = { onOpenProduct(item) },
-                                    onChat = {
-                                        Toast.makeText(context, "Chat with ${item.sellerName}", Toast.LENGTH_SHORT).show()
-                                    },
-                                    onBuy = {
-                                        viewModel.addToCart(item)
-                                    }
-                                )
+                            // List of Community Items
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                communityDeals.forEach { item ->
+                                    CommunityDealRowItem(
+                                        product = item,
+                                        onOpen = { onOpenProduct(item) },
+                                        onChat = {
+                                            Toast.makeText(context, "Chat with ${item.sellerName}", Toast.LENGTH_SHORT).show()
+                                        },
+                                        onBuy = {
+                                            viewModel.addToCart(item)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
@@ -482,7 +512,6 @@ fun MarketplaceHomeScreen(
             }
         }
     }
-}
 }
 
 /**
