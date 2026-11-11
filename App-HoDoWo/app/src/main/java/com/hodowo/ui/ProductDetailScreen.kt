@@ -575,7 +575,7 @@ private fun PartSection(product: ProductDetail.Part) {
 }
 
 @Composable
-private fun CompatibilityBadge(compatibility: PartCompatibility, evidence: String?) {
+internal fun CompatibilityBadge(compatibility: PartCompatibility, evidence: String? = null) {
     val (color, label) = when (compatibility) {
         PartCompatibility.FITS -> CompatibilityFitsGreen to "Fits your appliance"
         PartCompatibility.DOES_NOT_FIT -> Error to "Does not fit your appliance"

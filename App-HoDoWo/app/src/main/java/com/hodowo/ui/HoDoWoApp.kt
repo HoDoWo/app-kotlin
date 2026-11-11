@@ -68,6 +68,7 @@ import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.CheckoutViewModel
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
+import com.hodowo.viewmodel.PartsCatalogueViewModel
 import com.hodowo.viewmodel.PostProductViewModel
 import com.hodowo.viewmodel.SponsoredPartnersViewModel
 
@@ -95,6 +96,9 @@ fun HoDoWoApp(
     )
     val cartViewModel: CartViewModel = viewModel(factory = AiServiceProvider.cartViewModelFactory())
     val checkoutViewModel: CheckoutViewModel = viewModel(factory = AiServiceProvider.checkoutViewModelFactory())
+    val partsCatalogueViewModel: PartsCatalogueViewModel = viewModel(
+        factory = AiServiceProvider.partsCatalogueViewModelFactory(context)
+    )
     val sponsoredPartnersViewModel: SponsoredPartnersViewModel = viewModel(
         factory = AiServiceProvider.sponsoredPartnersViewModelFactory()
     )
@@ -107,6 +111,7 @@ fun HoDoWoApp(
     var showPostProduct by remember { mutableStateOf(false) }
     var showMarketplaceSearch by remember { mutableStateOf(false) }
     var showMyListings by remember { mutableStateOf(false) }
+    var showParts by remember { mutableStateOf(false) }
     var showSponsored by remember { mutableStateOf(false) }
     var showCart by remember { mutableStateOf(false) }
     // Product opened from a marketplace card: its Product Detail page (#140) with the forum (#150).
@@ -174,6 +179,7 @@ fun HoDoWoApp(
                                 showMarketplaceSearch = false
                                 showPostProduct = false
                                 showMyListings = false
+                                showParts = false
                                 showSponsored = false
                                 showCart = false
                                 selectedMarketProduct = null
@@ -191,6 +197,7 @@ fun HoDoWoApp(
                                         showMarketplaceSearch = false
                                         showPostProduct = false
                                         showMyListings = false
+                                        showParts = false
                                         showSponsored = false
                                         showCart = false
                                         selectedMarketProduct = null
@@ -205,199 +212,216 @@ fun HoDoWoApp(
                     Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         Box(modifier = Modifier.weight(1f)) {
                             when (currentTab) {
-                    AppNavTab.HOME -> {
-                        HomeScreen(
-                            viewModel = homeViewModel,
-                            onSearch = { query ->
-                                currentTab = AppNavTab.AI_CHAT
-                                chatViewModel.sendTextMessage(query)
-                            },
-                            onDiagnose = ::openCamera,
-                            onOpenArCore = { currentTab = AppNavTab.AR_CORE },
-                            onOpenMarket = { currentTab = AppNavTab.MARKET },
-                            onOpenProfile = { currentTab = AppNavTab.PROFILE },
-                            onOpenSponsored = {
-                                showSponsored = true
-                                currentTab = AppNavTab.MARKET
-                            },
-                            onAskAboutManual = { guide ->
-                                currentTab = AppNavTab.AI_CHAT
-                                chatViewModel.sendTextMessage(
-                                    "I need help with \"${guide.issueTitle}\" on my ${guide.applianceName}."
-                                )
-                            },
-                            onOpenManualChat = { guide ->
-                                currentTab = AppNavTab.AI_CHAT
-                                chatViewModel.openChatForGuide(guide)
-                            },
-                            profilePhotoUrl = chatState.userProfile?.photoUrl
-                        )
-                    }
-                    AppNavTab.AI_CHAT -> {
-                        ChatScreen(
-                            viewModel = chatViewModel,
-                            onOpenCamera = ::openCamera,
-                            onOpenAuth = { showAuthDialog = true }
-                        )
-                    }
-                    AppNavTab.PROFILE -> {
-                        if (showApplianceManuals) {
-                            ApplianceManualsScreen(
-                                viewModel = chatViewModel,
-                                onBack = { showApplianceManuals = false },
-                                onNavigateAiChat = {
-                                    showApplianceManuals = false
-                                    currentTab = AppNavTab.AI_CHAT
-                                }
-                            )
-                        } else if (showMyListings) {
-                            MyListingsScreen(
-                                viewModel = myListingsViewModel,
-                                onBack = { showMyListings = false },
-                                onPostProduct = {
-                                    showMyListings = false
-                                    currentTab = AppNavTab.MARKET
-                                    showPostProduct = true
-                                },
-                                onOpenListing = { listing ->
-                                    showMyListings = false
-                                    currentTab = AppNavTab.MARKET
-                                    selectedMarketProduct = listing.toMarketplaceProduct()
-                                }
-                            )
-                        } else {
-                            ProfileScreen(
-                                authManager = authManager,
-                                viewModel = chatViewModel,
-                                myListingsViewModel = myListingsViewModel,
-                                onOpenAuth = { showAuthDialog = true },
-                                onNavigateHome = { currentTab = AppNavTab.HOME },
-                                onNavigateAiChat = { currentTab = AppNavTab.AI_CHAT },
-                                onNavigateMarket = { currentTab = AppNavTab.MARKET },
-                                onNavigateArCore = { currentTab = AppNavTab.AR_CORE },
-                                onNavigateProfile = { currentTab = AppNavTab.PROFILE },
-                                onOpenApplianceManuals = { showApplianceManuals = true },
-                                onOpenMyListings = { showMyListings = true },
-                                onPostProduct = {
-                                    currentTab = AppNavTab.MARKET
-                                    showPostProduct = true
-                                }
-                            )
-                        }
-                    }
-                    AppNavTab.MARKET -> {
-                        val product = selectedMarketProduct
-                        if (showCart) {
-                            BackHandler { showCart = false }
-                            CartScreen(
-                                viewModel = cartViewModel,
-                                checkoutViewModel = checkoutViewModel,
-                                onBack = { showCart = false },
-                                onBrowse = {
-                                    showCart = false
-                                    showMarketplaceSearch = true
-                                },
-                                onOpenProduct = { line ->
-                                    showCart = false
-                                    selectedMarketProduct = line.toMarketplaceProduct()
-                                }
-                            )
-                        } else if (product != null) {
-                            BackHandler { selectedMarketProduct = null }
-                            val productType = product.cartProductType()
-                            ProductDetailScreen(
-                                viewModel = viewModel(
-                                    key = "detail-${product.type}-${product.id}",
-                                    factory = AiServiceProvider.productDetailViewModelFactory(product)
-                                ),
-                                forumViewModel = productType?.let {
-                                    viewModel<ProductForumViewModel>(
-                                        key = "forum-$it-${product.id}",
-                                        factory = AiServiceProvider.productForumViewModelFactory(it, product.id)
+                                AppNavTab.HOME -> {
+                                    HomeScreen(
+                                        viewModel = homeViewModel,
+                                        onSearch = { query ->
+                                            currentTab = AppNavTab.AI_CHAT
+                                            chatViewModel.sendTextMessage(query)
+                                        },
+                                        onDiagnose = ::openCamera,
+                                        onOpenArCore = { currentTab = AppNavTab.AR_CORE },
+                                        onOpenMarket = { currentTab = AppNavTab.MARKET },
+                                        onOpenProfile = { currentTab = AppNavTab.PROFILE },
+                                        onOpenParts = {
+                                            showParts = true
+                                            currentTab = AppNavTab.MARKET
+                                        },
+                                        onOpenSponsored = {
+                                            showSponsored = true
+                                            currentTab = AppNavTab.MARKET
+                                        },
+                                        onAskAboutManual = { guide ->
+                                            currentTab = AppNavTab.AI_CHAT
+                                            chatViewModel.sendTextMessage(
+                                                "I need help with \"${guide.issueTitle}\" on my ${guide.applianceName}."
+                                            )
+                                        },
+                                        onOpenManualChat = { guide ->
+                                            currentTab = AppNavTab.AI_CHAT
+                                            chatViewModel.openChatForGuide(guide)
+                                        },
+                                        profilePhotoUrl = chatState.userProfile?.photoUrl
                                     )
-                                },
-                                onBack = { selectedMarketProduct = null },
-                                onOpenCart = { showCart = true }
-                            )
-                        } else if (showPostProduct) {
-                            PostProductScreen(
-                                viewModel = postProductViewModel,
-                                userId = authManager.currentUserId,
-                                onPublished = { showPostProduct = false },
-                                onBack = { showPostProduct = false },
-                                onOpenCart = { showCart = true }
-                            )
-                        } else if (showSponsored) {
-                            BackHandler { showSponsored = false }
-                            SponsoredPartnersScreen(
-                                viewModel = sponsoredPartnersViewModel,
-                                onBack = { showSponsored = false },
-                                onOpenProduct = { selectedMarketProduct = it }
-                            )
-                        } else if (showMarketplaceSearch) {
-                            ProductSearchAndFiltersScreen(
-                                viewModel = marketplaceViewModel,
-                                onBack = { showMarketplaceSearch = false },
-                                onCartClick = { showCart = true },
-                                onOpenProduct = { selectedMarketProduct = it }
-                            )
-                        } else {
-                            MarketplaceHomeScreen(
-                                viewModel = marketplaceViewModel,
-                                onOpenSearch = { showMarketplaceSearch = true },
-                                onPostProduct = { showPostProduct = true },
-                                onOpenProfile = { currentTab = AppNavTab.PROFILE },
-                                onCartClick = { showCart = true },
-                                onOpenSponsored = { showSponsored = true },
-                                onOpenProduct = { selectedMarketProduct = it },
-                                profilePhotoUrl = chatState.userProfile?.photoUrl
+                                }
+                                AppNavTab.AI_CHAT -> {
+                                    ChatScreen(
+                                        viewModel = chatViewModel,
+                                        onOpenCamera = ::openCamera,
+                                        onOpenAuth = { showAuthDialog = true },
+                                        onBuyPart = { part ->
+                                            showParts = false
+                                            selectedMarketProduct = part.toMarketplaceProduct()
+                                            currentTab = AppNavTab.MARKET
+                                        }
+                                    )
+                                }
+                                AppNavTab.PROFILE -> {
+                                    if (showApplianceManuals) {
+                                        ApplianceManualsScreen(
+                                            viewModel = chatViewModel,
+                                            onBack = { showApplianceManuals = false },
+                                            onNavigateAiChat = {
+                                                showApplianceManuals = false
+                                                currentTab = AppNavTab.AI_CHAT
+                                            }
+                                        )
+                                    } else if (showMyListings) {
+                                        MyListingsScreen(
+                                            viewModel = myListingsViewModel,
+                                            onBack = { showMyListings = false },
+                                            onPostProduct = {
+                                                showMyListings = false
+                                                currentTab = AppNavTab.MARKET
+                                                showPostProduct = true
+                                            },
+                                            onOpenListing = { listing ->
+                                                showMyListings = false
+                                                currentTab = AppNavTab.MARKET
+                                                selectedMarketProduct = listing.toMarketplaceProduct()
+                                            }
+                                        )
+                                    } else {
+                                        ProfileScreen(
+                                            authManager = authManager,
+                                            viewModel = chatViewModel,
+                                            myListingsViewModel = myListingsViewModel,
+                                            onOpenAuth = { showAuthDialog = true },
+                                            onNavigateHome = { currentTab = AppNavTab.HOME },
+                                            onNavigateAiChat = { currentTab = AppNavTab.AI_CHAT },
+                                            onNavigateMarket = { currentTab = AppNavTab.MARKET },
+                                            onNavigateArCore = { currentTab = AppNavTab.AR_CORE },
+                                            onNavigateProfile = { currentTab = AppNavTab.PROFILE },
+                                            onOpenApplianceManuals = { showApplianceManuals = true },
+                                            onOpenMyListings = { showMyListings = true },
+                                            onPostProduct = {
+                                                currentTab = AppNavTab.MARKET
+                                                showPostProduct = true
+                                            }
+                                        )
+                                    }
+                                }
+                                AppNavTab.MARKET -> {
+                                    val product = selectedMarketProduct
+                                    if (showCart) {
+                                        BackHandler { showCart = false }
+                                        CartScreen(
+                                            viewModel = cartViewModel,
+                                            checkoutViewModel = checkoutViewModel,
+                                            onBack = { showCart = false },
+                                            onBrowse = {
+                                                showCart = false
+                                                showMarketplaceSearch = true
+                                            },
+                                            onOpenProduct = { line ->
+                                                showCart = false
+                                                selectedMarketProduct = line.toMarketplaceProduct()
+                                            }
+                                        )
+                                    } else if (product != null) {
+                                        BackHandler { selectedMarketProduct = null }
+                                        val productType = product.cartProductType()
+                                        ProductDetailScreen(
+                                            viewModel = viewModel(
+                                                key = "detail-${product.type}-${product.id}",
+                                                factory = AiServiceProvider.productDetailViewModelFactory(product)
+                                            ),
+                                            forumViewModel = productType?.let {
+                                                viewModel<ProductForumViewModel>(
+                                                    key = "forum-$it-${product.id}",
+                                                    factory = AiServiceProvider.productForumViewModelFactory(it, product.id)
+                                                )
+                                            },
+                                            onBack = { selectedMarketProduct = null },
+                                            onOpenCart = { showCart = true }
+                                        )
+                                    } else if (showPostProduct) {
+                                        PostProductScreen(
+                                            viewModel = postProductViewModel,
+                                            userId = authManager.currentUserId,
+                                            onPublished = { showPostProduct = false },
+                                            onBack = { showPostProduct = false },
+                                            onOpenCart = { showCart = true }
+                                        )
+                                    } else if (showParts) {
+                                        BackHandler { showParts = false }
+                                        PartsCatalogueScreen(
+                                            viewModel = partsCatalogueViewModel,
+                                            onBack = { showParts = false },
+                                            onOpenPart = { selectedMarketProduct = it }
+                                        )
+                                    } else if (showSponsored) {
+                                        BackHandler { showSponsored = false }
+                                        SponsoredPartnersScreen(
+                                            viewModel = sponsoredPartnersViewModel,
+                                            onBack = { showSponsored = false },
+                                            onOpenProduct = { selectedMarketProduct = it }
+                                        )
+                                    } else if (showMarketplaceSearch) {
+                                        ProductSearchAndFiltersScreen(
+                                            viewModel = marketplaceViewModel,
+                                            onBack = { showMarketplaceSearch = false },
+                                            onCartClick = { showCart = true },
+                                            onOpenProduct = { selectedMarketProduct = it }
+                                        )
+                                    } else {
+                                        MarketplaceHomeScreen(
+                                            viewModel = marketplaceViewModel,
+                                            onOpenSearch = { showMarketplaceSearch = true },
+                                            onPostProduct = { showPostProduct = true },
+                                            onOpenProfile = { currentTab = AppNavTab.PROFILE },
+                                            onCartClick = { showCart = true },
+                                            onOpenSponsored = { showSponsored = true },
+                                            onOpenProduct = { selectedMarketProduct = it },
+                                            profilePhotoUrl = chatState.userProfile?.photoUrl
+                                        )
+                                    }
+                                }
+                                AppNavTab.AR_CORE -> {
+                                    NotImplementedScreen(
+                                        tabName = currentTab.label,
+                                        icon = currentTab.icon,
+                                        onBackToChat = { currentTab = AppNavTab.AI_CHAT }
+                                    )
+                                }
+                            }
+
+                            // The chat has its own "+" in the header. Product Detail, the cart and the sell
+                            // form have their own sticky bar at the bottom, which this button would overlap.
+                            if (currentTab != AppNavTab.AI_CHAT && selectedMarketProduct == null && !showCart &&
+                                !showPostProduct
+                            ) {
+                                NewChatButton(
+                                    onClick = { startNewChat() },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(16.dp)
+                                )
+                            }
+                        }
+
+                        // Bottom Navigation Bar matching HTML mockup. The sell form has its own
+                        // sticky publish bar, so the tab bar is hidden while it is open.
+                        if (!showPostProduct && !useRail) {
+                            BottomNavBar(
+                                currentTab = currentTab,
+                                onTabSelected = {
+                                    showApplianceManuals = false
+                                    showMarketplaceSearch = false
+                                    showPostProduct = false
+                                    showMyListings = false
+                                    showParts = false
+                                    showSponsored = false
+                                    showCart = false
+                                    selectedMarketProduct = null
+                                    currentTab = it
+                                }
                             )
                         }
                     }
-                    AppNavTab.AR_CORE -> {
-                        NotImplementedScreen(
-                            tabName = currentTab.label,
-                            icon = currentTab.icon,
-                            onBackToChat = { currentTab = AppNavTab.AI_CHAT }
-                        )
-                    }
                 }
-
-                // The chat has its own "+" in the header. Product Detail, the cart and the sell
-                // form have their own sticky bar at the bottom, which this button would overlap.
-                if (currentTab != AppNavTab.AI_CHAT && selectedMarketProduct == null && !showCart &&
-                    !showPostProduct
-                ) {
-                    NewChatButton(
-                        onClick = { startNewChat() },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(16.dp)
-                    )
-                }
-            }
-
-            // Bottom Navigation Bar matching HTML mockup. The sell form has its own
-            // sticky publish bar, so the tab bar is hidden while it is open.
-            if (!showPostProduct && !useRail) {
-                BottomNavBar(
-                    currentTab = currentTab,
-                    onTabSelected = {
-                        showApplianceManuals = false
-                        showMarketplaceSearch = false
-                        showPostProduct = false
-                        showMyListings = false
-                        showSponsored = false
-                        showCart = false
-                        selectedMarketProduct = null
-                        currentTab = it
-                    }
-                )
             }
         }
-    }
-    }
-    }
     }
 
     if (showAuthDialog) {

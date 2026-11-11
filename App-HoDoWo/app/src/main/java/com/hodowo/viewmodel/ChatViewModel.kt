@@ -51,7 +51,22 @@ data class ManualGuide(
     val steps: List<ManualStep> = emptyList(),
     val imageUrl: String? = null,
     val warnings: List<String> = emptyList(),
-    val manualId: String? = null
+    val manualId: String? = null,
+    /** Spare part the diagnosis points to (#149); null when there is no confident suggestion. */
+    val suggestedPart: SuggestedPart? = null
+)
+
+/** Minimum confidence of a diagnosis before its suggested part is shown (#149). */
+const val SUGGESTED_PART_MIN_CONFIDENCE = 0.7
+
+/** The spare part the AI diagnosis points to, shown inside the error resolution card (#149). */
+data class SuggestedPart(
+    val id: String,
+    val name: String,
+    val priceCents: Int?,
+    val imageUrl: String?,
+    val compatibility: PartCompatibility = PartCompatibility.UNKNOWN,
+    val confidence: Double
 )
 
 /**

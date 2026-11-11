@@ -319,7 +319,10 @@ class RemoteHoDoWoAiService(
                                         overview = json.optString("overview", reply),
                                         steps = steps,
                                         imageUrl = imageUrl,
-                                        manualId = manualId
+                                        manualId = manualId,
+                                        suggestedPart = ManualJson.suggestedPartFromJson(
+                                            json.optJSONObject("suggested_part")
+                                        )
                                     )
                                 } else null
 

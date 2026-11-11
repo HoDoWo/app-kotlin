@@ -12,6 +12,7 @@ import com.hodowo.viewmodel.DemoHoDoWoAiService
 import com.hodowo.viewmodel.HoDoWoAiService
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
+import com.hodowo.viewmodel.PartsCatalogueViewModel
 import com.hodowo.viewmodel.PostProductViewModel
 import com.hodowo.viewmodel.SponsoredPartnersViewModel
 import com.hodowo.viewmodel.MyListingsViewModel
@@ -181,6 +182,17 @@ object AiServiceProvider {
                     service = RemoteForumService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
                     productType = productType,
                     productId = productId
+                )
+            }
+        }
+
+    /** Factory that builds [PartsCatalogueViewModel] (#148) with the last search kept on the phone. */
+    fun partsCatalogueViewModelFactory(context: Context): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                PartsCatalogueViewModel(
+                    MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
+                    SharedPreferencesPartsCache(context.applicationContext)
                 )
             }
         }

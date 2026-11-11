@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.hodowo.ui.theme.PrimaryContainer
 import com.hodowo.viewmodel.Message
+import com.hodowo.viewmodel.SuggestedPart
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -38,7 +39,8 @@ fun AiMessageItem(
     onLike: () -> Unit,
     onDislike: () -> Unit,
     onToggleBookmark: () -> Unit,
-    onImageClick: (String) -> Unit = {}
+    onImageClick: (String) -> Unit = {},
+    onBuyPart: (SuggestedPart) -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -72,7 +74,8 @@ fun AiMessageItem(
                     onLike = onLike,
                     onDislike = onDislike,
                     onToggleBookmark = onToggleBookmark,
-                    onImageClick = onImageClick
+                    onImageClick = onImageClick,
+                    onBuyPart = onBuyPart
                 )
             } else {
                 // Regular Text Response Bubble

@@ -2,7 +2,10 @@ package com.hodowo.data
 
 import com.hodowo.viewmodel.ManualGuide
 import com.hodowo.viewmodel.ManualStep
+import com.hodowo.viewmodel.PartCompatibility
 import com.hodowo.viewmodel.RecentManual
+import com.hodowo.viewmodel.SUGGESTED_PART_MIN_CONFIDENCE
+import com.hodowo.viewmodel.SuggestedPart
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -74,6 +77,7 @@ object ManualJson {
             .put("steps", steps)
             .put("warnings", JSONArray(guide.warnings))
             .put("image_url", guide.imageUrl ?: JSONObject.NULL)
+            .put("suggested_part", guide.suggestedPart?.let(::suggestedPartToJson) ?: JSONObject.NULL)
     }
 
     /** Reads one guide; null when it has no title. */
@@ -88,9 +92,57 @@ object ManualJson {
             steps = parseSteps(item),
             imageUrl = item.textOrNull("image_url"),
             warnings = parseWarnings(item),
-            manualId = item.textOrNull("id")
+            manualId = item.textOrNull("id"),
+            suggestedPart = suggestedPartFromJson(item.optJSONObject("suggested_part"))
         )
     }
+
+    /**
+     * `{"id", "name", "price_cents" | "price", "image_url", "compatible", "confidence"}`.
+     * Null when it is missing, incomplete or below [SUGGESTED_PART_MIN_CONFIDENCE]: the card then
+     * shows no part block at all (#149).
+     */
+    fun suggestedPartFromJson(json: JSONObject?): SuggestedPart? {
+        if (json == null) return null
+        val id = json.textOrNull("id") ?: return null
+        val name = (json.textOrNull("name") ?: json.textOrNull("title")) ?: return null
+        val confidence = json.optDouble("confidence", 0.0)
+        if (confidence.isNaN() || confidence < SUGGESTED_PART_MIN_CONFIDENCE) return null
+
+        val priceCents = when {
+            json.has("price_cents") && !json.isNull("price_cents") -> json.optInt("price_cents")
+            json.has("price") && !json.isNull("price") -> Math.round(json.optDouble("price") * 100).toInt()
+            else -> null
+        }
+        val compatibility = when (if (json.isNull("compatible")) null else json.opt("compatible")) {
+            true -> PartCompatibility.FITS
+            false -> PartCompatibility.DOES_NOT_FIT
+            else -> PartCompatibility.UNKNOWN
+        }
+        return SuggestedPart(
+            id = id,
+            name = name,
+            priceCents = priceCents,
+            imageUrl = json.textOrNull("image_url") ?: json.textOrNull("image"),
+            compatibility = compatibility,
+            confidence = confidence
+        )
+    }
+
+    private fun suggestedPartToJson(part: SuggestedPart): JSONObject = JSONObject()
+        .put("id", part.id)
+        .put("name", part.name)
+        .put("price_cents", part.priceCents ?: JSONObject.NULL)
+        .put("image_url", part.imageUrl ?: JSONObject.NULL)
+        .put(
+            "compatible",
+            when (part.compatibility) {
+                PartCompatibility.FITS -> true
+                PartCompatibility.DOES_NOT_FIT -> false
+                PartCompatibility.UNKNOWN -> JSONObject.NULL
+            }
+        )
+        .put("confidence", part.confidence)
 
     private fun parseSteps(item: JSONObject): List<ManualStep> {
         val array = item.optJSONArray("steps") ?: return emptyList()
