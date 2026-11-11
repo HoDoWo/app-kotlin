@@ -55,3 +55,5 @@ timestamp,issue,title,type,delta_hours
 2026-11-10T17:16:04+00:00,138,Marketplace tab and entry points,completed,-4.0
 2026-11-10T17:16:06+00:00,40,"Unified product search: new, second-hand and spare parts",completed,-10.0
 2026-11-10T19:28:30+00:00,141,Ads / sponsored partners page,completed,-5.0
+2026-11-11T00:17:39+00:00,148,"Parts catalogue UI (list, filters and detail)",completed,-8.0
+2026-11-11T00:17:41+00:00,149,Error resolution card: suggested spare part CTA,completed,-3.0

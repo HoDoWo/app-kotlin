@@ -216,14 +216,14 @@
   "title": "My listings: edit, mark as sold and delete"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4kI": {
-  "c": 8.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 148,
   "title": "Parts catalogue UI (list, filters and detail)"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4l4": {
-  "c": 3.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 149,
   "title": "Error resolution card: suggested spare part CTA"
  },
