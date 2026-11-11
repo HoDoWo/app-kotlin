@@ -81,9 +81,20 @@ fun ManualGuideCard(
     onBuyPart: (SuggestedPart) -> Unit = {}
 ) {
     val isWide = LocalAppLayout.current.isWide
-    // Step chosen on the image (pin) or in the list: both show it highlighted.
+    // Step chosen in the list: its pin on the image is shown highlighted.
     var selectedStep by remember(guide) { mutableStateOf<Int?>(null) }
     val onSelectStep: (Int) -> Unit = { number -> selectedStep = if (selectedStep == number) null else number }
+    // The full-screen guide: the image stays pinned while the steps scroll (review 10-11).
+    var viewerOpen by remember(guide) { mutableStateOf(false) }
+    var viewerStep by remember(guide) { mutableStateOf<Int?>(null) }
+    val openViewer: (Int?) -> Unit = { number ->
+        viewerStep = number
+        viewerOpen = true
+    }
+    // An image without steps has nothing to pin: it opens in the plain image viewer.
+    val onGuideImageClick: (String) -> Unit = { url ->
+        if (guide.steps.isEmpty()) onImageClick(url) else openViewer(null)
+    }
 
     Surface(
         shape = RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
@@ -141,7 +152,7 @@ fun ManualGuideCard(
 
             // Diagnostic Overview
             Text(
-                text = guide.overview,
+                text = markdownText(guide.overview),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
                 lineHeight = 24.sp,
@@ -168,8 +179,8 @@ fun ManualGuideCard(
                         url = guide.imageUrl,
                         steps = guide.steps,
                         selectedStep = selectedStep,
-                        onSelectStep = onSelectStep,
-                        onImageClick = onImageClick,
+                        onSelectStep = { number -> openViewer(number) },
+                        onImageClick = onGuideImageClick,
                         modifier = Modifier.width(200.dp)
                     )
                 }
@@ -184,8 +195,8 @@ fun ManualGuideCard(
                         url = url,
                         steps = guide.steps,
                         selectedStep = selectedStep,
-                        onSelectStep = onSelectStep,
-                        onImageClick = onImageClick,
+                        onSelectStep = { number -> openViewer(number) },
+                        onImageClick = onGuideImageClick,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -229,6 +240,10 @@ fun ManualGuideCard(
                 }
             }
         }
+    }
+
+    if (viewerOpen) {
+        GuideViewerDialog(guide = guide, initialStep = viewerStep, onDismiss = { viewerOpen = false })
     }
 }
 
@@ -275,13 +290,15 @@ private fun StepsSection(guide: ManualGuide, selectedStep: Int?, onSelectStep: (
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = buildString {
-                            append(step.title)
-                            if (step.description.isNotBlank()) {
-                                append(": ")
-                                append(step.description)
+                        text = markdownText(
+                            buildString {
+                                append(step.title)
+                                if (step.description.isNotBlank()) {
+                                    append(": ")
+                                    append(step.description)
+                                }
                             }
-                        },
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 23.sp,
@@ -295,9 +312,9 @@ private fun StepsSection(guide: ManualGuide, selectedStep: Int?, onSelectStep: (
 
 /**
  * The guide image with a numbered pin on the control of each step (review 10-11).
- * Tapping a pin highlights its step in the list (and the other way round); the
- * image keeps its proportions so the pins stay on their controls. Tapping the
- * image elsewhere opens it full screen.
+ * The image keeps its proportions so the pins stay on their controls. Tapping a
+ * pin or the image opens the full-screen guide ([GuideViewerDialog]), where the
+ * image stays pinned beside the steps; a step chosen in the list highlights its pin.
  */
 @Composable
 private fun GuideImage(

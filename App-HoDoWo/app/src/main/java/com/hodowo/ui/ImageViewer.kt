@@ -75,45 +75,10 @@ private const val GALLERY_FOLDER = "HoDoWo"
 @Composable
 fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
 
     var scale by remember(url) { mutableFloatStateOf(1f) }
     var offset by remember(url) { mutableStateOf(Offset.Zero) }
     var size by remember { mutableStateOf(IntSize.Zero) }
-    var isSaving by remember { mutableStateOf(false) }
-
-    fun download() {
-        if (isSaving) return
-        isSaving = true
-        scope.launch {
-            val saved = saveImageToGallery(context, url)
-            isSaving = false
-            val text = if (saved) "Image saved in Gallery › Pictures › $GALLERY_FOLDER" else "Could not save the image"
-            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    // Before Android 10 saving to the gallery needs the storage permission.
-    val permissionLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            download()
-        } else {
-            Toast.makeText(context, "Storage permission denied", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    fun onDownloadClick() {
-        val needsPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
-                ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
-                PackageManager.PERMISSION_GRANTED
-        if (needsPermission) {
-            permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-        } else {
-            download()
-        }
-    }
 
     /** Keeps the zoomed image inside the screen. */
     fun clamp(value: Offset, zoom: Float): Offset {
@@ -178,19 +143,7 @@ fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
                 }
                 Spacer(modifier = Modifier.weight(1f))
-                if (isSaving) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier
-                            .padding(12.dp)
-                            .size(24.dp)
-                    )
-                } else {
-                    IconButton(onClick = { onDownloadClick() }) {
-                        Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
-                    }
-                }
+                ImageDownloadButton(url = url)
                 Spacer(modifier = Modifier.width(4.dp))
             }
 
@@ -203,6 +156,64 @@ fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
                     .navigationBarsPadding()
                     .padding(16.dp)
             )
+        }
+    }
+}
+
+/**
+ * Download button of the image viewers ([FullscreenImageViewer] and [GuideViewerDialog]):
+ * saves the image to the phone's gallery (Pictures/HoDoWo) and shows a spinner meanwhile.
+ */
+@Composable
+internal fun ImageDownloadButton(url: String) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var isSaving by remember { mutableStateOf(false) }
+
+    fun download() {
+        if (isSaving) return
+        isSaving = true
+        scope.launch {
+            val saved = saveImageToGallery(context, url)
+            isSaving = false
+            val text = if (saved) "Image saved in Gallery › Pictures › $GALLERY_FOLDER" else "Could not save the image"
+            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Before Android 10 saving to the gallery needs the storage permission.
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            download()
+        } else {
+            Toast.makeText(context, "Storage permission denied", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun onDownloadClick() {
+        val needsPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+                PackageManager.PERMISSION_GRANTED
+        if (needsPermission) {
+            permissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        } else {
+            download()
+        }
+    }
+
+    if (isSaving) {
+        CircularProgressIndicator(
+            color = Color.White,
+            strokeWidth = 2.dp,
+            modifier = Modifier
+                .padding(12.dp)
+                .size(24.dp)
+        )
+    } else {
+        IconButton(onClick = { onDownloadClick() }) {
+            Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
         }
     }
 }

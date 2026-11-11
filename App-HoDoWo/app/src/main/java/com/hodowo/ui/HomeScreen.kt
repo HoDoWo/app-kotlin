@@ -126,6 +126,7 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsState()
     var openedManual by remember { mutableStateOf<RecentManual?>(null) }
     var viewerUrl by remember { mutableStateOf<String?>(null) }
+    var viewerGuide by remember { mutableStateOf<ManualGuide?>(null) }
     val context = LocalContext.current
     val layoutInfo = LocalAppLayout.current
 
@@ -206,7 +207,14 @@ fun HomeScreen(
         ManualDetailDialog(
             manual = manual,
             onDismiss = { openedManual = null },
-            onImageClick = { viewerUrl = it },
+            // With steps the image opens pinned beside them; without, as a plain image.
+            onImageClick = { url ->
+                if (manual.guide.steps.isEmpty()) {
+                    viewerUrl = url
+                } else {
+                    viewerGuide = manual.guide
+                }
+            },
             onAskInChat = {
                 openedManual = null
                 onAskAboutManual(manual.guide)
@@ -216,6 +224,10 @@ fun HomeScreen(
 
     viewerUrl?.let { url ->
         FullscreenImageViewer(url = url, onDismiss = { viewerUrl = null })
+    }
+
+    viewerGuide?.let { guide ->
+        GuideViewerDialog(guide = guide, onDismiss = { viewerGuide = null })
     }
 }
 
