@@ -1,14 +1,18 @@
 package com.hodowo.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -28,12 +32,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -42,11 +52,13 @@ import coil.request.ImageRequest
 import com.hodowo.data.formatPriceCents
 import com.hodowo.ui.adaptive.LocalAppLayout
 import com.hodowo.ui.theme.Primary
+import com.hodowo.ui.theme.PrimaryFixed
 import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLow
 import com.hodowo.ui.theme.SurfaceContainerLowest
 import com.hodowo.viewmodel.Feedback
 import com.hodowo.viewmodel.ManualGuide
+import com.hodowo.viewmodel.ManualStep
 import com.hodowo.viewmodel.SuggestedPart
 import java.util.Locale
 
@@ -69,6 +81,9 @@ fun ManualGuideCard(
     onBuyPart: (SuggestedPart) -> Unit = {}
 ) {
     val isWide = LocalAppLayout.current.isWide
+    // Step chosen on the image (pin) or in the list: both show it highlighted.
+    var selectedStep by remember(guide) { mutableStateOf<Int?>(null) }
+    val onSelectStep: (Int) -> Unit = { number -> selectedStep = if (selectedStep == number) null else number }
 
     Surface(
         shape = RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
@@ -145,43 +160,33 @@ fun ManualGuideCard(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        StepsSection(guide)
+                        StepsSection(guide, selectedStep, onSelectStep)
                     }
 
-                    // Diagram image (fixed width beside steps)
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(imageData(guide.imageUrl))
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Step-by-step visual diagram",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .width(200.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(12.dp))
-                            .clickable { onImageClick(guide.imageUrl) }
+                    // Diagram image (fixed width beside steps), with the step pins
+                    GuideImage(
+                        url = guide.imageUrl,
+                        steps = guide.steps,
+                        selectedStep = selectedStep,
+                        onSelectStep = onSelectStep,
+                        onImageClick = onImageClick,
+                        modifier = Modifier.width(200.dp)
                     )
                 }
             } else {
                 // Portrait: steps, then image below
                 if (guide.steps.isNotEmpty()) {
-                    StepsSection(guide)
+                    StepsSection(guide, selectedStep, onSelectStep)
                 }
 
                 guide.imageUrl?.let { url ->
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(imageData(url))
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Step-by-step visual diagram",
-                        contentScale = ContentScale.FillWidth,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(12.dp))
-                            .clickable { onImageClick(url) }
+                    GuideImage(
+                        url = url,
+                        steps = guide.steps,
+                        selectedStep = selectedStep,
+                        onSelectStep = onSelectStep,
+                        onImageClick = onImageClick,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -229,7 +234,7 @@ fun ManualGuideCard(
 
 /** Numbered step list, shared between portrait and landscape layouts. */
 @Composable
-private fun StepsSection(guide: ManualGuide) {
+private fun StepsSection(guide: ManualGuide, selectedStep: Int?, onSelectStep: (Int) -> Unit) {
     if (guide.steps.isEmpty()) return
 
     Text(
@@ -242,9 +247,15 @@ private fun StepsSection(guide: ManualGuide) {
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         guide.steps.forEach { step ->
+            val selected = step.number == selectedStep
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (selected) PrimaryFixed else Color.Transparent)
+                    .then(if (step.pin != null) Modifier.clickable { onSelectStep(step.number) } else Modifier)
+                    .padding(4.dp)
             ) {
                 Surface(
                     shape = CircleShape,
@@ -276,6 +287,69 @@ private fun StepsSection(guide: ManualGuide) {
                         lineHeight = 23.sp,
                         fontSize = 15.sp
                     )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The guide image with a numbered pin on the control of each step (review 10-11).
+ * Tapping a pin highlights its step in the list (and the other way round); the
+ * image keeps its proportions so the pins stay on their controls. Tapping the
+ * image elsewhere opens it full screen.
+ */
+@Composable
+private fun GuideImage(
+    url: String,
+    steps: List<ManualStep>,
+    selectedStep: Int?,
+    onSelectStep: (Int) -> Unit,
+    onImageClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var ratio by remember(url) { mutableStateOf<Float?>(null) }
+    val pinned = steps.filter { it.pin != null }
+    BoxWithConstraints(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(12.dp))
+            .then(ratio?.let { Modifier.aspectRatio(it) } ?: Modifier)
+            .clickable { onImageClick(url) }
+    ) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(imageData(url))
+                .crossfade(true)
+                .build(),
+            contentDescription = "Step-by-step visual diagram",
+            contentScale = if (ratio != null) ContentScale.FillBounds else ContentScale.FillWidth,
+            onSuccess = { state ->
+                val size = state.painter.intrinsicSize
+                if (size.width > 0f && size.height > 0f) ratio = size.width / size.height
+            },
+            modifier = Modifier.fillMaxWidth()
+        )
+        // Pins only once the proportions are known, so they land on the right control.
+        if (ratio != null) {
+            pinned.forEach { step ->
+                val pin = step.pin ?: return@forEach
+                val selected = step.number == selectedStep
+                val size = if (selected) 34.dp else 26.dp
+                Surface(
+                    shape = CircleShape,
+                    color = if (selected) Primary else Primary.copy(alpha = 0.85f),
+                    border = BorderStroke(2.dp, Color.White),
+                    shadowElevation = 3.dp,
+                    modifier = Modifier
+                        .offset(x = maxWidth * pin.x - size / 2, y = maxHeight * pin.y - size / 2)
+                        .size(size)
+                        .clickable { onSelectStep(step.number) }
+                        .semantics { contentDescription = "Step ${step.number}: ${step.title}" }
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("${step.number}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
                 }
             }
         }

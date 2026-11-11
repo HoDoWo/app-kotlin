@@ -38,8 +38,13 @@ enum class Feedback(val score: Int) {
 data class ManualStep(
     val number: Int,
     val title: String,
-    val description: String
+    val description: String,
+    /** Where the step happens on the guide image, shown as a numbered pin; null when unknown. */
+    val pin: StepPin? = null
 )
+
+/** A point of the guide image, from 0 to 1 from the left and top edges. */
+data class StepPin(val x: Float, val y: Float)
 
 /**
  * Structured AI manual guide response.

@@ -308,7 +308,8 @@ class RemoteHoDoWoAiService(
                                                     com.hodowo.viewmodel.ManualStep(
                                                         number = s.optInt("number", i + 1),
                                                         title = s.optString("title", "Step ${i + 1}"),
-                                                        description = s.optString("description", "")
+                                                        description = s.optString("description", ""),
+                                                        pin = ManualJson.parsePin(s.optJSONObject("pin"))
                                                     )
                                                 )
                                             }
