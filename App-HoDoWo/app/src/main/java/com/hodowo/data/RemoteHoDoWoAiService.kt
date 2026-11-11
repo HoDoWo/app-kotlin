@@ -114,9 +114,10 @@ class RemoteHoDoWoAiService(
     }
 
     override suspend fun sendFeedback(report: FeedbackReport) {
-        // TODO(#40): the backend has no endpoint to store ratings yet.
-        // Until it exists the rating is only logged, so it is not retried forever.
-        Log.d(TAG, "Rating of message ${report.messageId} not stored: no backend endpoint yet")
+        // Nothing to send here: a rating is already stored by ChatViewModel.setFeedback,
+        // in Firestore (`ratings`, FirebaseRepository.saveFeedback) and, for a manual,
+        // with POST /api/manuals/{id}/rate, which the reinforcement of #40 reads.
+        Log.d(TAG, "Rating of message ${report.messageId} stored in Firestore and on the manual")
     }
 
     /** Newest manuals of the signed-in user (`GET /api/manuals?limit=`), for the Home screen. */
