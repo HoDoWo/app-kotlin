@@ -11,6 +11,7 @@ import com.hodowo.viewmodel.Appliance
 import com.hodowo.viewmodel.FeedbackReport
 import com.hodowo.viewmodel.ManualGuide
 import com.hodowo.viewmodel.ManualStep
+import com.hodowo.viewmodel.StepPin
 import com.hodowo.viewmodel.Message
 import com.hodowo.viewmodel.UserAppliance
 import com.hodowo.viewmodel.UserProfile
@@ -43,7 +44,8 @@ class FirebaseRepository(
                     mapOf(
                         "number" to it.number,
                         "title" to it.title,
-                        "description" to it.description
+                        "description" to it.description,
+                        "pin" to it.pin?.let { pin -> mapOf("x" to pin.x.toDouble(), "y" to pin.y.toDouble()) }
                     )
                 },
                 "timestamp" to System.currentTimeMillis()
@@ -147,7 +149,8 @@ class FirebaseRepository(
                     ManualStep(
                         number = (map["number"] as? Number)?.toInt() ?: 1,
                         title = map["title"] as? String ?: "",
-                        description = map["description"] as? String ?: ""
+                        description = map["description"] as? String ?: "",
+                        pin = pinOf(map["pin"])
                     )
                 } ?: emptyList()
 
@@ -471,7 +474,8 @@ class FirebaseRepository(
             ManualStep(
                 number = (map["number"] as? Number)?.toInt() ?: 1,
                 title = map["title"] as? String ?: "",
-                description = map["description"] as? String ?: ""
+                description = map["description"] as? String ?: "",
+                pin = pinOf(map["pin"])
             )
         } ?: emptyList()
         return ManualGuide(
@@ -489,4 +493,12 @@ private suspend fun <T> Task<T>.await(): T = suspendCancellableCoroutine { cont 
     addOnSuccessListener { result -> cont.resume(result) }
     addOnFailureListener { error -> cont.resumeWithException(error) }
     addOnCanceledListener { cont.cancel() }
+}
+
+/** A step pin saved in Firestore as `{x, y}`, or null. */
+private fun pinOf(value: Any?): StepPin? {
+    val map = value as? Map<*, *> ?: return null
+    val x = (map["x"] as? Number)?.toFloat() ?: return null
+    val y = (map["y"] as? Number)?.toFloat() ?: return null
+    return if (x in 0f..1f && y in 0f..1f) StepPin(x, y) else null
 }

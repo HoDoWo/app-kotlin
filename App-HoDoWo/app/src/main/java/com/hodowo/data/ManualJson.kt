@@ -2,6 +2,7 @@ package com.hodowo.data
 
 import com.hodowo.viewmodel.ManualGuide
 import com.hodowo.viewmodel.ManualStep
+import com.hodowo.viewmodel.StepPin
 import com.hodowo.viewmodel.PartCompatibility
 import com.hodowo.viewmodel.RecentManual
 import com.hodowo.viewmodel.SUGGESTED_PART_MIN_CONFIDENCE
@@ -66,6 +67,7 @@ object ManualJson {
                     .put("number", step.number)
                     .put("title", step.title)
                     .put("description", step.description)
+                    .put("pin", step.pin?.let { JSONObject().put("x", it.x.toDouble()).put("y", it.y.toDouble()) } ?: JSONObject.NULL)
             )
         }
 
@@ -151,9 +153,18 @@ object ManualJson {
             ManualStep(
                 number = step.optInt("number", index + 1),
                 title = step.optString("title").trim().ifEmpty { "Step ${index + 1}" },
-                description = step.optString("description").trim()
+                description = step.optString("description").trim(),
+                pin = parsePin(step.optJSONObject("pin"))
             )
         }
+    }
+
+    /** `{"x": 0..1, "y": 0..1}` of a step, or null when missing or outside the image. */
+    fun parsePin(json: JSONObject?): StepPin? {
+        if (json == null || !json.has("x") || !json.has("y")) return null
+        val x = json.optDouble("x", Double.NaN)
+        val y = json.optDouble("y", Double.NaN)
+        return if (x in 0.0..1.0 && y in 0.0..1.0) StepPin(x.toFloat(), y.toFloat()) else null
     }
 
     private fun parseWarnings(item: JSONObject): List<String> {
