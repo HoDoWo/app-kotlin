@@ -625,8 +625,10 @@ class ChatViewModel(
      * Opens the chat in which [guide] was written (from "Recent Manuals" on Home).
      * When it is not in the history (written on the web or before the history
      * existed), a new chat starts from the guide, so the next question is about it.
+     * [appliance] (brand and model) is used for that new chat when it is known,
+     * as on the appliance page of the profile.
      */
-    fun openChatForGuide(guide: ManualGuide) {
+    fun openChatForGuide(guide: ManualGuide, appliance: Appliance? = null) {
         if (_uiState.value.isSending) return
         val chat = savedChats.chatWithGuide(guide)
         if (chat != null) {
@@ -645,7 +647,7 @@ class ChatViewModel(
             )
         )
         _uiState.update {
-            it.copy(appliance = Appliance(name = guide.applianceName, brand = null, model = null, confidence = 1f))
+            it.copy(appliance = appliance ?: Appliance(name = guide.applianceName, brand = null, model = null, confidence = 1f))
         }
     }
 
