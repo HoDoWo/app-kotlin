@@ -14,6 +14,7 @@ import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
 import com.hodowo.viewmodel.PartsCatalogueViewModel
 import com.hodowo.viewmodel.PostProductViewModel
+import com.hodowo.viewmodel.SponsoredPartnersViewModel
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.ProductForumViewModel
@@ -94,9 +95,13 @@ object AiServiceProvider {
                     aiService = create(context),
                     firebaseRepository = firebaseRepository,
                     authManager = authManager,
-                    chatHistory = FileChatHistoryStore(
-                        directory = File(context.filesDir, "chat_history"),
-                        openImage = { uri -> context.applicationContext.contentResolver.openInputStream(uri) }
+                    chatHistory = SyncedChatHistoryStore(
+                        local = FileChatHistoryStore(
+                            directory = File(context.filesDir, "chat_history"),
+                            openImage = { uri -> context.applicationContext.contentResolver.openInputStream(uri) }
+                        ),
+                        remote = FirestoreChatHistory(),
+                        uploader = FirebaseChatImageUploader(compress = { uri -> compressor.compress(uri) })
                     ),
                     profilePhotoStore = ProfilePhotoStore(context.applicationContext),
                     encodeProfilePhoto = { uri ->
@@ -188,6 +193,16 @@ object AiServiceProvider {
                 PartsCatalogueViewModel(
                     MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
                     SharedPreferencesPartsCache(context.applicationContext)
+                )
+            }
+        }
+
+    /** Factory that builds [SponsoredPartnersViewModel] (#141). */
+    fun sponsoredPartnersViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                SponsoredPartnersViewModel(
+                    MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token)
                 )
             }
         }

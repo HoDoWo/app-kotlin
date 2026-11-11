@@ -136,6 +136,84 @@ class ChatHistoryTest {
         assertTrue(store.chats.isEmpty())
     }
 
+    @Test
+    fun aRecentManualOpensTheChatWhereItWasWritten() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.sendTextMessage("How do I set 180 °C?")
+        advanceUntilIdle()
+        val chatId = vm.uiState.value.currentChatId
+        time = 2_000L
+        vm.startNewChat()
+
+        vm.openChatForGuide(ManualGuide(applianceName = "Indesit Oven", issueTitle = "How do I set 180 °C?", overview = ""))
+
+        assertEquals(chatId, vm.uiState.value.currentChatId)
+        assertEquals("How do I set 180 °C?", vm.uiState.value.messages.first().text)
+    }
+
+    @Test
+    fun aManualWithoutItsChatStartsANewChatAboutIt() = runTest(dispatcher) {
+        val vm = viewModel()
+        val guide = ManualGuide(applianceName = "Bosch Dishwasher", issueTitle = "E24 error", overview = "Clean the filter.")
+
+        vm.openChatForGuide(guide)
+
+        val state = vm.uiState.value
+        assertEquals(guide, state.messages.single().manualGuide)
+        assertEquals("Bosch Dishwasher", state.appliance?.name)
+        // Nothing asked yet: not in the history until the first question.
+        advanceUntilIdle()
+        assertTrue(store.chats.isEmpty())
+    }
+
+    @Test
+    fun aReopenedChatKeepsTheApplianceModel() = runTest(dispatcher) {
+        store.chats += savedChatOf(
+            "old",
+            listOf(Message(id = 1, text = "Old question", isUser = true)),
+            Appliance(name = "Oven", brand = "Indesit", model = "IFW 6530", confidence = 0.9f)
+        )!!
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.openChat("old")
+
+        assertEquals(Appliance("Oven", "Indesit", "IFW 6530", 1f), vm.uiState.value.appliance)
+    }
+
+    // ---------- conversationHistory ----------
+
+    @Test
+    fun theAiIsToldAboutPhotosAndGuidesOfTheChat() {
+        val photo = io.mockk.mockk<Uri>()
+        val guide = ManualGuide(
+            applianceName = "Indesit Oven",
+            issueTitle = "Set 180 °C",
+            overview = "Use the right knob.",
+            steps = listOf(ManualStep(1, "Turn the knob", ""), ManualStep(2, "Wait", ""))
+        )
+        val history = conversationHistory(
+            listOf(
+                Message(id = 1, imageUri = photo, isUser = true),
+                Message(id = 2, text = "This is an oven.", isUser = false),
+                Message(id = 3, text = "How do I set 180?", imageUri = photo, isUser = true),
+                Message(id = 4, isUser = false, manualGuide = guide),
+                Message(id = 5, text = "", isUser = false, isStreaming = true)
+            ),
+            Appliance(name = "Oven", brand = "Indesit", model = null, confidence = 1f)
+        )
+
+        assertEquals(
+            listOf(
+                ChatMessageHistory("user", "[Sent a photo of Indesit Oven]"),
+                ChatMessageHistory("assistant", "This is an oven."),
+                ChatMessageHistory("user", "[Sent a photo of Indesit Oven] How do I set 180?"),
+                ChatMessageHistory("assistant", "Use the right knob.\nGuide: Set 180 °C (Indesit Oven)\n1. Turn the knob\n2. Wait")
+            ),
+            history
+        )
+    }
+
     // ---------- savedChatOf ----------
 
     @Test

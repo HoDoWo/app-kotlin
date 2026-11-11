@@ -594,7 +594,7 @@ class ChatViewModel(
         lastImageUri = chat.messages.lastOrNull { it.imageUri != null }?.imageUri
         _uiState.value = ChatUiState(
             messages = chat.messages,
-            appliance = chat.applianceName?.let { Appliance(name = it, brand = null, model = null, confidence = 1f) },
+            appliance = chat.appliance(),
             currentChatId = chat.id,
             chatSessions = _uiState.value.chatSessions,
             bookmarkedGuides = current.bookmarkedGuides,
@@ -602,6 +602,34 @@ class ChatViewModel(
             userAppliances = current.userAppliances,
             userProfile = current.userProfile
         )
+    }
+
+    /**
+     * Opens the chat in which [guide] was written (from "Recent Manuals" on Home).
+     * When it is not in the history (written on the web or before the history
+     * existed), a new chat starts from the guide, so the next question is about it.
+     */
+    fun openChatForGuide(guide: ManualGuide) {
+        if (_uiState.value.isSending) return
+        val chat = savedChats.chatWithGuide(guide)
+        if (chat != null) {
+            if (chat.id != _uiState.value.currentChatId) openChat(chat.id)
+            return
+        }
+        startNewChat()
+        addMessage(
+            Message(
+                id = nextMessageId(),
+                text = guide.overview,
+                isUser = false,
+                timestamp = clock(),
+                question = guide.issueTitle,
+                manualGuide = guide
+            )
+        )
+        _uiState.update {
+            it.copy(appliance = Appliance(name = guide.applianceName, brand = null, model = null, confidence = 1f))
+        }
     }
 
     /** Removes a chat from the history; deleting the open chat starts a new one. */
@@ -966,18 +994,9 @@ class ChatViewModel(
             return
         }
 
-        // Build conversation history from previous completed messages
-        val history = _uiState.value.messages
-            .filterNot { it.isStreaming }
-            .mapNotNull { msg ->
-                val content = msg.text?.takeIf { it.isNotBlank() } ?: msg.manualGuide?.overview
-                if (!content.isNullOrBlank()) {
-                    ChatMessageHistory(
-                        role = if (msg.isUser) "user" else "assistant",
-                        content = content
-                    )
-                } else null
-            }
+        // The whole conversation so far, photos and guides included, so a follow-up
+        // question is answered knowing what the chat is about.
+        val history = conversationHistory(_uiState.value.messages, _uiState.value.appliance)
 
         // Clear selected image preview (it was attached to this message)
         if (useSelectedImage) {

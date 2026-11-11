@@ -235,4 +235,31 @@ class FileChatHistoryStoreTest {
 
         assertFalse(photoFile.exists())
     }
+
+    // ---------- account copy ----------
+
+    @Test
+    fun theApplianceBrandAndModelAreKept() = runTest {
+        val store = FileChatHistoryStore(folder.root)
+        val chat = chat("c1", 1_000).copy(applianceKind = "Oven", applianceBrand = "Indesit", applianceModel = "IFW 6530")
+
+        store.save("user-1", chat)
+
+        assertEquals(chat, store.load("user-1").single())
+        assertEquals(chat, ChatJson.chatFromJson(org.json.JSONObject(ChatJson.compactChat(chat))))
+    }
+
+    @Test
+    fun aLongChatLeavesOutItsOldestMessagesToFitInOneDocument() {
+        val long = chat("c1", 1_000).copy(
+            messages = (1L..100L).map { Message(id = it, text = "x".repeat(1_000), isUser = it % 2 == 1L) }
+        )
+
+        val text = ChatJson.compactChat(long, maxChars = 30_000)
+
+        val kept = ChatJson.chatFromJson(org.json.JSONObject(text))!!.messages
+        assertTrue(text.length <= 30_000)
+        assertEquals(100L, kept.last().id)
+        assertTrue(kept.size < 100)
+    }
 }
