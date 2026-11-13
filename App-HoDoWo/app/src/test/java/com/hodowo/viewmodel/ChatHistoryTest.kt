@@ -225,6 +225,34 @@ class ChatHistoryTest {
         )
     }
 
+    @Test
+    fun aGuideKeepsItsOverviewAndStepDescriptionsForTheNextQuestion() {
+        val guide = ManualGuide(
+            applianceName = "washing machine",
+            issueTitle = "Quick wash",
+            overview = "Rapid 30 washes a small load in 30 minutes.",
+            steps = listOf(
+                ManualStep(1, "Turn the dial", "Set it to Rapido 30."),
+                ManualStep(2, "Start", "Start")
+            )
+        )
+        val history = conversationHistory(
+            listOf(Message(id = 1, text = "Here is how.", isUser = false, manualGuide = guide)),
+            null
+        )
+
+        assertEquals(
+            listOf(
+                ChatMessageHistory(
+                    "assistant",
+                    "Here is how.\nRapid 30 washes a small load in 30 minutes.\n" +
+                        "Guide: Quick wash (washing machine)\n1. Turn the dial: Set it to Rapido 30.\n2. Start"
+                )
+            ),
+            history
+        )
+    }
+
     // ---------- savedChatOf ----------
 
     @Test
