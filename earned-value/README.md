@@ -1,10 +1,10 @@
 # Earned Value – HoDoWo
 
-Status on **2026-11-12** (generated 2026-11-12 13:47 UTC).
+Status on **2026-11-13** (generated 2026-11-13 13:08 UTC).
 
 | KPI | Name | Formula | Sprint 2 | Cumulative | Hours (cumulative) |
 |---|---|---|---:|---:|---:|
-| **PV** | Planned Value | % planned × BAC | 2,029 € | 4,903 € | 218.4 h |
+| **PV** | Planned Value | % planned × BAC | 2,155 € | 5,029 € | 224.0 h |
 | **EV** | Earned Value | % completed × BAC | 2,807 € | 5,793 € | 258.0 h |
 | **AC** | Actual Cost | hours spent × rate + services | 1,290 € | 3,867 € | 187.7 h |
 | **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 4,311 € | 9,879 € | 440.0 h |
@@ -12,19 +12,19 @@ Status on **2026-11-12** (generated 2026-11-12 13:47 UTC).
 | **ETC** | Estimate to Complete | EAC − AC | 691 € | 2,728 € | 106.0 h |
 | **VAC** | Variance at Completion | BAC − EAC | 2,330 € | 3,284 € | 146.3 h |
 | **CPI** | Cost Performance Index | EV / AC | 2.18 | 1.50 | – |
-| **SPI** | Schedule Performance Index | EV / PV | 1.38 | 1.18 | – |
+| **SPI** | Schedule Performance Index | EV / PV | 1.30 | 1.15 | – |
 
 ## Reading
 
 - CPI 1.50: under budget (the completed work cost less than planned)
-- SPI 1.18: ahead of or on schedule
+- SPI 1.15: ahead of or on schedule
 - VAC 3,284 €: saving money
 - Sprint 2: budget 4,311 € (its share of the BAC), EAC 1,981 € with the current CPI, so VAC 2,330 € (saving money).
 
 ## Inputs
 
 - BAC: 9,879 € (total cost estimated in Sprint 0), 440 h planned for the whole project.
-- % planned: 218.4 h of the Sprint 0 baseline by 2026-11-12 → 49.6%.
+- % planned: 224.0 h of the Sprint 0 baseline by 2026-11-13 → 50.9%.
 - % completed: 258.0 h estimated on the items in Done → 58.6%.
 - AC: 187.7 h spent × 20 €/h + 113 € of services.
 - Hypothetical costs: the team uses free tiers and pays nothing. Each service counts with the price planned in Sprint 0 from the date it is used.
