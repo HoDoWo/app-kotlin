@@ -128,10 +128,21 @@ fun conversationHistory(messages: List<Message>, appliance: Appliance?): List<Ch
     }
 }
 
+/**
+ * A guide as the AI reads it later: the answer, the overview when it says something
+ * more, and every step with its description (the programme names, times and buttons
+ * are there), so a follow-up question does not need the photo again.
+ */
 private fun guideAsText(guide: ManualGuide, text: String?): String {
-    val steps = guide.steps.mapIndexed { index, step -> "${index + 1}. ${step.title}" }
+    val overview = guide.overview.trim().takeIf { it.isNotEmpty() && it != text }
+    val steps = guide.steps.mapIndexed { index, step ->
+        val description = step.description.trim()
+        if (description.isEmpty() || description == step.title) "${index + 1}. ${step.title}"
+        else "${index + 1}. ${step.title}: $description"
+    }
     return listOfNotNull(
-        text ?: guide.overview,
+        text,
+        overview,
         "Guide: ${guide.issueTitle} (${guide.applianceName})",
         steps.takeIf { it.isNotEmpty() }?.joinToString("\n")
     ).joinToString("\n")
