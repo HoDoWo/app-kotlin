@@ -47,11 +47,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.hodowo.BuildConfig
 import com.hodowo.data.AiServiceProvider
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.cartProductType
 import com.hodowo.data.toMarketplaceProduct
 import com.hodowo.data.AuthManager
+import com.hodowo.data.auth.FirebaseAuthRepository
+import com.hodowo.data.auth.GoogleSignInHelper
+import com.hodowo.viewmodel.AuthViewModel
 import com.hodowo.viewmodel.Listing
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
@@ -95,9 +101,31 @@ fun HoDoWoApp(
             LocalContext.current.applicationContext
         )
     ),
-    authManager: AuthManager = AiServiceProvider.authManager
+    authManager: AuthManager = AiServiceProvider.authManager,
+    authViewModel: AuthViewModel = viewModel(
+        factory = viewModelFactory {
+            initializer { AuthViewModel(FirebaseAuthRepository()) }
+        }
+    )
 ) {
+
     val context = LocalContext.current
+
+    // The auth state of AuthManager is the single source of truth: it already
+    // follows FirebaseAuth (restored session, email login, Google, sign out).
+    // AuthViewModel only owns the login form.
+    val currentUser by authManager.currentUser.collectAsState()
+    val isSignedIn = currentUser != null && !authManager.isAnonymous
+
+    // Nothing else is shown until the user is signed in (#54).
+    if (!isSignedIn) {
+        AuthRoute(
+            viewModel = authViewModel,
+            googleSignIn = remember { GoogleSignInHelper(BuildConfig.GOOGLE_WEB_CLIENT_ID) },
+            context = context
+        )
+        return
+    }
     val marketplaceViewModel: MarketplaceViewModel = viewModel(factory = AiServiceProvider.marketplaceViewModelFactory())
     val postProductViewModel: PostProductViewModel = viewModel(
         factory = AiServiceProvider.postProductViewModelFactory(context)
@@ -370,6 +398,10 @@ fun HoDoWoApp(
                                                 onPostProduct = {
                                                     currentTab = AppNavTab.MARKET
                                                     showPostProduct = true
+                                                },
+                                                onSignedOut = {
+                                                    // Back to the login screen owned by AuthViewModel.
+                                                    authViewModel.signOut()
                                                 }
                                             )
                                         }
@@ -511,6 +543,11 @@ fun HoDoWoApp(
     if (showAuthDialog) {
         AuthDialog(
             authManager = authManager,
+            onSignedOut = {
+                // The login screen owns the session state: signing out here must
+                // send the user back to it, not leave the app in a guest mode.
+                authViewModel.signOut()
+            },
             onDismiss = {
                 showAuthDialog = false
                 chatViewModel.refreshBookmarks()

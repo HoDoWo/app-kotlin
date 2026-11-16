@@ -1,18 +1,14 @@
 package com.hodowo.data
 
 import android.net.Uri
-import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.Source
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageMetadata
 import com.hodowo.viewmodel.SavedChat
-import kotlinx.coroutines.suspendCancellableCoroutine
 import org.json.JSONException
 import org.json.JSONObject
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 /**
  * The chats in the user's account: one document per chat in `users/{uid}/chats`,
@@ -106,10 +102,4 @@ class FirebaseChatImageUploader(
     private companion object {
         const val RETRY_MILLIS = 15_000L
     }
-}
-
-private suspend fun <T> Task<T>.await(): T = suspendCancellableCoroutine { cont ->
-    addOnSuccessListener { result -> cont.resume(result) }
-    addOnFailureListener { error -> cont.resumeWithException(error) }
-    addOnCanceledListener { cont.cancel() }
 }

@@ -2,7 +2,6 @@ package com.hodowo.data
 
 import android.net.Uri
 import android.util.Log
-import com.google.android.gms.tasks.Task
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -14,9 +13,6 @@ import com.hodowo.viewmodel.ManualStep
 import com.hodowo.viewmodel.Message
 import com.hodowo.viewmodel.UserAppliance
 import com.hodowo.viewmodel.UserProfile
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 
 class FirebaseRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -486,10 +482,4 @@ class FirebaseRepository(
             manualId = getString("manualId")
         )
     }
-}
-
-private suspend fun <T> Task<T>.await(): T = suspendCancellableCoroutine { cont ->
-    addOnSuccessListener { result -> cont.resume(result) }
-    addOnFailureListener { error -> cont.resumeWithException(error) }
-    addOnCanceledListener { cont.cancel() }
 }

@@ -58,7 +58,9 @@ fun ProfileScreen(
     onNavigateProfile: () -> Unit = {},
     onOpenApplianceManuals: () -> Unit = {},
     onOpenMyListings: () -> Unit = {},
-    onPostProduct: () -> Unit = {}
+    onPostProduct: () -> Unit = {},
+    /** The login screen owns the session, so signing out here must show it again. */
+    onSignedOut: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val currentUser = authManager?.currentUser?.collectAsState()?.value
@@ -642,6 +644,7 @@ fun ProfileScreen(
                 Button(
                     onClick = {
                         authManager?.signOut()
+                        onSignedOut()
                         showSignOutConfirm = false
                         Toast.makeText(context, "Signed out", Toast.LENGTH_SHORT).show()
                     },
