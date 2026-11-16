@@ -169,11 +169,7 @@ fun ProfileScreen(
             AppTopBar(
                 subtitle = "PROFILE",
                 actions = {
-                    NotificationIconButton(
-                        onClick = {
-                            Toast.makeText(context, "No new notifications", Toast.LENGTH_SHORT).show()
-                        }
-                    )
+                    NotificationIconButton()
                     ProfileAvatar(
                         name = defaultName,
                         size = 34,
