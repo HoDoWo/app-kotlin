@@ -65,6 +65,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.hodowo.data.StepPinLayout
 import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.PrimaryFixed
 import com.hodowo.viewmodel.ManualGuide
@@ -239,6 +240,7 @@ private fun ZoomableGuideImage(
     modifier: Modifier = Modifier
 ) {
     var ratio by remember(url) { mutableStateOf<Float?>(null) }
+    val pinMarkers = remember(steps, ratio) { StepPinLayout.markers(steps, ratio ?: 1f) }
     var scale by remember(url) { mutableFloatStateOf(1f) }
     var offset by remember(url) { mutableStateOf(Offset.Zero) }
 
@@ -302,13 +304,15 @@ private fun ZoomableGuideImage(
             )
             // Pins only once the proportions are known, so they land on the right control.
             if (imageRatio != null) {
-                steps.forEachIndexed { index, step ->
-                    val pin = step.pin ?: return@forEachIndexed
+                PinLines(pinMarkers, selectedIndex = selected, modifier = Modifier.fillMaxSize(), zoom = scale)
+                pinMarkers.forEach { pin ->
+                    val index = pin.index
+                    val step = steps[index]
                     val isSelected = index == selected
                     val pinSize = if (isSelected) 38.dp else 30.dp
                     Surface(
                         shape = CircleShape,
-                        color = if (isSelected) Primary else Primary.copy(alpha = 0.85f),
+                        color = pinColor(isSelected, pin.placed),
                         border = BorderStroke(2.dp, Color.White),
                         shadowElevation = 3.dp,
                         modifier = Modifier
