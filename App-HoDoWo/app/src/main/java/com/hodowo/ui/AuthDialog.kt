@@ -45,7 +45,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun AuthDialog(
     authManager: AuthManager,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** Called after signing out, so the app can go back to the login screen. */
+    onSignedOut: () -> Unit = {}
 ) {
     val currentUser by authManager.currentUser.collectAsState()
     val scope = rememberCoroutineScope()
@@ -108,6 +110,7 @@ fun AuthDialog(
                     OutlinedButton(
                         onClick = {
                             authManager.signOut()
+                            onSignedOut()
                             onDismiss()
                         },
                         modifier = Modifier.fillMaxWidth()

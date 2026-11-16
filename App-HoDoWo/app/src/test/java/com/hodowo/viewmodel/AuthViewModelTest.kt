@@ -181,6 +181,19 @@ class AuthViewModelTest {
         assertFalse(state.isSignedIn)
     }
 
+    @Test
+    fun aMissingGoogleConfigurationIsExplainedInsteadOfCrashing() = runTest(dispatcher) {
+        // GoogleSignInHelper throws this before opening the picker (#54): the
+        // user must see the reason, not a generic error or a crash.
+        viewModel.signInWithGoogle { throw AuthException(AuthError.GOOGLE_NOT_CONFIGURED) }
+        advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(AuthError.GOOGLE_NOT_CONFIGURED.message, state.formError)
+        assertFalse(state.isLoading)
+        assertFalse(state.isSignedIn)
+    }
+
     // ---------- state ----------
 
     @Test

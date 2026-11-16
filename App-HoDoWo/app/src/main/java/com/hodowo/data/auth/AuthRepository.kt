@@ -11,6 +11,8 @@ enum class AuthError(val message: String) {
     GOOGLE_NOT_CONFIGURED("Google sign-in is not configured in this build."),
     GOOGLE_NO_ACCOUNT("No Google account is available on this device."),
     GOOGLE_FAILED("Google sign-in failed. Try again."),
+    GOOGLE_PROVIDER_DISABLED("Google sign-in is not enabled for this project. Enable it in the Firebase console."),
+    GOOGLE_ACCOUNT_CONFLICT("An account with this email already uses another sign-in method."),
     UNKNOWN("Something went wrong. Try again."),
 }
 

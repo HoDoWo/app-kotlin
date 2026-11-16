@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HoDoWo · Clickable prototype (Sprint 1 flow)</title>
+<style>
+  :root{
+    --bg:#0d1016; --panel:#141821; --card:#1b1f29; --card2:#222734;
+    --line:#2a2f3a; --line2:#333a48;
+    --text:#e7ebf3; --muted:#98a2b3; --accent:#7aa2ff; --primary:#3b5bdb;
+    --button:#2196F3; --dial:#FF9800; --switch:#9C27B0; --display:#4CAF50;
+    --good:#57e08b; --warn:#ffb020; --bad:#ff6b6b;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  /* Buttons do not inherit the text colour by default, which left the
+     tappable cards with black text on the dark background. */
+  button{color:inherit}
+  body{
+    margin:0; padding:28px 18px 60px; color:var(--text);
+    background:radial-gradient(1200px 700px at 50% -10%,#1a2030 0%,var(--bg) 55%);
+    font-family:Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    line-height:1.5;
+  }
+  h1.page{font-size:24px;margin:0 0 4px}
+  p.page{margin:0 0 26px;color:var(--muted);font-size:15px;max-width:820px}
+  code{background:#222734;padding:2px 6px;border-radius:6px;font-size:12.5px;color:#cbd5e1}
+
+  .stage{display:flex;gap:26px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+
+  /* ---------- sidebar ---------- */
+  .sidebar{width:270px;flex:none}
+  .sidebar h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+  .nav{display:flex;flex-direction:column;gap:4px;margin-bottom:22px}
+  .nav button{
+    display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
+    font:inherit;font-size:13.5px;color:var(--text);background:transparent;border:1px solid transparent;
+    padding:8px 10px;border-radius:9px;
+  }
+  .nav button:hover{background:var(--card)}
+  .nav button.active{background:var(--card);border-color:var(--line2)}
+  .nav .n{width:20px;height:20px;border-radius:6px;background:var(--card2);color:var(--muted);
+    font-size:11px;display:flex;align-items:center;justify-content:center;flex:none}
+  .nav button.active .n{background:var(--primary);color:#fff}
+
+  /* ---------- phone ---------- */
+  .phone{width:384px;flex:none;border:10px solid #05070b;border-radius:40px;background:#05070b;
+    box-shadow:0 26px 70px rgba(0,0,0,.6);overflow:hidden}
+  .statusbar{height:30px;display:flex;justify-content:space-between;align-items:center;
+    padding:0 18px;background:#0b0e14;font-size:11.5px;color:#cfd6e3}
+  .viewport{height:742px;overflow-y:auto;background:#10131a;display:flex;flex-direction:column}
+
+  /* ---------- app shell ---------- */
+  .appbar{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:10px;
+    padding:13px 14px;background:#1b1f29;border-bottom:1px solid var(--line)}
+  .appbar h2{font-size:16.5px;margin:0;font-weight:600;flex:1}
+  .appbar .sub{font-size:11.5px;color:var(--muted);font-weight:400;display:block}
+  .iconbtn{background:transparent;border:0;color:var(--text);font-size:17px;cursor:pointer;padding:4px 6px;border-radius:8px}
+  .iconbtn:hover{background:var(--card2)}
+  .content{padding:15px;display:flex;flex-direction:column;gap:13px;flex:1}
+  .spacer{flex:1}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .card.tight{padding:11px 12px}
+  .row{display:flex;align-items:center;gap:10px}
+  .between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .muted{color:var(--muted)}
+  .small{font-size:12px}
+  .tiny{font-size:11px}
+  .grow{flex:1}
+  .stack{display:flex;flex-direction:column;gap:6px}
+
+  .btn{font:inherit;font-size:13.5px;border:1px solid transparent;border-radius:10px;
+    padding:11px 14px;cursor:pointer;background:var(--card2);color:var(--text);transition:.12s}
+  .btn:hover{filter:brightness(1.12)}
+  .btn.primary{background:var(--primary);color:#fff}
+  .btn.ghost{background:transparent;border-color:var(--line2)}
+  .btn.block{width:100%}
+  .btn.sm{padding:7px 12px;font-size:12.5px;border-radius:999px}
+
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12px;color:var(--muted)}
+  .field input{background:#0f131a;border:1px solid var(--line);border-radius:10px;
+    padding:11px 12px;color:var(--text);font:inherit;font-size:14px}
+
+  .badge{font-size:11px;padding:3px 9px;border-radius:999px;background:var(--card2);color:var(--muted)}
+  .badge.ok{background:rgba(87,224,139,.14);color:var(--good)}
+  .badge.bad{background:rgba(255,107,107,.14);color:var(--bad)}
+
+  .bubble{max-width:84%;padding:10px 12px;border-radius:14px;font-size:13.5px}
+  .bubble.user{align-self:flex-end;background:#2b3d6b;border-bottom-right-radius:5px}
+  .bubble.ai{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:5px}
+  .composer{display:flex;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);
+    background:#1b1f29;position:sticky;bottom:0}
+  .composer input{flex:1;background:#0f131a;border:1px solid var(--line);border-radius:999px;
+    padding:10px 14px;color:var(--text);font:inherit;font-size:13.5px}
+  .composer .iconbtn{font-size:19px}
+
+  .bottomnav{display:flex;border-top:1px solid var(--line);background:#1b1f29;position:sticky;bottom:0}
+  .bottomnav button{flex:1;background:transparent;border:0;padding:9px 4px 11px;color:var(--muted);
+    font:inherit;font-size:10.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .bottomnav .ico{font-size:18px;line-height:1}
+  .bottomnav button.active{color:var(--accent)}
+
+  /* ---------- media / svg ---------- */
+  .media{position:relative;width:100%;aspect-ratio:1000/600;background:#0b0e14;
+    border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .media svg{position:absolute;inset:0;width:100%;height:100%}
+  .media .boxes{position:absolute;inset:0}
+  .box{position:absolute;padding:0;cursor:pointer;border:3px solid var(--c);border-radius:8px;
+    background:var(--c-bg);transition:.12s}
+  .box.selected{border-width:6px;background:var(--c-bg-strong);box-shadow:0 0 0 2px rgba(255,255,255,.55) inset}
+  .box:not(.selected):hover{background:var(--c-bg-strong)}
+  .viewfinder{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .frame{width:70%;height:52%;border:2px dashed rgba(255,255,255,.65);border-radius:14px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--line);background:var(--card2);
+    color:var(--text);padding:6px 12px;border-radius:999px;transition:.12s}
+  .chip:hover{border-color:var(--c,#7aa2ff)}
+  .chip.selected{background:var(--c,var(--primary));border-color:var(--c,var(--primary));color:#0b0e14;font-weight:600}
+
+  .steps{display:flex;gap:6px;justify-content:center}
+  .steps i{width:26px;height:5px;border-radius:999px;background:var(--card2)}
+  .steps i.on{background:var(--accent)}
+
+  .hl{position:absolute;border:4px solid var(--warn);border-radius:50%;
+    box-shadow:0 0 0 6px rgba(255,176,32,.22);animation:pulse 1.4s infinite}
+  @keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+  .arrow{position:absolute;font-size:30px;filter:drop-shadow(0 2px 4px #000);animation:pulse 1.4s infinite}
+
+  .bars{display:flex;align-items:flex-end;gap:4px;height:70px;margin-top:8px}
+  .bars div{flex:1;background:var(--card2);border-radius:3px 3px 0 0}
+  .bars div.good{background:linear-gradient(#57e08b,#2f9e63)}
+
+  /* ---------- notes ---------- */
+  .notes{width:300px;flex:none}
+  .notes h3{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+  .notes .card{margin-bottom:14px}
+  .notes .title{font-size:16px;font-weight:600;margin-bottom:4px}
+  .refs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+  .ref{font-size:11.5px;background:var(--card2);color:#cbd5e1;padding:3px 9px;border-radius:999px}
+  .todo{margin:0;padding-left:18px;color:var(--muted);font-size:13.5px}
+  .todo li{margin-bottom:5px}
+</style>
+</head>
+<body>
+
+<h1 class="page">HoDoWo · Clickable prototype</h1>
+<p class="page">
+  Interactive walk-through of the <b>Sprint&nbsp;1</b> flow (design only, no real data).
+  Click through the app on the phone, or jump to any screen from the list on the left.
+  Every screen shows which issue / backlog item it belongs to on the right.
+</p>
+
+<div class="stage">
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar">
+    <h3>The flow</h3>
+    <nav class="nav" id="nav"></nav>
+    <h3>Tip</h3>
+    <p class="muted small" style="margin:0">
+      The phone is fully clickable: buttons, tabs, chips, the bottom bar and Back all work.
+    </p>
+  </aside>
+
+  <!-- ============ PHONE ============ -->
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span>▮▮▮ &nbsp;5G &nbsp;▮</span></div>
+    <div class="viewport" id="viewport"></div>
+  </div>
+
+  <!-- ============ NOTES ============ -->
+  <aside class="notes">
+    <h3>Current screen</h3>
+    <div class="card">
+      <div class="title" id="n-title"></div>
+      <div class="muted small" id="n-desc"></div>
+      <div class="refs" id="n-refs"></div>
+    </div>
+    <h3>Still out of scope</h3>
+    <ul class="todo">
+      <li>Real camera, backend and Firebase</li>
+      <li>Chat history / streaming (real)</li>
+      <li>Marketplace &amp; forums (Sprint 2)</li>
+      <li>AR, voice, web app (Sprint 3)</li>
+    </ul>
+  </aside>
+
+</div>
+
+<script>
+/* =========================================================================
+ * SCREENS
+ * key -> { title, desc, refs, render }
+ * ========================================================================= */
+
+const state = {
+  screen: 'auth',
+  tab: 'home',
+  selectedControl: null,
+  guideStep: 0,
+  liked: null
+};
+
+const SCREENS = [
+  { id:'auth',        title:'Sign in / Register',   desc:'Log in with email or Google. Entry point of the app.',                 refs:['#54','PB-10'] },
+  { id:'home',        title:'Home / Chat',          desc:'Main screen: start a conversation or take a photo of the appliance.',  refs:['#63','PB-03'] },
+  { id:'camera',      title:'Camera capture',       desc:'CameraX viewfinder to photograph the appliance or its panel.',         refs:['#38','PB-01 > F-01'] },
+  { id:'identifying', title:'Identifying…',         desc:'The vision model reads the brand, the category and the model.',        refs:['#4','PB-01 > F-02'] },
+  { id:'identified',  title:'Appliance identified', desc:'Result card with the model and the actions to continue.',              refs:['#4','PB-01 > F-02'] },
+  { id:'chat',        title:'Chat Q&A + rating',    desc:'Model-specific answer, with thumbs up / down to rate it.',             refs:['#63','#15','PB-03'] },
+  { id:'overlay',     title:'Control panel overlay',desc:'Detected buttons, dials and switches drawn over the photo.',           refs:['#62','PB-02 > F-01'] },
+  { id:'guide',       title:'Visual guide',         desc:'Step-by-step instructions with an overlay on the panel.',              refs:['#57','#10','PB-06'] },
+  { id:'errorcard',   title:'Error code card',      desc:'Meaning, likely causes and solution for a code like E01.',             refs:['#70','PB-04 > F-02'] },
+  { id:'favourites',  title:'Favourites / Recent',  desc:'Saved appliances and the most recent scans.',                          refs:['#37','#11','PB-11'] },
+  { id:'profile',     title:'Profile',              desc:'User details and saved appliances; sign out.',                         refs:['#56','#11','PB-11'] },
+  { id:'offpeak',     title:'Off-peak tips',        desc:'Advice on the cheapest hours to run the appliance.',                   refs:['#16'] }
+];
+
+/* =========================================================================
+ * shared bits
+ * ========================================================================= */
+
+const h = (s) => s;
+
+function appbar(title, opts = {}) {
+  const back = opts.back ? `<button class="iconbtn" data-go="${opts.back}" title="Back">←</button>` : '';
+  const action = opts.action || '';
+  return `<div class="appbar">${back}<h2>${title}${opts.sub ? `<span class="sub">${opts.sub}</span>` : ''}</h2>${action}</div>`;
+}
+
+function bottomNav(active) {
+  const item = (id, ico, label) =>
+    `<button data-go="${id}" class="${active === id ? 'active' : ''}">
+       <span class="ico">${ico}</span>${label}
+     </button>`;
+  return `<div class="bottomnav">
+      ${item('home', '💬', 'Home')}
+      ${item('favourites', '⭐', 'Favourites')}
+      ${item('profile', '👤', 'Profile')}
+    </div>`;
+}
+
+function composer() {
+  return `<div class="composer">
+      <button class="iconbtn" data-go="camera" title="Camera">📷</button>
+      <input placeholder="Ask about your appliance…" readonly>
+      <button class="iconbtn" data-go="chat" title="Send">➤</button>
+    </div>`;
+}
+
+/** Illustration of a washing machine control panel (placeholder photo). */
+function panelSvg(highlight) {
+  const hl = highlight ? `
+    <circle cx="${highlight.x}" cy="${highlight.y}" r="${highlight.r}"
+            fill="none" stroke="#ffb020" stroke-width="7"
+            style="transform-origin:${highlight.x}px ${highlight.y}px;animation:pulse 1.4s infinite"></circle>
+    <text class="arrow" x="${highlight.x - 16}" y="${highlight.y - highlight.r - 12}">👇</text>` : '';
+  return `<svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <rect x="0" y="0" width="1000" height="600" rx="26" fill="#2b3240"/>
+    <rect x="0" y="0" width="1000" height="58" rx="26" fill="#333b4b"/>
+    <rect x="0" y="34" width="1000" height="24" fill="#333b4b"/>
+    <circle cx="170" cy="300" r="95" fill="#3a4252" stroke="#5b667a" stroke-width="6"/>
+    <circle cx="170" cy="300" r="58" fill="#2b3240"/>
+    <line x1="170" y1="300" x2="170" y2="228" stroke="#aab6ca" stroke-width="10" stroke-linecap="round"/>
+    <rect x="340" y="115" width="300" height="150" rx="14" fill="#0d1117" stroke="#101722" stroke-width="5"/>
+    <text x="368" y="212" fill="#57e08b" font-family="ui-monospace,Menlo,monospace" font-size="58">1:23</text>
+    <circle cx="380" cy="430" r="45" fill="#3a4252" stroke="#5b667a" stroke-width="6"/>
+    <circle cx="500" cy="430" r="45" fill="#3a4252" stroke="#5b667a" stroke-width="6"/>
+    <circle cx="620" cy="430" r="45" fill="#3a4252" stroke="#5b667a" stroke-width="6"/>
+    <text x="380" y="512" fill="#8b97ab" font-size="22" text-anchor="middle">Temp</text>
+    <text x="500" y="512" fill="#8b97ab" font-size="22" text-anchor="middle">Spin</text>
+    <text x="620" y="512" fill="#8b97ab" font-size="22" text-anchor="middle">Options</text>
+    <rect x="755" y="380" width="190" height="120" rx="26" fill="#3a4252" stroke="#5b667a" stroke-width="6"/>
+    <text x="850" y="452" fill="#8b97ab" font-size="26" text-anchor="middle">Start</text>
+    <rect x="755" y="110" width="95" height="65" rx="14" fill="#3a4252" stroke="#5b667a" stroke-width="6"/>
+    <circle cx="825" cy="142" r="17" fill="#8b97ab"/>
+    ${hl}
+  </svg>`;
+}
+
+/* =========================================================================
+ * controls data (same as the backend S1-14 output)
+ * ========================================================================= */
+
+const COLORS = { button:'#2196F3', dial:'#FF9800', switch:'#9C27B0', display:'#4CAF50', other:'#9E9E9E' };
+
+const CONTROLS = [
+  { id:'c1', label:'Program dial', type:'dial',
+    description:'Selects the wash program: cotton, wool, quick, delicate…',
+    box:{x:7.5,y:34.2,w:19,h:31.7} },
+  { id:'c2', label:'Display', type:'display',
+    description:'Shows the remaining time, the temperature and error codes.',
+    box:{x:34,y:19.2,w:30,h:25} },
+  { id:'c3', label:'Temperature', type:'button',
+    description:'Sets the wash temperature, from cold to 90 degrees.',
+    box:{x:33.5,y:64.2,w:9,h:15} },
+  { id:'c4', label:'Spin speed', type:'button',
+    description:'Adjusts the spin speed of the drum.',
+    box:{x:45.5,y:64.2,w:9,h:15} },
+  { id:'c5', label:'Options', type:'button',
+    description:'Extra rinse, prewash and delayed start.',
+    box:{x:57.5,y:64.2,w:9,h:15} },
+  { id:'c6', label:'Start / Pause', type:'button',
+    description:'Starts or pauses the selected program.',
+    box:{x:75.5,y:63.3,w:19,h:20} },
+  { id:'c7', label:'On / Off', type:'switch',
+    description:'Turns the appliance on and off.',
+    box:{x:75.5,y:18.3,w:9.5,h:10.8} }
+];
+
+function rgba(hex, a){
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n>>16)&255}, ${(n>>8)&255}, ${n&255}, ${a})`;
+}
+
+function overlayMedia() {
+  const boxes = CONTROLS.map((c) => {
+    const col = COLORS[c.type] || COLORS.other;
+    const selected = state.selectedControl === c.id ? ' selected' : '';
+    return `<button class="box${selected}" data-control="${c.id}" title="${c.label}"
+      style="left:${c.box.x}%;top:${c.box.y}%;width:${c.box.w}%;height:${c.box.h}%;
+             --c:${col};--c-bg:${rgba(col,.12)};--c-bg-strong:${rgba(col,.30)}"></button>`;
+  }).join('');
+  return `<div class="media" id="media">
+      ${panelSvg()}
+      <div class="boxes">${boxes}</div>
+    </div>`;
+}
+
+function overlayCard() {
+  const chips = CONTROLS.map((c) => {
+    const col = COLORS[c.type] || COLORS.other;
+    const selected = state.selectedControl === c.id ? ' selected' : '';
+    return `<button class="chip${selected}" data-control="${c.id}"
+      style="--c:${col}">${c.label}</button>`;
+  }).join('');
+
+  const control = CONTROLS.find((c) => c.id === state.selectedControl);
+  let details = `<p class="muted small" style="margin:12px 0 0">Tap a box on the photo to learn what it is for.</p>`;
+
+  if (control) {
+    const col = COLORS[control.type] || COLORS.other;
+    const kind = control.type.charAt(0).toUpperCase() + control.type.slice(1);
+    details = `<div style="margin-top:12px">
+        <div style="font-size:16px;font-weight:600">${control.label}</div>
+        <div style="font-size:12px;font-weight:600;color:${col}">${kind}</div>
+        <div class="small" style="color:#cbd5e1;margin-top:5px">${control.description}</div>
+      </div>`;
+  }
+
+  return `<div class="card">
+      <div class="tiny muted" style="text-transform:uppercase;letter-spacing:.02em;font-weight:600">
+        Detected controls (${CONTROLS.length})
+      </div>
+      <div class="chips" style="margin:10px 0 2px">${chips}</div>
+      ${details}
+    </div>`;
+}
+
+/* =========================================================================
+ * screen templates
+ * ========================================================================= */
+
+const T = {
+
+  auth: () => `
+    <div class="content" style="justify-content:center;text-align:center">
+      <div style="font-size:40px">🧺</div>
+      <div>
+        <div style="font-size:26px;font-weight:700">HoDoWo</div>
+        <div class="muted">How does it work?</div>
+      </div>
+      <div class="field" style="text-align:left;margin-top:10px">
+        <label>Email</label>
+        <input value="oriol@hodowo.app" readonly>
+      </div>
+      <div class="field" style="text-align:left">
+        <label>Password</label>
+        <input value="••••••••" readonly>
+      </div>
+      <button class="btn primary block" data-go="home">Sign in</button>
+      <button class="btn ghost block" data-go="home">🔵 &nbsp;Continue with Google</button>
+      <p class="muted small">No account? <a href="#" data-go="home" style="color:var(--accent)">Create one</a></p>
+    </div>`,
+
+  home: () => `
+    ${appbar('HoDoWo', { action:`<button class="iconbtn" data-go="profile" title="Profile">👤</button>` })}
+    <div class="content">
+      <div class="stack" style="gap:9px">
+        <div class="bubble ai">Hi! Take a photo of your appliance and I'll tell you what it is and how to use it.</div>
+      </div>
+      <button class="card" data-go="camera" style="text-align:left;cursor:pointer;border-color:var(--line2)">
+        <div class="row">
+          <div style="font-size:26px">📷</div>
+          <div class="grow">
+            <div style="font-weight:600">Take a photo</div>
+            <div class="muted small">Scan an appliance or its control panel</div>
+          </div>
+          <div class="muted">›</div>
+        </div>
+      </button>
+      <div class="between">
+        <div class="small" style="font-weight:600">Recent</div>
+        <button class="btn sm ghost" data-go="favourites">See all</button>
+      </div>
+      <div class="stack" style="gap:8px">
+        <button class="card tight between" data-go="identified" style="cursor:pointer;text-align:left">
+          <div class="row"><span style="font-size:20px">🌀</span>
+            <div><div style="font-size:13.5px">Washing machine · Bosch</div>
+            <div class="muted tiny">2 min ago</div></div></div>
+          <div class="muted">›</div>
+        </button>
+        <button class="card tight between" data-go="identified" style="cursor:pointer;text-align:left">
+          <div class="row"><span style="font-size:20px">🔥</span>
+            <div><div style="font-size:13.5px">Oven · Siemens</div>
+            <div class="muted tiny">Yesterday</div></div></div>
+          <div class="muted">›</div>
+        </button>
+      </div>
+      <button class="card" data-go="offpeak" style="text-align:left;cursor:pointer">
+        <div class="row"><span style="font-size:20px">⚡</span>
+          <div class="grow"><div style="font-weight:600;font-size:13.5px">Off-peak tip</div>
+          <div class="muted small">Run the wash after 00:00 to pay the cheapest rate.</div></div>
+          <div class="muted">›</div>
+        </div>
+      </button>
+      <div class="spacer"></div>
+    </div>
+    ${composer()}
+    ${bottomNav('home')}`,
+
+  camera: () => `
+    ${appbar('Camera', { back:'home', sub:'Point at the appliance or its panel' })}
+    <div class="content">
+      <div class="media">
+        ${panelSvg()}
+        <div class="viewfinder"><div class="frame"></div></div>
+      </div>
+      <div class="row">
+        <button class="btn ghost sm" data-go="identifying">🖼 &nbsp;Gallery</button>
+        <div class="grow"></div>
+        <span class="badge">Auto-focus</span>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn primary block" data-go="identifying">Capture and Analyze</button>
+    </div>`,
+
+  identifying: () => `
+    <div class="content" style="justify-content:center;align-items:center;text-align:center;gap:18px">
+      <div style="width:52px;height:52px;border-radius:50%;border:5px solid var(--card2);
+                  border-top-color:var(--accent);animation:spin 1s linear infinite"></div>
+      <div>
+        <div style="font-weight:600">Identifying the appliance…</div>
+        <div class="muted small">Reading the brand, the model and the panel</div>
+      </div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    </div>`,
+
+  identified: () => `
+    ${appbar('Appliance identified', { back:'home' })}
+    <div class="content">
+      <div class="media">${panelSvg()}</div>
+      <div class="card">
+        <div class="between">
+          <div>
+            <div style="font-size:19px;font-weight:700">Washing machine</div>
+            <div class="muted">Bosch · Serie 6 · HW-100</div>
+          </div>
+          <span class="badge ok">94%</span>
+        </div>
+        <div class="muted small" style="margin-top:8px">
+          Front-load washer, 8 kg. Control panel detected with 7 controls.
+        </div>
+      </div>
+      <button class="btn primary block" data-go="chat">Ask a question about it</button>
+      <button class="btn block" data-go="overlay">See the panel controls</button>
+      <div class="row" style="gap:8px">
+        <button class="btn ghost grow" data-go="favourites">⭐ &nbsp;Save</button>
+        <button class="btn ghost grow" data-go="errorcard">⚠️ &nbsp;Error code</button>
+      </div>
+      <div class="spacer"></div>
+      ${bottomNav('home')}
+    </div>`,
+
+  chat: () => `
+    ${appbar('Ask HoDoWo', { back:'identified', sub:'Washing machine · Bosch HW-100' })}
+    <div class="content">
+      <div class="bubble user">How do I start a quick wash?</div>
+      <div class="stack" style="gap:6px">
+        <div class="bubble ai">
+          Turn the <b>Program dial</b> to <b>Quick 30</b>, then press <b>Start / Pause</b>.
+          It runs a 30-minute cycle at 30&nbsp;°C.
+        </div>
+        <div class="row" style="gap:6px">
+          <button class="btn sm ${state.liked === 'up' ? 'primary' : 'ghost'}" data-rate="up">👍 Helpful</button>
+          <button class="btn sm ${state.liked === 'down' ? 'primary' : 'ghost'}" data-rate="down">👎 Not helpful</button>
+        </div>
+      </div>
+      <div class="bubble user">Does it need anything else?</div>
+      <div class="bubble ai">
+        Add detergent in the drawer on the left and make sure the door is closed.
+      </div>
+      <div class="spacer"></div>
+      <div class="stack" style="gap:7px">
+        <button class="btn block" data-go="guide">📋 &nbsp;Generate a visual guide</button>
+        <button class="btn ghost block" data-go="overlay">🎛 &nbsp;Show the panel controls</button>
+        <button class="btn ghost block" data-go="errorcard">⚠️ &nbsp;It shows error E01</button>
+      </div>
+    </div>
+    ${composer()}`,
+
+  overlay: () => `
+    ${appbar('Control panel', { back:'identified', sub:'Tap a control to see what it does' })}
+    <div class="content" style="gap:12px">
+      ${overlayMedia()}
+      ${overlayCard()}
+      <div class="spacer"></div>
+      <button class="btn primary block" data-go="guide">📋 &nbsp;Generate a visual guide</button>
+    </div>`,
+
+  guide: () => {
+    const steps = [
+      { t:'Switch the appliance on', d:'Press the On / Off button; the display lights up.',
+        hl:{ x:825, y:142, r:62 } },
+      { t:'Turn the dial to «Quick 30»', d:'Rotate the program dial until the pointer points to Quick 30.',
+        hl:{ x:170, y:300, r:105 } },
+      { t:'Press Start / Pause', d:'Press the Start button; the display shows the remaining time.',
+        hl:{ x:850, y:440, r:80 } }
+    ];
+    const i = Math.min(state.guideStep, steps.length - 1);
+    const s = steps[i];
+    const dots = steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('');
+
+    return `${appbar('Visual guide', { back:'chat', sub:`Step ${i + 1} of ${steps.length}` })}
+      <div class="content" style="gap:14px">
+        <div class="media">${panelSvg(s.hl)}</div>
+        <div class="card">
+          <div class="tiny muted" style="font-weight:600;text-transform:uppercase;letter-spacing:.03em">Step ${i + 1}</div>
+          <div style="font-size:16px;font-weight:600;margin-top:3px">${s.t}</div>
+          <div class="muted small" style="margin-top:5px">${s.d}</div>
+        </div>
+        <div class="steps">${dots}</div>
+        <div class="spacer"></div>
+        <div class="row" style="gap:8px">
+          <button class="btn ghost grow" data-guide="prev" ${i === 0 ? 'disabled style="opacity:.45"' : ''}>Back</button>
+          <button class="btn primary grow" data-guide="${i === steps.length - 1 ? 'done' : 'next'}">
+            ${i === steps.length - 1 ? 'Done' : 'Next step'}
+          </button>
+        </div>
+      </div>`;
+  },
+
+  errorcard: () => `
+    ${appbar('Error code', { back:'chat', sub:'Washing machine · Bosch HW-100' })}
+    <div class="content">
+      <div class="card" style="text-align:center">
+        <div style="font-size:34px;font-weight:800;letter-spacing:.06em;color:var(--bad)">E01</div>
+        <div class="muted small">Water inlet problem</div>
+      </div>
+      <div class="card">
+        <div class="tiny muted" style="font-weight:600;text-transform:uppercase">What it means</div>
+        <div class="small" style="margin-top:4px">The appliance is not filling with water fast enough.</div>
+      </div>
+      <div class="card">
+        <div class="tiny muted" style="font-weight:600;text-transform:uppercase">Likely causes</div>
+        <ul class="small" style="margin:6px 0 0;padding-left:18px;color:#cbd5e1">
+          <li>The water tap is closed.</li>
+          <li>The inlet hose is kinked or blocked.</li>
+          <li>The filter at the tap is clogged.</li>
+        </ul>
+      </div>
+      <div class="card" style="border-color:rgba(87,224,139,.35)">
+        <div class="tiny" style="font-weight:600;text-transform:uppercase;color:var(--good)">Recommended solution</div>
+        <div class="small" style="margin-top:4px">Open the tap fully and clean the inlet filter, then start the program again.</div>
+      </div>
+      <button class="btn primary block" data-go="guide">📋 &nbsp;Show me how (visual guide)</button>
+      <div class="spacer"></div>
+    </div>`,
+
+  favourites: () => `
+    ${appbar('Favourites', { sub:'Saved appliances and recent scans' })}
+    <div class="content">
+      <div class="row" style="gap:8px">
+        <button class="btn sm primary">Saved</button>
+        <button class="btn sm ghost" data-go="favourites">Recent</button>
+      </div>
+      <div class="stack" style="gap:8px">
+        <button class="card tight between" data-go="identified" style="cursor:pointer;text-align:left">
+          <div class="row"><span style="font-size:20px">🌀</span>
+            <div><div style="font-size:13.5px">Washing machine · Bosch</div>
+            <div class="muted tiny">Saved · 2 controls guides</div></div></div>
+          <div class="muted">›</div>
+        </button>
+        <button class="card tight between" data-go="identified" style="cursor:pointer;text-align:left">
+          <div class="row"><span style="font-size:20px">🔥</span>
+            <div><div style="font-size:13.5px">Oven · Siemens</div>
+            <div class="muted tiny">Saved · error E01 resolved</div></div></div>
+          <div class="muted">›</div>
+        </button>
+        <button class="card tight between" data-go="identified" style="cursor:pointer;text-align:left">
+          <div class="row"><span style="font-size:20px">🧊</span>
+            <div><div style="font-size:13.5px">Fridge · LG</div>
+            <div class="muted tiny">Recent · today</div></div></div>
+          <div class="muted">›</div>
+        </button>
+      </div>
+      <div class="spacer"></div>
+      ${bottomNav('favourites')}
+    </div>`,
+
+  profile: () => `
+    ${appbar('Profile')}
+    <div class="content">
+      <div class="card row">
+        <div style="width:46px;height:46px;border-radius:50%;background:var(--card2);
+                    display:flex;align-items:center;justify-content:center;font-size:22px">🧑‍🔧</div>
+        <div class="grow">
+          <div style="font-weight:600">Oriol Ferrer</div>
+          <div class="muted small">oriol@hodowo.app</div>
+        </div>
+      </div>
+      <div class="small" style="font-weight:600">Saved appliances</div>
+      <div class="stack" style="gap:8px">
+        <button class="card tight between" data-go="identified" style="cursor:pointer;text-align:left">
+          <span>🌀 &nbsp;Washing machine · Bosch</span><span class="muted">›</span>
+        </button>
+        <button class="card tight between" data-go="identified" style="cursor:pointer;text-align:left">
+          <span>🔥 &nbsp;Oven · Siemens</span><span class="muted">›</span>
+        </button>
+      </div>
+      <button class="card tight between" data-go="offpeak" style="cursor:pointer;text-align:left">
+        <span>⚡ &nbsp;Off-peak electricity tips</span><span class="muted">›</span>
+      </button>
+      <button class="card tight between" data-go="favourites" style="cursor:pointer;text-align:left">
+        <span>⭐ &nbsp;Favourites</span><span class="muted">›</span>
+      </button>
+      <div class="spacer"></div>
+      <button class="btn ghost block" data-go="auth">Sign out</button>
+      ${bottomNav('profile')}
+    </div>`,
+
+  offpeak: () => `
+    ${appbar('Off-peak tips', { back:'home', sub:'Cheapest hours to run the appliance' })}
+    <div class="content">
+      <div class="card">
+        <div class="between">
+          <div><div style="font-weight:600">Best time today</div>
+          <div class="muted small">00:00 – 08:00</div></div>
+          <span class="badge ok">Saving ≈ 0.18 €/cycle</span>
+        </div>
+        <div class="bars">
+          <div style="height:35%"></div><div style="height:55%"></div><div style="height:80%"></div>
+          <div style="height:95%"></div><div style="height:70%"></div><div style="height:45%"></div>
+          <div style="height:25%"></div><div class="good" style="height:15%"></div>
+          <div class="good" style="height:12%"></div><div style="height:30%"></div>
+          <div style="height:60%"></div><div style="height:85%"></div>
+        </div>
+        <div class="between tiny muted" style="margin-top:6px"><span>00h</span><span>12h</span><span>24h</span></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:600;font-size:13.5px">Tip</div>
+        <div class="muted small">Delay the wash to after midnight and you pay the off-peak rate.</div>
+      </div>
+      <button class="btn primary block" data-go="guide">📋 &nbsp;Show me how to delay the start</button>
+      <div class="spacer"></div>
+    </div>`
+};
+
+/* =========================================================================
+ * router
+ * ========================================================================= */
+
+let identifyTimer = null;
+
+function go(id) {
+  state.screen = id;
+  if (id === 'guide') state.guideStep = 0;
+  if (id !== 'overlay') state.selectedControl = null;
+  render();
+}
+
+function render() {
+  const viewport = document.getElementById('viewport');
+  viewport.innerHTML = T[state.screen]();
+
+  // Sidebar
+  document.getElementById('nav').innerHTML = SCREENS.map((s, i) => `
+    <button data-go="${s.id}" class="${state.screen === s.id ? 'active' : ''}">
+      <span class="n">${i + 1}</span>${s.title}
+    </button>`).join('');
+
+  // Notes
+  const meta = SCREENS.find((s) => s.id === state.screen);
+  document.getElementById('n-title').textContent = meta.title;
+  document.getElementById('n-desc').textContent = meta.desc;
+  document.getElementById('n-refs').innerHTML =
+    meta.refs.map((r) => `<span class="ref">${r}</span>`).join('');
+
+  // Auto-advance the "identifying" screen, like a real request would.
+  clearTimeout(identifyTimer);
+  if (state.screen === 'identifying') {
+    identifyTimer = setTimeout(() => { if (state.screen === 'identifying') go('identified'); }, 1500);
+  }
+}
+
+/* =========================================================================
+ * events
+ * ========================================================================= */
+
+document.addEventListener('click', (event) => {
+  const goEl = event.target.closest('[data-go]');
+  if (goEl) { event.preventDefault(); go(goEl.dataset.go); return; }
+
+  const ctrl = event.target.closest('[data-control]');
+  if (ctrl) { state.selectedControl = ctrl.dataset.control; render(); return; }
+
+  const guide = event.target.closest('[data-guide]');
+  if (guide) {
+    const action = guide.dataset.guide;
+    if (action === 'next') state.guideStep++;
+    else if (action === 'prev') state.guideStep = Math.max(0, state.guideStep - 1);
+    else if (action === 'done') { go('home'); return; }
+    render();
+    return;
+  }
+
+  const rate = event.target.closest('[data-rate]');
+  if (rate) { state.liked = rate.dataset.rate; render(); return; }
+
+  // Tapping the photo outside a box deselects (overlay screen only).
+  if (event.target.closest('#media')) { if (state.selectedControl) { state.selectedControl = null; render(); } }
+});
+
+render();
+</script>
+
+</body>
+</html>

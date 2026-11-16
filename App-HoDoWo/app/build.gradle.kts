@@ -1,4 +1,5 @@
 import java.util.Properties
+import groovy.json.JsonSlurper
 
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
@@ -6,9 +7,41 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use(localProperties::load)
 }
 
+/** Web OAuth client (`client_type == 3`) of google-services.json, or "" (#54). */
+fun googleWebClientIdFromServices(): String {
+    val candidates = listOf(
+        rootProject.file("app/google-services.json"),
+        rootProject.file("google-services.json"),
+    )
+    for (file in candidates) {
+        if (!file.exists()) continue
+        val json = JsonSlurper().parse(file) as? Map<*, *> ?: continue
+        val clients = json["client"] as? List<*> ?: continue
+        for (client in clients) {
+            val oauthClients = (client as? Map<*, *>)?.get("oauth_client") as? List<*> ?: continue
+            for (oauth in oauthClients) {
+                val entry = oauth as? Map<*, *> ?: continue
+                if ((entry["client_type"] as? Number)?.toInt() == 3) {
+                    val id = entry["client_id"] as? String
+                    if (!id.isNullOrBlank()) return id
+                }
+            }
+        }
+    }
+    return ""
+}
+
 val backendUrl = localProperties.getProperty("backend.url", "")
 // OAuth *Web* client ID of the Firebase project, used by Google sign-in (#54).
-val googleWebClientId = localProperties.getProperty("google.web.client.id", "")
+// When local.properties has no value it is read from google-services.json
+// (the oauth_client of type 3), so the button works after enabling Google in
+// the Firebase console without editing local files.
+val googleWebClientId: String = localProperties.getProperty("google.web.client.id", "").trim()
+    .ifBlank { googleWebClientIdFromServices() }
+
+// Stripe publishable TEST key (pk_test_...) for the PaymentSheet (#143). It is not a secret,
+// but it stays in local.properties like backend.url. Empty = payments disabled in the app.
+val stripePublishableKey = localProperties.getProperty("stripe.publishable.key", "")
 
 plugins {
     alias(libs.plugins.android.application)
@@ -27,6 +60,7 @@ android {
         dependsOn("testDebugUnitTest")
         reports {
             xml.required.set(true)
+            xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/jacocoDebugUnitTestReport/jacocoDebugUnitTestReport.xml"))
             html.required.set(true)
         }
         // The classes that need the Android framework (or a real Firebase
@@ -78,6 +112,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
+        buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
     }
 
     buildTypes {
@@ -113,6 +148,7 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
+    implementation("androidx.compose.material:material")
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
@@ -139,7 +175,10 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.2.0-rc01")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
     implementation(libs.coil.compose)
+    // Stripe PaymentSheet: card data is entered in Stripe's own UI, never in ours (#143).
+    implementation(libs.stripe.android)
     implementation(libs.androidx.compose.material.icons.extended)
     testImplementation(kotlin("test"))
 }

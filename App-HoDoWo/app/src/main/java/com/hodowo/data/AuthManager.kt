@@ -2,10 +2,10 @@ package com.hodowo.data
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.UserProfileChangeRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.tasks.await
 
 class AuthManager(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
@@ -45,6 +45,16 @@ class AuthManager(
     fun signOut() {
         auth.signOut()
         _currentUser.value = null
+    }
+
+    suspend fun updateProfile(displayName: String): FirebaseUser? {
+        val user = auth.currentUser ?: return null
+        val request = UserProfileChangeRequest.Builder()
+            .setDisplayName(displayName.trim())
+            .build()
+        user.updateProfile(request).await()
+        _currentUser.value = auth.currentUser
+        return auth.currentUser
     }
 
     val currentUserId: String

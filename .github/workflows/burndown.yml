@@ -1,7 +1,7 @@
 name: Burndown
 on:
   schedule:
-    - cron: "0 */3 * * *"   # cada 3 horas
+    - cron: "0 */3 * * *"   # every 3 hours
   workflow_dispatch:
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
         with:
           ref: burndown-data
 
-      - name: Calcular burndown
+      - name: Calculate burndown
         run: |
           mkdir -p burndown
           python3 - <<'EOF'
@@ -105,9 +105,9 @@ jobs:
 
           all_items = [norm(n) for n in fetch()]
           if not all_items:
-              print('El Project no devolvio items'); sys.exit(1)
+              print('The Project did not return any items'); sys.exit(1)
 
-          # Sprint actual
+          # Current sprint
           cur, sprint = [], None
           for it in all_items:
               s = it['sprint']
@@ -119,7 +119,7 @@ jobs:
                   cur.append(it)
                   sprint = (s['title'], sd, ed)
           if not cur:
-              print('No hay sprint activo'); sys.exit(0)
+              print('No active sprint found'); sys.exit(0)
 
           title, sd, ed = sprint
           start = dt.datetime.combine(sd, dt.time.min, tzinfo=UTC)
@@ -147,24 +147,24 @@ jobs:
               c = 0.0 if it['done'] else it['hours']
               old = state.get(it['id'])
               if first:
-                  add(start, it, 'inicial', it['hours'])
+                  add(start, it, 'initial', it['hours'])
                   if it['done']:
-                      add(it['t_status'], it, 'completado', -it['hours'])
+                      add(it['t_status'], it, 'completed', -it['hours'])
               elif old is None:
                   times = [t for t in (it['t_sprint'], it['t_hours']) if t]
-                  add(max(times) if times else now, it, 'anadido', it['hours'])
+                  add(max(times) if times else now, it, 'added', it['hours'])
                   if it['done']:
-                      add(it['t_status'], it, 'completado', -it['hours'])
+                      add(it['t_status'], it, 'completed', -it['hours'])
               elif c != old['c']:
                   if it['done'] != old['done']:
-                      add(it['t_status'], it, 'completado' if it['done'] else 'reabierto', c - old['c'])
+                      add(it['t_status'], it, 'completed' if it['done'] else 'reopened', c - old['c'])
                   else:
-                      add(it['t_hours'], it, 'estimacion', c - old['c'])
+                      add(it['t_hours'], it, 'estimation', c - old['c'])
               state_new[it['id']] = dict(c=c, done=it['done'], issue=it['issue'], title=it['title'])
 
           for k, o in state.items():
               if k not in seen and o['c']:
-                  new.append((now.isoformat(), o['issue'], o['title'], 'retirado', -o['c']))
+                  new.append((now.isoformat(), o['issue'], o['title'], 'removed', -o['c']))
 
           if new:
               exists = os.path.exists(epath)
@@ -176,7 +176,7 @@ jobs:
           json.dump(state_new, open(spath, 'w'), indent=1)
           changed = bool(new) or first
 
-          # ---- Dibujar ----
+          # ---- Render ----
           evs = []
           if os.path.exists(epath):
               for r in list(csv.reader(open(epath)))[1:]:
@@ -208,7 +208,7 @@ jobs:
           o.append('<!-- generated:%s -->' % today)
           o.append('<rect width="100%" height="100%" fill="white"/>')
           o.append('<text x="%d" y="26" font-size="17" font-weight="bold">Burndown - %s</text>' % (L, escape(title)))
-          o.append('<text x="%d" y="46" fill="#555">Pendiente ahora: %g h  |  Alcance inicial: %g h</text>' % (L, v, v0))
+          o.append('<text x="%d" y="46" fill="#555">Remaining now: %g h  |  Initial scope: %g h</text>' % (L, v, v0))
           for i in range(6):
               val = ymax * i / 5
               y = Y(val)
@@ -235,9 +235,9 @@ jobs:
           o.append('<circle cx="%.1f" cy="%.1f" r="5" fill="#2da44e"/>' % (X(start), Y(v0)))
           lx = W - 330
           o.append('<text x="%d" y="26" fill="#999">--- Ideal</text>' % lx)
-          o.append('<text x="%d" y="26" fill="#2da44e">— Real</text>' % (lx + 70))
-          o.append('<text x="%d" y="26" fill="#d1242f">● Sube alcance</text>' % (lx + 130))
-          o.append('<text x="%d" y="46" fill="#2da44e">● Completado</text>' % (lx + 130))
+          o.append('<text x="%d" y="26" fill="#2da44e">— Actual</text>' % (lx + 70))
+          o.append('<text x="%d" y="26" fill="#d1242f">● Scope increase</text>' % (lx + 130))
+          o.append('<text x="%d" y="46" fill="#2da44e">● Completed</text>' % (lx + 130))
           o.append('</svg>')
           svg = '\n'.join(o)
 
@@ -249,7 +249,7 @@ jobs:
               open(d + '/burndown.svg', 'w').write(svg)
           EOF
 
-      - name: Guardar cambios
+      - name: Save changes
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"

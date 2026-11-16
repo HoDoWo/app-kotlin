@@ -1,4 +1,4 @@
-package com.hodowo.ui
+﻿package com.hodowo.ui
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -27,12 +26,13 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DocumentScanner
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Kitchen
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.ShoppingBag
@@ -71,7 +71,13 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import coil.imageLoader
 import coil.request.ImageRequest
+import com.hodowo.ui.adaptive.AdaptiveContent
+import com.hodowo.ui.adaptive.LocalAppLayout
+import com.hodowo.ui.components.AppTopBar
+import com.hodowo.ui.components.NotificationIconButton
+import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.ui.theme.OnSurfaceVariant
 import com.hodowo.ui.theme.OutlineVariant
 import com.hodowo.ui.theme.Primary
@@ -84,19 +90,21 @@ import com.hodowo.ui.theme.Tertiary
 import com.hodowo.viewmodel.HomeUiState
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.ManualGuide
+import com.hodowo.viewmodel.ManualsSection
 import com.hodowo.viewmodel.RecentManual
 import com.hodowo.viewmodel.relativeTimeLabel
 
-/** Light orange of the "Market" action (tertiary-fixed in the Stitch mockup). */
+/** Light orange of the "Market" action (tertiary-fixed in the mockup). */
 private val TertiaryFixed = Color(0xFFFFDDB8)
 
 /**
  * Home screen from the Stitch mockup: greeting, search, quick actions,
- * daily tip and the user's recent manuals.
+ * daily tip, the user's recent manuals and the most popular manuals of all users.
  *
  * @param onSearch sends the text to the AI chat as a question.
  * @param onDiagnose opens the camera to photograph an appliance.
  * @param onAskAboutManual opens the chat with a question about a manual.
+ * @param onOpenManualChat opens the chat in which one of the user's recent manuals was written.
  */
 @Composable
 fun HomeScreen(
@@ -106,51 +114,92 @@ fun HomeScreen(
     onOpenArCore: () -> Unit,
     onOpenMarket: () -> Unit,
     onOpenProfile: () -> Unit,
-    onAskAboutManual: (ManualGuide) -> Unit
+    /** Opens the spare parts catalogue (#148). */
+    onOpenParts: () -> Unit = {},
+    /** Opens the sponsored partners page (#141). */
+    onOpenSponsored: () -> Unit = {},
+    onAskAboutManual: (ManualGuide) -> Unit,
+    onOpenManualChat: (ManualGuide) -> Unit = onAskAboutManual,
+    /** Photo of the signed-in user for the top bar; null shows the default avatar. */
+    profilePhotoUrl: String? = null
 ) {
     val state by viewModel.uiState.collectAsState()
     var openedManual by remember { mutableStateOf<RecentManual?>(null) }
+    var viewerUrl by remember { mutableStateOf<String?>(null) }
+    var viewerGuide by remember { mutableStateOf<ManualGuide?>(null) }
+    val context = LocalContext.current
+    val layoutInfo = LocalAppLayout.current
 
     // Reload every time Home is shown, so manuals created in the chat appear.
     LaunchedEffect(Unit) { viewModel.refresh() }
+
+    // Download the images of both lists into Coil's disk cache, so they can be seen offline.
+    LaunchedEffect(state.recentManuals, state.popularManuals) {
+        (state.recentManuals + state.popularManuals)
+            .mapNotNull { it.guide.imageUrl }
+            .filter { it.startsWith("http") }
+            .distinct()
+            .forEach { url -> context.imageLoader.enqueue(ImageRequest.Builder(context).data(url).build()) }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
     ) {
-        HomeHeader(onOpenProfile = onOpenProfile)
+        // In landscape/tablet the rail already shows the notification button and
+        // profile avatar at its bottom, so we suppress them here to avoid duplication.
+        val useRail = LocalAppLayout.current.useNavigationRail
+        AppTopBar(
+            subtitle = "HOME",
+            actions = {
+                if (!useRail) {
+                    NotificationIconButton(
+                        onClick = {
+                            Toast.makeText(context, "No notifications yet", Toast.LENGTH_SHORT).show()
+                        }
+                    )
+                    ProfileAvatar(name = "", size = 34, onClick = onOpenProfile, photoUrl = profilePhotoUrl)
+                }
+            }
+        )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            item { Greeting(state.userName) }
-            item { HomeSearchBar(onSearch = onSearch) }
-            item {
-                QuickActions(
-                    onDiagnose = onDiagnose,
-                    onOpenArCore = onOpenArCore,
-                    onOpenMarket = onOpenMarket
+        AdaptiveContent(maxWidth = 980.dp) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                // Extra space at the bottom, so the "New chat" button never covers a card.
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                item { Greeting(state.userName) }
+                item { HomeSearchBar(onSearch = onSearch) }
+                item {
+                    QuickActions(
+                        onDiagnose = onDiagnose,
+                        onOpenArCore = onOpenArCore,
+                        onOpenMarket = onOpenMarket,
+                        onOpenParts = onOpenParts
+                    )
+                }
+                item { SponsoredPartnersCard(onClick = onOpenSponsored) }
+                item { HelpfulTipCard(state.tip) }
+                item {
+                    SectionHeader(section = state.section, onSelect = viewModel::selectSection)
+                }
+                manualsSection(
+                    state = state,
+                    isWide = layoutInfo.isWide,
+                    onOpen = { manual ->
+                        // Your own manuals reopen their chat, as in a chat app; the most
+                        // popular ones are other users' guides and open as a card.
+                        if (state.section == ManualsSection.RECENT) onOpenManualChat(manual.guide)
+                        else openedManual = manual
+                    },
+                    onImageClick = { viewerUrl = it },
+                    onRetry = viewModel::refresh,
+                    onDiagnose = onDiagnose
                 )
             }
-            item { HelpfulTipCard(state.tip) }
-            item {
-                Text(
-                    text = "Recent Manuals",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-            }
-            recentManualsSection(
-                state = state,
-                onOpen = { openedManual = it },
-                onRetry = viewModel::refresh,
-                onDiagnose = onDiagnose
-            )
         }
     }
 
@@ -158,35 +207,60 @@ fun HomeScreen(
         ManualDetailDialog(
             manual = manual,
             onDismiss = { openedManual = null },
+            // With steps the image opens pinned beside them; without, as a plain image.
+            onImageClick = { url ->
+                if (manual.guide.steps.isEmpty()) {
+                    viewerUrl = url
+                } else {
+                    viewerGuide = manual.guide
+                }
+            },
             onAskInChat = {
                 openedManual = null
                 onAskAboutManual(manual.guide)
             }
         )
     }
+
+    viewerUrl?.let { url ->
+        FullscreenImageViewer(url = url, onDismiss = { viewerUrl = null })
+    }
+
+    viewerGuide?.let { guide ->
+        GuideViewerDialog(guide = guide, onDismiss = { viewerGuide = null })
+    }
 }
 
-private fun LazyListScope.recentManualsSection(
+private fun LazyListScope.manualsSection(
     state: HomeUiState,
+    isWide: Boolean,
     onOpen: (RecentManual) -> Unit,
+    onImageClick: (String) -> Unit,
     onRetry: () -> Unit,
     onDiagnose: () -> Unit
 ) {
+    val isPopular = state.section == ManualsSection.POPULAR
+    val manuals = state.shownManuals
+
     when {
-        state.recentManuals.isNotEmpty() -> {
-            itemsIndexed(state.recentManuals) { index, manual ->
+        manuals.isNotEmpty() -> {
+            // Saved copy shown because the backend could not be reached.
+            if (state.shownFailed) {
+                item { OfflineRow(onRetry = onRetry) }
+            }
+            itemsIndexed(manuals, key = { index, manual -> "${state.section}-${manual.guide.manualId ?: index}" }) { index, manual ->
                 RecentManualCard(
                     manual = manual,
                     now = state.now,
                     highlighted = index % 2 == 0,
-                    onClick = { onOpen(manual) }
+                    isPopular = isPopular,
+                    isWide = isWide,
+                    onClick = { onOpen(manual) },
+                    onImageClick = onImageClick
                 )
             }
-            if (state.manualsFailed) {
-                item { ManualsErrorRow(onRetry = onRetry) }
-            }
         }
-        state.isLoadingManuals -> item {
+        state.isLoadingShown -> item {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -196,91 +270,71 @@ private fun LazyListScope.recentManualsSection(
                 CircularProgressIndicator(color = Primary, strokeWidth = 3.dp)
             }
         }
-        state.manualsFailed -> item { ManualsErrorRow(onRetry = onRetry) }
+        state.shownFailed -> item { ManualsErrorRow(onRetry = onRetry) }
+        isPopular -> item { EmptyPopularCard() }
         else -> item { EmptyManualsCard(onDiagnose = onDiagnose) }
     }
 }
 
+/** Title of the list with the "Recent / Most popular" switch next to it. */
 @Composable
-private fun HomeHeader(onOpenProfile: () -> Unit) {
-    val context = LocalContext.current
+private fun SectionHeader(section: ManualsSection, onSelect: (ManualsSection) -> Unit) {
+    val other = if (section == ManualsSection.RECENT) ManualsSection.POPULAR else ManualsSection.RECENT
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-        shadowElevation = 1.dp
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
+        // Tapping the title also switches list.
+        Text(
+            text = section.title,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            fontSize = 22.sp,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .height(60.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .weight(1f)
+                .clickable { onSelect(other) }
+        )
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = SurfaceContainerHigh,
+            modifier = Modifier.padding(start = 8.dp)
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Surface(color = Primary, shape = RoundedCornerShape(12.dp), modifier = Modifier.size(38.dp)) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Psychology,
-                            contentDescription = "Howdowo Logo",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-                Column {
-                    Text(
-                        text = "Howdowo",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Primary,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = (-0.2).sp
-                    )
-                    Text(
-                        text = "HOME",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = OnSurfaceVariant,
-                        letterSpacing = 1.2.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = { Toast.makeText(context, "No notifications yet", Toast.LENGTH_SHORT).show() }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Notifications",
-                        tint = OnSurfaceVariant,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Surface(
-                    shape = CircleShape,
-                    color = SecondaryContainer,
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .clickable(onClick = onOpenProfile)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Profile",
-                            tint = Primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
+            Row(modifier = Modifier.padding(3.dp)) {
+                SwitchOption(
+                    label = "Recent",
+                    selected = section == ManualsSection.RECENT,
+                    onClick = { onSelect(ManualsSection.RECENT) }
+                )
+                SwitchOption(
+                    label = "Popular",
+                    selected = section == ManualsSection.POPULAR,
+                    onClick = { onSelect(ManualsSection.POPULAR) }
+                )
             }
         }
+    }
+}
+
+@Composable
+private fun SwitchOption(label: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = if (selected) Primary else Color.Transparent
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 14.sp,
+            color = if (selected) Color.White else OnSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+        )
     }
 }
 
@@ -291,12 +345,14 @@ private fun Greeting(userName: String) {
             text = "Hello $userName 👋",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
+            fontSize = 28.sp,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = "What do you need today?",
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
+            fontSize = 16.sp,
             color = OnSurfaceVariant
         )
     }
@@ -322,7 +378,13 @@ private fun HomeSearchBar(onSearch: (String) -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         singleLine = true,
         shape = RoundedCornerShape(12.dp),
-        placeholder = { Text("Search appliance, issue, or error code...") },
+        textStyle = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+        placeholder = {
+            Text(
+                "Search appliance, issue, or error code...",
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp)
+            )
+        },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = OnSurfaceVariant) },
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         keyboardActions = KeyboardActions(onSearch = { submit() }),
@@ -339,7 +401,8 @@ private fun HomeSearchBar(onSearch: (String) -> Unit) {
 private fun QuickActions(
     onDiagnose: () -> Unit,
     onOpenArCore: () -> Unit,
-    onOpenMarket: () -> Unit
+    onOpenMarket: () -> Unit,
+    onOpenParts: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -370,6 +433,14 @@ private fun QuickActions(
             onClick = onOpenMarket,
             modifier = Modifier.weight(1f)
         )
+        QuickActionButton(
+            label = "Parts",
+            icon = Icons.Outlined.Build,
+            iconTint = Primary,
+            iconBackground = Primary.copy(alpha = 0.1f),
+            onClick = onOpenParts,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -389,28 +460,63 @@ private fun QuickActionButton(
         color = SurfaceContainerLowest,
         shadowElevation = 1.dp,
         border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.2f)),
-        modifier = modifier.height(96.dp)
+        modifier = modifier.height(100.dp)
     ) {
         Column(
             modifier = Modifier.padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Surface(shape = CircleShape, color = iconBackground, modifier = Modifier.size(40.dp)) {
+            Surface(shape = CircleShape, color = iconBackground, modifier = Modifier.size(42.dp)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(22.dp))
+                    Icon(imageVector = icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(24.dp))
                 }
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onSurface
             )
             subtitle?.let {
-                Text(text = it, style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
+                Text(text = it, style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
             }
+        }
+    }
+}
+
+/** Entry to the sponsored partners page (#141). */
+@Composable
+private fun SponsoredPartnersCard(onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = SurfaceContainerLowest,
+        border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.3f)),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Campaign, contentDescription = null, tint = Primary)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Sponsored partners",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Offers from our partners",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceVariant
+                )
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = OnSurfaceVariant)
         }
     }
 }
@@ -423,17 +529,24 @@ private fun HelpfulTipCard(tip: String) {
         border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.3f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(text = "💡", fontSize = 22.sp)
+        Row(modifier = Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(text = "💡", fontSize = 24.sp)
             Column {
                 Text(
                     text = "Helpful Tip",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(text = tip, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = tip,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontSize = 16.sp,
+                    lineHeight = 23.sp,
+                    color = OnSurfaceVariant
+                )
             }
         }
     }
@@ -444,9 +557,13 @@ private fun RecentManualCard(
     manual: RecentManual,
     now: Long,
     highlighted: Boolean,
-    onClick: () -> Unit
+    isPopular: Boolean,
+    isWide: Boolean,
+    onClick: () -> Unit,
+    onImageClick: (String) -> Unit
 ) {
     val guide = manual.guide
+    val imageUrl = guide.imageUrl
 
     Surface(
         onClick = onClick,
@@ -456,44 +573,119 @@ private fun RecentManualCard(
         border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.2f)),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (isWide && imageUrl != null) {
+            // Landscape / tablet: the picture sits beside the text so the card
+            // stays short and two guides fit on screen.
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.Top
             ) {
-                ApplianceChip(name = guide.applianceName, highlighted = highlighted, modifier = Modifier.weight(1f, fill = false))
-                generatedLabel(manual.createdAtMillis, now)?.let { label ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Icon(Icons.Outlined.Schedule, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(text = label, style = MaterialTheme.typography.labelSmall, color = OnSurfaceVariant)
-                    }
-                }
-            }
-
-            Column {
-                Text(
-                    text = guide.issueTitle,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                if (guide.overview.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = guide.overview,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = OnSurfaceVariant,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    ManualCardHeader(
+                        guide = guide,
+                        manual = manual,
+                        now = now,
+                        highlighted = highlighted,
+                        isPopular = isPopular
                     )
+                    ManualCardText(guide = guide)
                 }
-            }
 
-            guide.imageUrl?.let { url -> GuideImage(url = url) }
+                GuideImage(
+                    url = imageUrl,
+                    onClick = { onImageClick(imageUrl) },
+                    modifier = Modifier
+                        .width(260.dp)
+                        .height(170.dp),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        } else {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                ManualCardHeader(
+                    guide = guide,
+                    manual = manual,
+                    now = now,
+                    highlighted = highlighted,
+                    isPopular = isPopular
+                )
+                ManualCardText(guide = guide)
+                imageUrl?.let { url -> GuideImage(url = url, onClick = { onImageClick(url) }) }
+            }
         }
+    }
+}
+
+/** Appliance chip and the "generated 2h ago" / popularity line of a manual card. */
+@Composable
+private fun ManualCardHeader(
+    guide: ManualGuide,
+    manual: RecentManual,
+    now: Long,
+    highlighted: Boolean,
+    isPopular: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        ApplianceChip(name = guide.applianceName, highlighted = highlighted, modifier = Modifier.weight(1f, fill = false))
+        if (isPopular) {
+            PopularityLabel(searches = manual.searchCount, saves = manual.saveCount)
+        } else generatedLabel(manual.createdAtMillis, now)?.let { label ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(Icons.Outlined.Schedule, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = label, style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
+            }
+        }
+    }
+}
+
+/** Title and short summary of a manual card. */
+@Composable
+private fun ManualCardText(guide: ManualGuide) {
+    Column {
+        Text(
+            text = guide.issueTitle,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        if (guide.overview.isNotBlank()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = guide.overview,
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = OnSurfaceVariant,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/** "🔍 12  🔖 3": how many times a popular guide was searched and saved. */
+@Composable
+private fun PopularityLabel(searches: Int, saves: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(Icons.Default.Search, contentDescription = "Searches", tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(2.dp))
+        Text(text = "$searches", style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(Icons.Default.Bookmark, contentDescription = "Saves", tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(2.dp))
+        Text(text = "$saves", style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
     }
 }
 
@@ -512,28 +704,76 @@ private fun ApplianceChip(name: String, highlighted: Boolean, modifier: Modifier
     ) {
         Text(
             text = name,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
             color = if (highlighted) Primary else Secondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
         )
     }
 }
 
+/** Guide image; tapping it opens the full-screen viewer (zoom, download). */
 @Composable
-private fun GuideImage(url: String) {
+private fun GuideImage(
+    url: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    contentScale: ContentScale = ContentScale.FillWidth
+) {
     AsyncImage(
         model = ImageRequest.Builder(LocalContext.current).data(imageData(url)).crossfade(true).build(),
-        contentDescription = null,
-        // Whole image, full width: the height follows the image's own proportions.
-        contentScale = ContentScale.FillWidth,
-        modifier = Modifier
-            .fillMaxWidth()
+        contentDescription = "Guide image, tap to enlarge",
+        contentScale = contentScale,
+        modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(SurfaceContainerHigh)
+            .clickable(onClick = onClick)
     )
+}
+
+@Composable
+private fun EmptyPopularCard() {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = SurfaceContainerLowest,
+        border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.3f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "No popular guides yet: they appear when users search and save guides.",
+            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 15.sp,
+            color = OnSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(20.dp)
+        )
+    }
+}
+
+/** Shown above a saved copy of the list when the backend cannot be reached. */
+@Composable
+private fun OfflineRow(onRetry: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "You're offline: showing the saved copy.",
+            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 14.sp,
+            color = OnSurfaceVariant,
+            modifier = Modifier.weight(1f)
+        )
+        OutlinedButton(onClick = onRetry, shape = RoundedCornerShape(12.dp)) {
+            Text("Retry", fontSize = 14.sp)
+        }
+    }
 }
 
 @Composable
@@ -551,22 +791,24 @@ private fun EmptyManualsCard(onDiagnose: () -> Unit) {
             Text(
                 text = "No manuals yet",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Take a photo of an appliance and ask what you need: your guides will appear here.",
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 15.sp,
                 color = OnSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(14.dp))
             Button(
                 onClick = onDiagnose,
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Diagnose an issue")
+                Text("Diagnose an issue", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
@@ -582,13 +824,14 @@ private fun ManualsErrorRow(onRetry: () -> Unit) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
-            text = "Couldn't load your manuals.",
-            style = MaterialTheme.typography.bodySmall,
+            text = "Couldn't load the manuals.",
+            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 14.sp,
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.weight(1f)
         )
         OutlinedButton(onClick = onRetry, shape = RoundedCornerShape(12.dp)) {
-            Text("Retry")
+            Text("Retry", fontSize = 14.sp)
         }
     }
 }
@@ -597,6 +840,7 @@ private fun ManualsErrorRow(onRetry: () -> Unit) {
 private fun ManualDetailDialog(
     manual: RecentManual,
     onDismiss: () -> Unit,
+    onImageClick: (String) -> Unit,
     onAskInChat: () -> Unit
 ) {
     val guide = manual.guide
@@ -613,7 +857,7 @@ private fun ManualDetailDialog(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -626,23 +870,34 @@ private fun ManualDetailDialog(
                     }
                 }
 
-                Text(text = guide.issueTitle, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text(
+                    text = guide.issueTitle,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp
+                )
                 if (guide.overview.isNotBlank()) {
-                    Text(text = guide.overview, style = MaterialTheme.typography.bodyMedium, color = OnSurfaceVariant)
+                    Text(
+                        text = guide.overview,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontSize = 16.sp,
+                        lineHeight = 23.sp,
+                        color = OnSurfaceVariant
+                    )
                 }
-                guide.imageUrl?.let { url -> GuideImage(url = url) }
+                guide.imageUrl?.let { url -> GuideImage(url = url, onClick = { onImageClick(url) }) }
 
                 guide.steps.forEach { step ->
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Surface(shape = CircleShape, color = Primary, modifier = Modifier.size(26.dp)) {
+                        Surface(shape = CircleShape, color = Primary, modifier = Modifier.size(28.dp)) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text(text = "${step.number}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(text = "${step.number}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         }
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = step.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                            Text(text = step.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                             if (step.description.isNotBlank()) {
-                                Text(text = step.description, style = MaterialTheme.typography.bodySmall, color = OnSurfaceVariant)
+                                Text(text = step.description, style = MaterialTheme.typography.bodyMedium, fontSize = 15.sp, color = OnSurfaceVariant)
                             }
                         }
                     }
@@ -651,7 +906,8 @@ private fun ManualDetailDialog(
                 guide.warnings.forEach { warning ->
                     Text(
                         text = "⚠️ $warning",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.error
                     )
                 }
@@ -662,7 +918,7 @@ private fun ManualDetailDialog(
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Ask about this in the chat")
+                    Text("Ask about this in the chat", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

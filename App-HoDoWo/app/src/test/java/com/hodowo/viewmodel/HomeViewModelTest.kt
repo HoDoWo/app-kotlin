@@ -36,8 +36,8 @@ class HomeViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(name: String = "Alex") =
-        HomeViewModel(aiService = service, userName = { name }, clock = { now })
+    private fun viewModel(name: String = "Alex", cache: ManualsCache = ManualsCache.None, user: String? = "u1") =
+        HomeViewModel(aiService = service, userName = { name }, clock = { now }, cache = cache, userId = { user })
 
     // ---------- refresh ----------
 
@@ -136,6 +136,104 @@ class HomeViewModelTest {
         assertEquals(DEFAULT_USER_NAME, vm.uiState.value.userName)
     }
 
+    // ---------- Most popular ----------
+
+    @Test
+    fun refreshAlsoLoadsThePopularManuals() = runTest(dispatcher) {
+        val vm = viewModel()
+
+        vm.refresh()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals(listOf("Popular E18"), state.popularManuals.map { it.guide.issueTitle })
+        assertEquals(42, state.popularManuals.single().searchCount)
+        assertEquals(7, state.popularManuals.single().saveCount)
+        assertEquals(HomeViewModel.POPULAR_MANUALS_LIMIT, service.lastPopularLimit)
+        assertFalse(state.popularFailed)
+    }
+
+    @Test
+    fun theSwitchChangesTheShownList() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.refresh()
+        advanceUntilIdle()
+
+        assertEquals(ManualsSection.RECENT, vm.uiState.value.section)
+        assertEquals("E18", vm.uiState.value.shownManuals.single().guide.issueTitle)
+
+        vm.selectSection(ManualsSection.POPULAR)
+
+        assertEquals(ManualsSection.POPULAR, vm.uiState.value.section)
+        assertEquals("Popular E18", vm.uiState.value.shownManuals.single().guide.issueTitle)
+    }
+
+    @Test
+    fun aPopularErrorDoesNotTouchTheRecentManuals() = runTest(dispatcher) {
+        service.popularError = IOException("offline")
+        val vm = viewModel()
+
+        vm.refresh()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertTrue(state.popularFailed)
+        assertFalse(state.manualsFailed)
+        vm.selectSection(ManualsSection.POPULAR)
+        assertTrue(vm.uiState.value.shownFailed)
+    }
+
+    // ---------- offline copy ----------
+
+    @Test
+    fun bothListsAreSavedForOffline() = runTest(dispatcher) {
+        val cache = MemoryCache()
+        val vm = viewModel(cache = cache)
+
+        vm.refresh()
+        advanceUntilIdle()
+
+        assertEquals(listOf("E18"), cache.saved["recent_manuals_u1"]?.map { it.guide.issueTitle })
+        assertEquals(listOf("Popular E18"), cache.saved[HomeViewModel.POPULAR_CACHE_NAME]?.map { it.guide.issueTitle })
+    }
+
+    @Test
+    fun offlineTheSavedCopiesAreShown() = runTest(dispatcher) {
+        val cache = MemoryCache()
+        cache.saved["recent_manuals_u1"] = listOf(manual("Saved recent"))
+        cache.saved[HomeViewModel.POPULAR_CACHE_NAME] = listOf(manual("Saved popular"))
+        service.manualsError = IOException("offline")
+        service.popularError = IOException("offline")
+        val vm = viewModel(cache = cache)
+
+        vm.refresh()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals(listOf("Saved recent"), state.recentManuals.map { it.guide.issueTitle })
+        assertEquals(listOf("Saved popular"), state.popularManuals.map { it.guide.issueTitle })
+        assertTrue(state.manualsFailed)
+        assertTrue(state.popularFailed)
+    }
+
+    @Test
+    fun eachUserHasTheirOwnSavedRecentManuals() = runTest(dispatcher) {
+        val cache = MemoryCache()
+        cache.saved["recent_manuals_u1"] = listOf(manual("Mine"))
+        service.manualsError = IOException("offline")
+        var user = "u1"
+        val vm = HomeViewModel(aiService = service, clock = { now }, cache = cache, userId = { user })
+
+        vm.refresh()
+        advanceUntilIdle()
+        assertEquals(listOf("Mine"), vm.uiState.value.recentManuals.map { it.guide.issueTitle })
+
+        user = "u2"
+        vm.refresh()
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.recentManuals.isEmpty())
+    }
+
     // ---------- greetingName ----------
 
     @Test
@@ -193,14 +291,34 @@ class HomeViewModelTest {
     }
 }
 
+private fun manual(title: String) =
+    RecentManual(guide = ManualGuide(applianceName = "Bosch Washer", issueTitle = title, overview = ""), createdAtMillis = 1L)
+
+/** In-memory [ManualsCache]. */
+private class MemoryCache : ManualsCache {
+    val saved = mutableMapOf<String, List<RecentManual>>()
+    override suspend fun load(name: String): List<RecentManual>? = saved[name]
+    override suspend fun save(name: String, manuals: List<RecentManual>) {
+        saved[name] = manuals
+    }
+}
+
 /** Fake backend for the Home screen: only the Home calls are implemented. */
 private class FakeHomeService : HoDoWoAiService {
     var tip: String? = "Wash at 30 degrees."
     var tipError: Exception? = null
     var manualsError: Exception? = null
+    var popularError: Exception? = null
     var tipCalls = 0
     var manualCalls = 0
     var lastLimit = 0
+    var lastPopularLimit = 0
+
+    override suspend fun popularManuals(limit: Int): List<RecentManual> {
+        lastPopularLimit = limit
+        popularError?.let { throw it }
+        return listOf(manual("Popular E18").copy(searchCount = 42, saveCount = 7))
+    }
 
     override suspend fun dailyTip(): String? {
         tipCalls++

@@ -216,11 +216,23 @@ fun AuthScreen(
 
             OutlinedButton(
                 onClick = onGoogleClick,
-                // Without a web client id the picker cannot be opened (#54).
-                enabled = !state.isLoading && googleConfigured,
+                enabled = !state.isLoading,
                 modifier = Modifier.fillMaxWidth().height(48.dp),
             ) {
                 Text("Continue with Google")
+            }
+
+            if (!googleConfigured) {
+                // The button stays tappable: the ViewModel shows the exact reason
+                // (no web client id / provider disabled) instead of doing nothing.
+                Text(
+                    "Google sign-in needs a Web client ID in local.properties or " +
+                        "in google-services.json. See the README.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             TextButton(

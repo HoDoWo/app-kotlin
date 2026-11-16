@@ -1,7 +1,8 @@
 package com.hodowo.data
 
+import com.google.firebase.FirebaseException
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.tasks.await
+import java.io.IOException
 
 /**
  * Provides the Firebase ID token that the backend expects in
@@ -13,16 +14,19 @@ import kotlinx.coroutines.tasks.await
  *   Firebase console -> Authentication -> Sign-in method.
  *
  * Firebase caches the token and refreshes it automatically when it expires.
+ *
+ * Without connection Firebase fails with a [FirebaseException]: it is turned
+ * into an [IOException], the error every service already handles ("check your
+ * connection"), so it never crashes the app.
  */
 class FirebaseTokenProvider(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) {
 
-    suspend fun token(): String? {
-        val user = auth.currentUser
-            ?: auth.signInAnonymously().await().user
-            ?: return null
-
-        return user.getIdToken(false).await().token
+    suspend fun token(): String? = try {
+        val user = auth.currentUser ?: auth.signInAnonymously().await().user
+        user?.getIdToken(false)?.await()?.token
+    } catch (e: FirebaseException) {
+        throw IOException("No connection to the server, check your connection", e)
     }
 }

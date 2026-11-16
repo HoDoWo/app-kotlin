@@ -14,13 +14,18 @@ import kotlin.math.roundToInt
 /**
  * Shrinks a camera photo before it is uploaded.
  *
- * Vercel rejects requests larger than about 4.5 MB, while a full-size camera
- * photo can be bigger. The longest side is reduced to [MAX_SIDE] pixels and
- * the image is saved as JPEG, which keeps it well under the limit.
+ * Listing photos are stored in Firestore, where one document cannot exceed
+ * 1 MiB, so the longest side is reduced to [MAX_SIDE] pixels and the image is
+ * saved as JPEG at [JPEG_QUALITY]. That keeps a photo around 100-300 KB,
+ * which is also well under Vercel's request-size limit.
  */
 class ImageCompressor(private val context: Context) {
 
-    suspend fun compress(uri: Uri): ByteArray = withContext(Dispatchers.IO) {
+    suspend fun compress(
+        uri: Uri,
+        maxSide: Int = MAX_SIDE,
+        quality: Int = JPEG_QUALITY
+    ): ByteArray = withContext(Dispatchers.IO) {
         val resolver = context.contentResolver
 
         // 1. Read only the image size, without loading the pixels.
@@ -29,7 +34,7 @@ class ImageCompressor(private val context: Context) {
 
         // 2. Decode a smaller copy (power-of-two sampling saves memory).
         var sampleSize = 1
-        while (max(bounds.outWidth, bounds.outHeight) / (sampleSize * 2) >= MAX_SIDE) {
+        while (max(bounds.outWidth, bounds.outHeight) / (sampleSize * 2) >= maxSide) {
             sampleSize *= 2
         }
 
@@ -42,22 +47,22 @@ class ImageCompressor(private val context: Context) {
         } ?: throw IOException("Could not read the photo")
 
         // 3. Scale to the exact maximum size and encode as JPEG.
-        val scaled = scaleDown(decoded)
+        val scaled = scaleDown(decoded, maxSide)
 
         ByteArrayOutputStream().use { output ->
-            scaled.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, output)
+            scaled.compress(Bitmap.CompressFormat.JPEG, quality, output)
             output.toByteArray()
         }
     }
 
-    private fun scaleDown(bitmap: Bitmap): Bitmap {
+    private fun scaleDown(bitmap: Bitmap, maxSide: Int): Bitmap {
         val longestSide = max(bitmap.width, bitmap.height)
 
-        if (longestSide <= MAX_SIDE) {
+        if (longestSide <= maxSide) {
             return bitmap
         }
 
-        val ratio = MAX_SIDE.toFloat() / longestSide
+        val ratio = maxSide.toFloat() / longestSide
 
         return Bitmap.createScaledBitmap(
             bitmap,
@@ -67,8 +72,8 @@ class ImageCompressor(private val context: Context) {
         )
     }
 
-    private companion object {
-        const val MAX_SIDE = 1600
-        const val JPEG_QUALITY = 80
+    companion object {
+        const val MAX_SIDE = 1280
+        const val JPEG_QUALITY = 75
     }
 }

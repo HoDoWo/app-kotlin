@@ -5,7 +5,7 @@
 Take a photo of the appliance or its control panel, ask a question in natural
 language and get model-specific help with a step-by-step visual guide.
 
-> University project · Sprint 1 delivery: October 27, 2026
+> University project · Sprint 1 delivery: October 27, 2026 · Backend: [HoDoWo/Backend](https://github.com/HoDoWo/Backend)
 
 ## Main flow
 
@@ -13,7 +13,7 @@ Take a photo → Identify the appliance → Ask the AI → Model-specific answer
 
 ## Features
 
-### Sprint 1 · Core AI engine (in progress)
+### Sprint 1 · Core AI engine
 - Appliance identification and control panel recognition
 - Natural-language Q&A grounded in technical manuals (RAG)
 - Error code translation
@@ -56,7 +56,7 @@ These are not committed to the current sprints and depend on feasibility and tim
 | Data | Firebase (Auth, Firestore, Storage) |
 
 This repository contains the **Android client** only. The backend and the
-project documentation live in a separate repository: [LINK-TO-BACKEND-REPO](#).
+project documentation live in a separate repository: [HoDoWo/Backend](https://github.com/HoDoWo/Backend).
 
 ## Repository structure
 
@@ -64,7 +64,9 @@ project documentation live in a separate repository: [LINK-TO-BACKEND-REPO](#).
 |------|---------|
 | `App-HoDoWo/` | Android app (Kotlin + Jetpack Compose) |
 | `burndown/` | Burndown chart data |
-| `.github/` | CI workflows (Sonar, Detekt, burndown) and PR template |
+| `docs/` | Generated project charts (Gantt comparison) |
+| `scripts/` | Scripts used by the workflows |
+| `.github/` | CI workflows (SonarQube, Detekt, Burndown, Earned Value, Gantt) and PR template |
 
 ## Getting started
 
@@ -78,12 +80,13 @@ project documentation live in a separate repository: [LINK-TO-BACKEND-REPO](#).
 
 1. Clone the repository:
 ```bash
-   git clone https://github.com/Anna-Marin/Howdowo.git
+   git clone https://github.com/HoDoWo/app-kotlin.git
 ```
 2. Open the `App-HoDoWo/` folder in Android Studio.
 3. Add your own `google-services.json` to `App-HoDoWo/app/` (not tracked by Git).
 4. Copy `App-HoDoWo/local.properties.template` to `App-HoDoWo/local.properties`
-   and fill in the values below (the file is ignored by Git).
+   and fill in the values below (the file is ignored by Git). At minimum set
+   `backend.url` (for example `backend.url=https://backend-howdowo.vercel.app`).
 5. Sync Gradle and run the app.
 
 #### `local.properties`
@@ -91,13 +94,29 @@ project documentation live in a separate repository: [LINK-TO-BACKEND-REPO](#).
 | Property | What it is | Without it |
 |----------|------------|------------|
 | `backend.url` | URL of the backend (see the backend repository) | The app runs with the offline demo service |
-| `google.web.client.id` | OAuth **web** client ID of the Firebase project (Firebase console → Authentication → Sign-in method → Google → Web client ID) | The "Continue with Google" button is disabled and the app answers that Google sign-in is not configured in this build |
+| `google.web.client.id` | OAuth **web** client ID of the Firebase project (Firebase console → Authentication → Sign-in method → Google → Web client ID) | Gradle falls back to the web client of `google-services.json`; if there is none the app explains that Google sign-in is not configured in this build |
 
-`google.web.client.id` is read at build time into `BuildConfig.GOOGLE_WEB_CLIENT_ID`,
-so it is empty in CI (where `local.properties` does not exist) and the Google
-button simply stays disabled. Alternatively, add the OAuth web client to the
-Firebase project and use the `default_web_client_id` string that the
-`google-services` plugin generates from `google-services.json`.
+`google.web.client.id` is read at build time into `BuildConfig.GOOGLE_WEB_CLIENT_ID`.
+When the property is missing, Gradle reads it from the OAuth **web** client
+(`client_type: 3`) listed in `google-services.json`, so enabling Google in the
+Firebase console and downloading the updated file is enough. If neither has a
+web client (Google sign-in not enabled in the project yet) the value is empty
+in CI too, and the app explains that Google sign-in is not configured in this
+build instead of failing.
+
+#### Enabling Google sign-in in the Firebase project
+
+The app cannot create the OAuth client itself: it has to exist in the Firebase
+project. In the [Firebase console](https://console.firebase.google.com/project/howdowo/authentication/providers):
+
+1. **Authentication → Sign-in method → Add new provider → Google → Enable**.
+   The console creates the OAuth *web* client of the project.
+2. **Project settings → Your apps → `com.hodowo` → Add fingerprint**: add the
+   SHA-1 (and SHA-256) of the keystore used to sign the app (`./gradlew signingReport`).
+   Google checks it when the account picker returns the ID token.
+3. Download the new `google-services.json` to `App-HoDoWo/app/`.
+4. Rebuild. Gradle picks its `client_type: 3` client up automatically, so no
+   `local.properties` change is needed.
 
 ## Contributing
 
@@ -105,7 +124,13 @@ Firebase project and use the `default_web_client_id` string that the
 - One branch per task, named after the backlog ID, e.g. `feature/PB-01-F-01`.
 - Every change goes through a Pull Request with at least one approval and passing checks.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+See [CONTRIBUTING](CONTRIBUING) for details.
+
+## Project tracking
+
+- Burndown chart and Earned Value report (PV, EV, AC, EAC, ETC, VAC, CPI, SPI), updated every day
+  by GitHub Actions on the [`burndown-data`](../../tree/burndown-data) branch.
+- Code quality: [SonarCloud](https://sonarcloud.io/project/overview?id=HoDoWo_app-kotlin).
 
 ## Team
 

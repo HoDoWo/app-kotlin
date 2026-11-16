@@ -12,42 +12,87 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * A manual saved by the backend, as shown in "Recent Manuals" on the Home screen.
+ * A manual saved by the backend, as shown in "Recent Manuals" / "Most popular" on the Home screen.
  *
  * @param createdAtMillis creation time in epoch milliseconds, or null when unknown.
+ * @param searchCount how many times users asked for this guide (only for "Most popular").
+ * @param saveCount how many users saved this guide (only for "Most popular").
  */
 data class RecentManual(
     val guide: ManualGuide,
     val createdAtMillis: Long?,
-    val isBookmarked: Boolean = false
+    val isBookmarked: Boolean = false,
+    val searchCount: Int = 0,
+    val saveCount: Int = 0
 )
+
+/** The two lists of the Home screen, switched next to the title. */
+enum class ManualsSection(val title: String) {
+    RECENT("Recent Manuals"),
+    POPULAR("Most popular")
+}
+
+/**
+ * Copy of the Home lists kept on the phone, so they are shown at once and offline.
+ * The default keeps nothing (tests and previews).
+ */
+interface ManualsCache {
+    suspend fun load(name: String): List<RecentManual>?
+    suspend fun save(name: String, manuals: List<RecentManual>)
+
+    object None : ManualsCache {
+        override suspend fun load(name: String): List<RecentManual>? = null
+        override suspend fun save(name: String, manuals: List<RecentManual>) = Unit
+    }
+}
 
 /** Everything the Home screen shows. */
 data class HomeUiState(
     val userName: String = DEFAULT_USER_NAME,
     val tip: String = FALLBACK_TIPS.first(),
+    val section: ManualsSection = ManualsSection.RECENT,
     val recentManuals: List<RecentManual> = emptyList(),
     val isLoadingManuals: Boolean = false,
-    /** True when the manuals could not be loaded (the list may be stale). */
+    /** True when the manuals could not be loaded (the list may be the saved copy). */
     val manualsFailed: Boolean = false,
+    val popularManuals: List<RecentManual> = emptyList(),
+    val isLoadingPopular: Boolean = false,
+    /** True when the popular manuals could not be loaded (the list may be the saved copy). */
+    val popularFailed: Boolean = false,
     val now: Long = System.currentTimeMillis()
-)
+) {
+    /** The list of the selected [section]. */
+    val shownManuals: List<RecentManual>
+        get() = if (section == ManualsSection.POPULAR) popularManuals else recentManuals
+
+    val isLoadingShown: Boolean
+        get() = if (section == ManualsSection.POPULAR) isLoadingPopular else isLoadingManuals
+
+    val shownFailed: Boolean
+        get() = if (section == ManualsSection.POPULAR) popularFailed else manualsFailed
+}
 
 /**
- * State of the Home screen: greeting, daily tip and the user's recent manuals.
+ * State of the Home screen: greeting, daily tip, the user's recent manuals and
+ * the most popular manuals of all users.
  *
- * The tip and the manuals come from the backend through [aiService]. When the
- * backend cannot answer, the screen still works: the tip falls back to a local
- * one and the manuals show an error with a retry button.
+ * The tip and the manuals come from the backend through [aiService]. Both lists
+ * are also kept in [cache]: the saved copy is shown immediately (and when the
+ * phone is offline), then replaced by the fresh list from the backend. When the
+ * backend cannot answer, the tip falls back to a local one and the lists show
+ * an "offline" note with a retry button.
  *
  * @param userName returns the name to greet (see [greetingName]); called on every refresh,
  *   so a sign-in done on another screen is picked up when Home is shown again.
+ * @param userId id of the signed-in user, so each user has their own saved recent manuals.
  * @param clock current time in epoch milliseconds (replaced in tests).
  */
 class HomeViewModel(
     private val aiService: HoDoWoAiService = DemoHoDoWoAiService(),
     private val userName: () -> String = { DEFAULT_USER_NAME },
-    private val clock: () -> Long = System::currentTimeMillis
+    private val clock: () -> Long = System::currentTimeMillis,
+    private val cache: ManualsCache = ManualsCache.None,
+    private val userId: () -> String? = { null }
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -56,8 +101,10 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     private var tipLoaded = false
+    private var cachedRecentName: String? = null
+    private var popularCacheRead = false
 
-    /** Reloads the greeting, the tip (once per ViewModel) and the recent manuals. */
+    /** Reloads the greeting, the tip (once per ViewModel) and both manual lists. */
     fun refresh() {
         _uiState.value = _uiState.value.copy(userName = userName(), now = clock())
 
@@ -65,6 +112,12 @@ class HomeViewModel(
             viewModelScope.launch { loadTip() }
         }
         viewModelScope.launch { loadManuals() }
+        viewModelScope.launch { loadPopular() }
+    }
+
+    /** Shows "Recent Manuals" or "Most popular". */
+    fun selectSection(section: ManualsSection) {
+        _uiState.value = _uiState.value.copy(section = section)
     }
 
     private suspend fun loadTip() {
@@ -83,10 +136,20 @@ class HomeViewModel(
     }
 
     private suspend fun loadManuals() {
+        val cacheName = "$RECENT_CACHE_PREFIX${userId() ?: GUEST}"
+
+        // A different user (or the first load): start from that user's saved copy.
+        if (cacheName != cachedRecentName) {
+            cachedRecentName = cacheName
+            val saved = cache.load(cacheName).orEmpty()
+            _uiState.value = _uiState.value.copy(recentManuals = saved)
+        }
+
         _uiState.value = _uiState.value.copy(isLoadingManuals = true)
 
         _uiState.value = try {
             val manuals = aiService.recentManuals(RECENT_MANUALS_LIMIT)
+            cache.save(cacheName, manuals)
             _uiState.value.copy(
                 recentManuals = manuals,
                 isLoadingManuals = false,
@@ -99,8 +162,37 @@ class HomeViewModel(
         }
     }
 
+    private suspend fun loadPopular() {
+        if (!popularCacheRead) {
+            popularCacheRead = true
+            cache.load(POPULAR_CACHE_NAME)?.let { saved ->
+                _uiState.value = _uiState.value.copy(popularManuals = saved)
+            }
+        }
+
+        _uiState.value = _uiState.value.copy(isLoadingPopular = true)
+
+        _uiState.value = try {
+            val manuals = aiService.popularManuals(POPULAR_MANUALS_LIMIT)
+            cache.save(POPULAR_CACHE_NAME, manuals)
+            _uiState.value.copy(
+                popularManuals = manuals,
+                isLoadingPopular = false,
+                popularFailed = false
+            )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            _uiState.value.copy(isLoadingPopular = false, popularFailed = true)
+        }
+    }
+
     companion object {
         const val RECENT_MANUALS_LIMIT = 5
+        const val POPULAR_MANUALS_LIMIT = 10
+        const val RECENT_CACHE_PREFIX = "recent_manuals_"
+        const val POPULAR_CACHE_NAME = "popular_manuals"
+        private const val GUEST = "guest"
     }
 }
 

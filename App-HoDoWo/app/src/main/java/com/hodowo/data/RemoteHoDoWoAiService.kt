@@ -7,10 +7,11 @@ import com.hodowo.viewmodel.ControlBox
 import com.hodowo.viewmodel.ControlType
 import com.hodowo.viewmodel.FeedbackReport
 import com.hodowo.viewmodel.HoDoWoAiService
-import com.hodowo.viewmodel.ManualGuide
-import com.hodowo.viewmodel.ManualStep
+import com.hodowo.viewmodel.ListingDetails
+import com.hodowo.viewmodel.ModelScanResult
 import com.hodowo.viewmodel.PanelBox
 import com.hodowo.viewmodel.PanelControl
+import com.hodowo.viewmodel.PriceEstimate
 import com.hodowo.viewmodel.RecentManual
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -113,14 +114,19 @@ class RemoteHoDoWoAiService(
     }
 
     override suspend fun sendFeedback(report: FeedbackReport) {
-        // TODO(#40): the backend has no endpoint to store ratings yet.
-        // Until it exists the rating is only logged, so it is not retried forever.
-        Log.d(TAG, "Rating of message ${report.messageId} not stored: no backend endpoint yet")
+        // Nothing to send here: a rating is already stored by ChatViewModel.setFeedback,
+        // in Firestore (`ratings`, FirebaseRepository.saveFeedback) and, for a manual,
+        // with POST /api/manuals/{id}/rate, which the reinforcement of #40 reads.
+        Log.d(TAG, "Rating of message ${report.messageId} stored in Firestore and on the manual")
     }
 
     /** Newest manuals of the signed-in user (`GET /api/manuals?limit=`), for the Home screen. */
     override suspend fun recentManuals(limit: Int): List<RecentManual> =
         parseRecentManuals(jsonOf(get("$MANUALS_PATH?limit=$limit")))
+
+    /** Most searched and saved guides of all users (`GET /api/manuals/popular`). */
+    override suspend fun popularManuals(limit: Int): List<RecentManual> =
+        parseRecentManuals(jsonOf(get("$POPULAR_MANUALS_PATH?limit=$limit")))
 
     /** Today's tip (`GET /api/appliances/environmental-tip`), or null when it is empty. */
     override suspend fun dailyTip(): String? =
@@ -302,7 +308,8 @@ class RemoteHoDoWoAiService(
                                                     com.hodowo.viewmodel.ManualStep(
                                                         number = s.optInt("number", i + 1),
                                                         title = s.optString("title", "Step ${i + 1}"),
-                                                        description = s.optString("description", "")
+                                                        description = s.optString("description", ""),
+                                                        pin = ManualJson.parsePin(s.optJSONObject("pin"))
                                                     )
                                                 )
                                             }
@@ -314,7 +321,10 @@ class RemoteHoDoWoAiService(
                                         overview = json.optString("overview", reply),
                                         steps = steps,
                                         imageUrl = imageUrl,
-                                        manualId = manualId
+                                        manualId = manualId,
+                                        suggestedPart = ManualJson.suggestedPartFromJson(
+                                            json.optJSONObject("suggested_part")
+                                        )
                                     )
                                 } else null
 
@@ -405,6 +415,58 @@ class RemoteHoDoWoAiService(
         }
     }
 
+    /** Rewrites the seller's narrative with the backend copywriter prompt. */
+    override suspend fun polishListingDescription(text: String): String {
+        val body = JSONObject().put("description", text)
+        return jsonOf(post(LISTING_POLISH_PATH, body.toString().toRequestBody(JSON)))
+            .getString("description")
+    }
+
+    /** Sends every field already entered in the sell form for a price estimate. */
+    override suspend fun estimateListingPrice(details: ListingDetails): PriceEstimate? {
+        val body = JSONObject()
+            .put("title", details.title)
+            .put("description", details.description)
+            .put("category", details.category)
+            .put("brand", details.brand)
+            .put("model", details.model)
+            .put("condition", details.condition)
+            .put("listing_kind", details.listingKind)
+            .put("photo_count", details.photoCount)
+            .put("pickup", details.pickup)
+            .put("shipping", details.shipping)
+            .put("location", details.location)
+
+        val result = jsonOf(post(LISTING_ESTIMATE_PATH, body.toString().toRequestBody(JSON)))
+        return PriceEstimate(
+            low = result.getDouble("low"),
+            high = result.getDouble("high"),
+            currency = result.optString("currency", "USD"),
+            rationale = result.optString("rationale")
+        )
+    }
+
+    /** Reads the model/part label in a photo taken or picked in the sell form. */
+    override suspend fun scanModelLabel(uri: Uri): ModelScanResult? {
+        val body = MultipartBody.Builder()
+            .setType(MultipartBody.FORM)
+            .addFormDataPart("image", "label.jpg", loadImage(uri).toRequestBody(JPEG))
+            .addFormDataPart("context", "Read the model and part number of this appliance or part.")
+            .build()
+
+        val result = jsonOf(post(LISTING_SCAN_PATH, body))
+        fun text(key: String): String? =
+            if (result.isNull(key)) null else result.optString(key).takeIf { it.isNotBlank() }
+
+        return ModelScanResult(
+            brand = text("brand"),
+            model = text("model"),
+            partNumber = text("part_number"),
+            confidence = result.optDouble("confidence", 0.0).toFloat(),
+            evidence = text("visible_evidence")
+        )
+    }
+
     companion object {
         private const val TAG = "RemoteHoDoWoAiService"
         private const val HTTP_UNAUTHORIZED = 401
@@ -422,7 +484,11 @@ class RemoteHoDoWoAiService(
         internal const val PANEL_PATH = "/api/panel/analyze"
         internal const val LOCATE_PATH = "/api/panel/locate"
         internal const val MANUALS_PATH = "/api/manuals"
+        internal const val POPULAR_MANUALS_PATH = "/api/manuals/popular"
         internal const val TIP_PATH = "/api/appliances/environmental-tip"
+        internal const val LISTING_SCAN_PATH = "/api/marketplace/listings/scan-label"
+        internal const val LISTING_POLISH_PATH = "/api/marketplace/listings/polish"
+        internal const val LISTING_ESTIMATE_PATH = "/api/marketplace/listings/estimate"
 
         internal const val UNKNOWN_APPLIANCE = "Unknown appliance"
 
@@ -473,55 +539,8 @@ class RemoteHoDoWoAiService(
          * Turns the `GET /api/manuals` answer (`{"manuals": [...]}`) into Home cards.
          * Entries without a title are skipped; missing fields get safe defaults.
          */
-        internal fun parseRecentManuals(payload: JSONObject): List<RecentManual> {
-            val array = payload.optJSONArray("manuals") ?: return emptyList()
-            val manuals = ArrayList<RecentManual>(array.length())
-
-            for (index in 0 until array.length()) {
-                val item = array.optJSONObject(index) ?: continue
-                val title = item.optString("issue_title").trim()
-                if (title.isEmpty()) continue
-
-                manuals.add(
-                    RecentManual(
-                        guide = ManualGuide(
-                            applianceName = item.optString("appliance_name").trim()
-                                .ifEmpty { "Appliance" },
-                            issueTitle = title,
-                            overview = item.optString("overview").trim(),
-                            steps = parseSteps(item),
-                            imageUrl = item.textOrNull("image_url"),
-                            warnings = parseWarnings(item),
-                            manualId = item.textOrNull("id")
-                        ),
-                        createdAtMillis = if (item.isNull("created_at_ms")) null
-                        else item.optLong("created_at_ms").takeIf { it > 0 },
-                        isBookmarked = item.optBoolean("is_bookmarked", false)
-                    )
-                )
-            }
-
-            return manuals
-        }
-
-        private fun parseSteps(item: JSONObject): List<ManualStep> {
-            val array = item.optJSONArray("steps") ?: return emptyList()
-            return (0 until array.length()).mapNotNull { index ->
-                val step = array.optJSONObject(index) ?: return@mapNotNull null
-                ManualStep(
-                    number = step.optInt("number", index + 1),
-                    title = step.optString("title").trim().ifEmpty { "Step ${index + 1}" },
-                    description = step.optString("description").trim()
-                )
-            }
-        }
-
-        private fun parseWarnings(item: JSONObject): List<String> {
-            val array = item.optJSONArray("warnings") ?: return emptyList()
-            return (0 until array.length())
-                .map { array.optString(it).trim() }
-                .filter { it.isNotEmpty() }
-        }
+        internal fun parseRecentManuals(payload: JSONObject): List<RecentManual> =
+            ManualJson.parse(payload)
 
         /**
          * Reads the JSON object contained in the AI reply.
@@ -561,9 +580,6 @@ class RemoteHoDoWoAiService(
         )
 
         /** Returns the field as text, or null when it is missing, null or blank. */
-        private fun JSONObject.textOrNull(key: String): String? =
-            if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
-
         /**
          * Turns the /api/panel/analyze answer into the list of controls (S1-14).
          *

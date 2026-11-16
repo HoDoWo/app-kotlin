@@ -1,11 +1,10 @@
 package com.hodowo.ui
 
-import android.graphics.BitmapFactory
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,39 +14,24 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material.icons.filled.ThumbDown
-import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -65,47 +49,42 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import com.hodowo.ui.adaptive.AdaptiveContent
+import com.hodowo.ui.components.AppTopBar
+import com.hodowo.ui.components.NotificationIconButton
+import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.ui.theme.Primary
-import com.hodowo.ui.theme.PrimaryContainer
-import com.hodowo.ui.theme.SecondaryContainer
-import com.hodowo.ui.theme.SurfaceContainer
 import com.hodowo.ui.theme.SurfaceContainerHigh
-import com.hodowo.ui.theme.SurfaceContainerLow
 import com.hodowo.ui.theme.SurfaceContainerLowest
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.Feedback
-import com.hodowo.viewmodel.ManualGuide
-import com.hodowo.viewmodel.ManualStep
 import com.hodowo.viewmodel.Message
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.hodowo.viewmodel.SuggestedPart
 
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel,
     onOpenCamera: () -> Unit,
-    onOpenAuth: () -> Unit
+    onOpenAuth: () -> Unit,
+    /** "Buy part" of the part suggested by a diagnosis (#149). */
+    onBuyPart: (SuggestedPart) -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
+    val context = LocalContext.current
 
     var inputText by remember { mutableStateOf("") }
     var dislikeTargetId by remember { mutableStateOf<Long?>(null) }
     var dislikeComment by remember { mutableStateOf("") }
+    var editingMessage by remember { mutableStateOf<Message?>(null) }
+    var editText by remember { mutableStateOf("") }
 
     var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
+    var showHistory by remember { mutableStateOf(false) }
 
     // System gallery picker to upload image from device
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -128,14 +107,35 @@ fun ChatScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.surface)
-                .statusBarsPadding()
                 .navigationBarsPadding()
                 .imePadding()
         ) {
-            // --- TOP APP HEADER (Matching HTML mock) ---
-            TopAppHeader(
-                onNewChat = { viewModel.startNewChat() },
-                onOpenAuth = onOpenAuth
+            // --- TOP APP BANNER (shared component) ---
+            AppTopBar(
+                subtitle = "AI CHAT",
+                actions = {
+                    IconButton(onClick = { showHistory = true }, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.History,
+                            contentDescription = "Chat history",
+                            tint = Primary
+                        )
+                    }
+                    IconButton(onClick = { viewModel.startNewChat() }, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "New Chat",
+                            tint = Primary
+                        )
+                    }
+                    NotificationIconButton()
+                    ProfileAvatar(
+                        name = "",
+                        size = 34,
+                        onClick = onOpenAuth,
+                        photoUrl = state.userProfile?.photoUrl
+                    )
+                }
             )
 
             // --- ACTIVE APPLIANCE TELEMETRY HEADER ---
@@ -144,19 +144,20 @@ fun ChatScreen(
             ActiveApplianceTelemetryHeader(
                 applianceName = latestManual?.applianceName ?: state.appliance?.name ?: "New Appliance",
                 statusText = if (state.isAnalyzing) "Analyzing Telemetry..."
-                else latestManual?.issueTitle ?: (state.appliance?.let { "Ready • Active" } ?: "New Issue")
+                else latestManual?.issueTitle ?: (state.appliance?.let { "Ready • Active" } ?: "New Issue"),
+                onMore = { showHistory = true }
             )
 
             // --- CHAT MESSAGE STREAM ---
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
+            AdaptiveContent(modifier = Modifier.weight(1f), maxWidth = 1000.dp) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
                 // Telemetry Timestamp Anchor
                 item {
                     Box(
@@ -172,12 +173,30 @@ fun ChatScreen(
                 }
 
                 // Message Items
+                val lastQuestionId = state.messages.lastOrNull { it.isUser }?.id
                 items(
                     items = state.messages,
                     key = { it.id }
                 ) { message ->
                     if (message.isUser) {
-                        UserMessageItem(message = message)
+                        // Only the last question can be asked again, and not while an answer arrives.
+                        val canResend = message.id == lastQuestionId && !state.isSending && !state.isAnalyzing
+                        UserMessageItem(
+                            message = message,
+                            onRegenerate = if (canResend) {
+                                { viewModel.regenerateMessage(message.id) }
+                            } else {
+                                null
+                            },
+                            onEdit = if (canResend && !message.text.isNullOrBlank()) {
+                                {
+                                    editText = message.text.orEmpty()
+                                    editingMessage = message
+                                }
+                            } else {
+                                null
+                            }
+                        )
                     } else {
                         AiMessageItem(
                             message = message,
@@ -189,10 +208,12 @@ fun ChatScreen(
                                 dislikeTargetId = message.id
                             },
                             onToggleBookmark = { viewModel.toggleBookmark(message.id) },
-                            onImageClick = { url -> fullscreenImageUrl = url }
+                            onImageClick = { url -> fullscreenImageUrl = url },
+                            onBuyPart = onBuyPart
                         )
                     }
                 }
+            }
             }
 
             // --- ERROR BANNER (if any) ---
@@ -272,43 +293,65 @@ fun ChatScreen(
             )
         }
 
-        // --- FULLSCREEN IMAGE VIEWER OVERLAY ---
+        // --- FULLSCREEN IMAGE VIEWER (zoom + download) ---
         fullscreenImageUrl?.let { url ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.95f))
-                    .clickable(enabled = false) {},
-                contentAlignment = Alignment.Center
-            ) {
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(imageData(url))
-                        .crossfade(true)
-                        .build(),
-                    contentDescription = "Fullscreen manual diagram",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                )
+            FullscreenImageViewer(url = url, onDismiss = { fullscreenImageUrl = null })
+        }
+    }
 
+    // --- CHAT HISTORY MENU ---
+    if (showHistory) {
+        ChatHistorySheet(
+            sessions = state.chatSessions,
+            currentChatId = state.currentChatId,
+            now = System.currentTimeMillis(),
+            onOpen = { chatId ->
+                if (state.isSending) {
+                    Toast.makeText(context, "Wait for the answer before opening another chat", Toast.LENGTH_SHORT).show()
+                } else {
+                    viewModel.openChat(chatId)
+                    showHistory = false
+                }
+            },
+            onDelete = viewModel::deleteChat,
+            onNewChat = {
+                viewModel.startNewChat()
+                showHistory = false
+            },
+            onDismiss = { showHistory = false }
+        )
+    }
+
+    // Edit the last question and ask it again
+    editingMessage?.let { target ->
+        AlertDialog(
+            onDismissRequest = { editingMessage = null },
+            title = { Text("Edit message") },
+            text = {
+                OutlinedTextField(
+                    value = editText,
+                    onValueChange = { editText = it },
+                    maxLines = 6,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
                 TextButton(
-                    onClick = { fullscreenImageUrl = null },
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .statusBarsPadding()
-                        .padding(16.dp)
+                    enabled = editText.isNotBlank(),
+                    onClick = {
+                        viewModel.editMessage(target.id, editText)
+                        editingMessage = null
+                    }
                 ) {
-                    Text(
-                        text = "Back",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
-                    )
+                    Text("Send")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingMessage = null }) {
+                    Text("Cancel")
                 }
             }
-        }
+        )
     }
 
     // Dislike feedback dialog
@@ -356,7 +399,8 @@ fun ChatScreen(
 @Composable
 private fun ActiveApplianceTelemetryHeader(
     applianceName: String,
-    statusText: String
+    statusText: String,
+    onMore: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -386,10 +430,10 @@ private fun ActiveApplianceTelemetryHeader(
                 )
             }
 
-            IconButton(onClick = {}) {
+            IconButton(onClick = onMore) {
                 Icon(
                     imageVector = Icons.Default.MoreHoriz,
-                    contentDescription = "More",
+                    contentDescription = "Chat history",
                     tint = Primary
                 )
             }
