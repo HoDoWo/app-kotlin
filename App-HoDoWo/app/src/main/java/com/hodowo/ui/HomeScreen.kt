@@ -32,9 +32,9 @@ import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DocumentScanner
-import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Kitchen
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -114,8 +114,8 @@ fun HomeScreen(
     onOpenArCore: () -> Unit,
     onOpenMarket: () -> Unit,
     onOpenProfile: () -> Unit,
-    /** Opens the spare parts catalogue (#148). */
-    onOpenParts: () -> Unit = {},
+    /** Opens the products the user has for sale ("My listings"). */
+    onOpenMyListings: () -> Unit = {},
     /** Opens the sponsored partners page (#141). */
     onOpenSponsored: () -> Unit = {},
     onAskAboutManual: (ManualGuide) -> Unit,
@@ -178,7 +178,7 @@ fun HomeScreen(
                         onDiagnose = onDiagnose,
                         onOpenArCore = onOpenArCore,
                         onOpenMarket = onOpenMarket,
-                        onOpenParts = onOpenParts
+                        onOpenMyListings = onOpenMyListings
                     )
                 }
                 item { SponsoredPartnersCard(onClick = onOpenSponsored) }
@@ -402,7 +402,7 @@ private fun QuickActions(
     onDiagnose: () -> Unit,
     onOpenArCore: () -> Unit,
     onOpenMarket: () -> Unit,
-    onOpenParts: () -> Unit
+    onOpenMyListings: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -434,11 +434,12 @@ private fun QuickActions(
             modifier = Modifier.weight(1f)
         )
         QuickActionButton(
-            label = "Parts",
-            icon = Icons.Outlined.Build,
+            label = "Selling",
+            subtitle = "My items",
+            icon = Icons.Outlined.Sell,
             iconTint = Primary,
             iconBackground = Primary.copy(alpha = 0.1f),
-            onClick = onOpenParts,
+            onClick = onOpenMyListings,
             modifier = Modifier.weight(1f)
         )
     }

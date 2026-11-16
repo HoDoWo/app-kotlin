@@ -13,7 +13,29 @@ data class Listing(
     val status: ListingStatus,
     val inquiryCount: Int,
     val postedAgo: String,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    /** The rest of what the sell form asked, so editing shows the same 4 steps already filled in. */
+    val details: ListingEdit? = null
+)
+
+/**
+ * Everything the 4-step sell form sets, sent when a listing is edited.
+ * [imageUrls] are the photos already uploaded (https), cover first.
+ */
+data class ListingEdit(
+    val title: String,
+    val description: String,
+    val category: String,
+    val brand: String,
+    val model: String,
+    val listingKind: String,
+    /** "unopened", "like-new", "used-good", "parts-only" or "refurbished". */
+    val condition: String,
+    val price: Double,
+    val imageUrls: List<String>,
+    val handoverMethods: List<String>,
+    val pickupZip: String,
+    val shippingPriceCents: Int?
 )
 
 /**
