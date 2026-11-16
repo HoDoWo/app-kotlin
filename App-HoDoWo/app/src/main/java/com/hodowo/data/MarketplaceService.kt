@@ -253,9 +253,6 @@ class RemoteMarketplaceService(
         parseIdList(jsonOf(get(SEARCH_PATH)))
 
     override suspend fun getProductDetail(id: String): ProductDetail {
-        val productResponse = runCatching { get("$PRODUCTS_PATH/$id") }
-        productResponse.getOrNull()?.let { return parseProduct(jsonOf(it)) }
-
         val partResponse = runCatching { get("$PARTS_PATH/$id") }
         partResponse.getOrNull()?.let { return parseProduct(jsonOf(it)) }
 
