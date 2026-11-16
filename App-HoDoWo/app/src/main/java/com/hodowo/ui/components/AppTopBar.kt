@@ -13,12 +13,15 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -103,15 +106,36 @@ fun AppTopBar(
     }
 }
 
-/** Notification action shared by the top banners. */
+/** The bell of the app: how many new notifications there are and how to open them. */
+data class NotificationBell(val badge: Int, val open: () -> Unit)
+
+/** Provided by the root of the app, so every top banner shows the same bell. */
+val LocalNotificationBell = compositionLocalOf<NotificationBell?> { null }
+
+/**
+ * Notification action shared by the top banners. Without [onClick] it opens the
+ * notifications of [LocalNotificationBell] and shows how many are new.
+ */
 @Composable
-fun NotificationIconButton(onClick: () -> Unit = {}) {
-    IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
-        Icon(
-            imageVector = Icons.Default.Notifications,
-            contentDescription = "Notifications",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(22.dp)
-        )
+fun NotificationIconButton(onClick: (() -> Unit)? = null) {
+    val bell = LocalNotificationBell.current
+    val badge = bell?.badge ?: 0
+    IconButton(onClick = onClick ?: bell?.open ?: {}, modifier = Modifier.size(36.dp)) {
+        BadgedBox(
+            badge = {
+                if (badge > 0) {
+                    Badge { Text(if (badge > MAX_BADGE) "$MAX_BADGE+" else "$badge") }
+                }
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Notifications,
+                contentDescription = if (badge > 0) "Notifications, $badge new" else "Notifications",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
+        }
     }
 }
+
+private const val MAX_BADGE = 9

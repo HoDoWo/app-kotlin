@@ -1,6 +1,5 @@
 ﻿package com.hodowo.ui
 
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -154,11 +153,7 @@ fun HomeScreen(
             subtitle = "HOME",
             actions = {
                 if (!useRail) {
-                    NotificationIconButton(
-                        onClick = {
-                            Toast.makeText(context, "No notifications yet", Toast.LENGTH_SHORT).show()
-                        }
-                    )
+                    NotificationIconButton()
                     ProfileAvatar(name = "", size = 34, onClick = onOpenProfile, photoUrl = profilePhotoUrl)
                 }
             }

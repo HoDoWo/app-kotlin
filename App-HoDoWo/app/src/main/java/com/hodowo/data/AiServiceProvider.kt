@@ -17,6 +17,7 @@ import com.hodowo.viewmodel.SponsoredPartnersViewModel
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.MessagesViewModel
+import com.hodowo.viewmodel.NotificationsViewModel
 import com.hodowo.viewmodel.ProductForumViewModel
 import com.hodowo.viewmodel.greetingName
 import java.io.File
@@ -71,6 +72,24 @@ object AiServiceProvider {
         viewModelFactory {
             initializer {
                 MessagesViewModel(service = messagesService, cartStore = cartStore)
+            }
+        }
+
+    /** Factory of the bell: messages, offers, price changes in the cart and a sponsored product. */
+    fun notificationsViewModelFactory(context: Context): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                val backendUrl = BuildConfig.BACKEND_URL
+                NotificationsViewModel(
+                    service = if (backendUrl.isBlank()) {
+                        UnavailableNotificationsService
+                    } else {
+                        RemoteNotificationsService(backendUrl, FirebaseTokenProvider()::token)
+                    },
+                    seenStore = PrefsNotificationSeenStore(
+                        context.applicationContext.getSharedPreferences("notifications", Context.MODE_PRIVATE)
+                    )
+                )
             }
         }
 
