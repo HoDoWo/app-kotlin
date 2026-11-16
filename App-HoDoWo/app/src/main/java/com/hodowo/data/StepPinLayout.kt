@@ -12,9 +12,7 @@ import kotlin.math.sqrt
  * A numbered pin to draw on the guide image: [index] is the step's position in
  * the guide. [x] and [y] (0 to 1 over the image) are the centre of the number;
  * [anchorX] and [anchorY] are the exact point of the control, where a line from
- * the number ends, like the arrows of the annotated images. A step whose control
- * is not on the photo (a safety note, for example) has no anchor: its number
- * appears in a row at the bottom of the image.
+ * the number ends, like the arrows of the annotated images.
  */
 data class PinMarker(
     val index: Int,
@@ -32,8 +30,9 @@ data class PinMarker(
  *
  * Each number sits a little away from its control, towards the outside of the
  * image, joined to it by a line, so it does not cover the control. Steps that
- * use the same control fan out around it. Steps without a pin are shown in a
- * row at the bottom left. A guide with no pin at all shows none: its image
+ * use the same control fan out around it. A step without a pin of its own
+ * points where the step before it does (the first one: where the first pin is),
+ * so no number is left apart. A guide with no pin at all shows none: its image
  * already has the numbers drawn in it.
  */
 object StepPinLayout {
@@ -45,16 +44,10 @@ object StepPinLayout {
     const val CALLOUT_DISTANCE = 0.13f
 
     /** Angle between the numbers of steps that share a control. */
-    const val FAN_DEGREES = 40.0
+    const val FAN_DEGREES = 50.0
 
     /** Numbers stay this far from the edges of the image. */
     const val MARGIN = 0.06f
-
-    /** Distance between two numbers of the row of steps without a pin. */
-    const val SPACING = 0.08f
-
-    /** Height of the row of steps without a pin. */
-    const val UNPLACED_ROW_Y = 0.9f
 
     private const val CENTRE = 0.5f
 
@@ -66,21 +59,21 @@ object StepPinLayout {
      * (the ratio keeps the line the same length in every direction).
      */
     fun markers(steps: List<ManualStep>, ratio: Float = 1f): List<PinMarker> {
-        if (steps.none { it.pin != null }) return emptyList()
+        val firstPin = steps.firstNotNullOfOrNull { it.pin } ?: return emptyList()
         val markers = mutableListOf<PinMarker>()
         val spots = mutableListOf<StepPin>()
+        var previous = firstPin
         steps.forEachIndexed { index, step ->
-            val pin = step.pin ?: return@forEachIndexed
+            // A step without its own point (same control as the one before, or a safety
+            // note) points where the step before it does, so its number is not left apart.
+            val pin = step.pin ?: previous
+            previous = pin
             val sameSpot = spots.count { abs(it.x - pin.x) < OVERLAP && abs(it.y - pin.y) < OVERLAP }
             spots += pin
             val (x, y) = calloutPosition(pin, sameSpot, ratio)
             markers += PinMarker(index, step.number, x, y, pin.x, pin.y)
         }
-        val unplaced = steps.withIndex().filter { it.value.pin == null }
-        unplaced.forEachIndexed { slot, (index, step) ->
-            markers += PinMarker(index, step.number, SPACING * (slot + 1), UNPLACED_ROW_Y)
-        }
-        return markers.sortedBy { it.index }
+        return markers
     }
 
     /**

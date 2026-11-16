@@ -120,14 +120,22 @@ val LocalNotificationBell = compositionLocalOf<NotificationBell?> { null }
 fun NotificationIconButton(onClick: (() -> Unit)? = null) {
     val bell = LocalNotificationBell.current
     val badge = bell?.badge ?: 0
-    IconButton(onClick = onClick ?: bell?.open ?: {}, modifier = Modifier.size(36.dp)) {
-        BadgedBox(
-            badge = {
-                if (badge > 0) {
-                    Badge { Text(if (badge > MAX_BADGE) "$MAX_BADGE+" else "$badge") }
+    // The badge is outside the button: inside it the round button would cut it off.
+    BadgedBox(
+        badge = {
+            if (badge > 0) {
+                Badge(containerColor = Primary) {
+                    Text(
+                        text = if (badge > MAX_BADGE) "$MAX_BADGE+" else "$badge",
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
-        ) {
+        }
+    ) {
+        IconButton(onClick = onClick ?: bell?.open ?: {}, modifier = Modifier.size(36.dp)) {
             Icon(
                 imageVector = Icons.Default.Notifications,
                 contentDescription = if (badge > 0) "Notifications, $badge new" else "Notifications",
