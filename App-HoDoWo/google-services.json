@@ -12,7 +12,20 @@
           "package_name": "com.hodowo"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "804247891417-k441o9dder21g700i9n9m9f5ivcq57de.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hodowo",
+            "certificate_hash": "4676e3dfcf77d6b858128c50d50a52f191f52860"
+          }
+        },
+        {
+          "client_id": "804247891417-m3aetqq3a2vj0edholbspkfu2ke8jgf7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyADIKRNV-8bLYxpBHMkQR4BPP0BgLo0HQE"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "804247891417-m3aetqq3a2vj0edholbspkfu2ke8jgf7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
