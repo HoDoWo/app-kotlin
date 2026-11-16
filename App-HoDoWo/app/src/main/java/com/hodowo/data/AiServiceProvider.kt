@@ -168,7 +168,8 @@ object AiServiceProvider {
                         BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token
                     ),
                     aiService = create(context),
-                    loadImage = { uri -> compressor.compress(uri) }
+                    loadImage = { uri -> compressor.compress(uri) },
+                    listingsService = listingsService
                 )
             }
         }
