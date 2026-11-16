@@ -82,6 +82,7 @@ import com.hodowo.ui.adaptive.AdaptiveContent
 import com.hodowo.ui.adaptive.LocalAppLayout
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.ui.components.AppTopBar
+import com.hodowo.ui.components.NotificationIconButton
 import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.ui.theme.OnPrimary
 import com.hodowo.ui.theme.OnSecondary
@@ -228,8 +229,10 @@ fun MarketplaceHomeScreen(
                             )
                         }
                     }
-                    // Profile avatar is in the rail footer in landscape — skip here to avoid duplication
+                    // Notifications and the profile avatar are in the rail footer in landscape — skip
+                    // them here to avoid duplication
                     if (!useRail) {
+                        NotificationIconButton()
                         ProfileAvatar(name = "", size = 34, onClick = onOpenProfile, photoUrl = profilePhotoUrl)
                     }
                 }
