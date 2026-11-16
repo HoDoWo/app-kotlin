@@ -5,6 +5,7 @@ import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.MarketplaceService
 import io.mockk.coEvery
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -295,5 +296,74 @@ class PostProductViewModelTest {
         assertFalse(successCalled)
         assertEquals("Upload failed", viewModel.message.value)
         assertFalse(viewModel.isSubmitting.value)
+    }
+
+    // ---------- editing a listing in the same 4 steps ----------
+
+    private fun edit(price: Double = 40.0, handover: List<String> = listOf("shipping")) = ListingEdit(
+        title = "Bosch Drain Pump", description = "Valid description long enough for 30 characters",
+        category = "washer", brand = "Bosch", model = "WAN", listingKind = "part", condition = "used-good",
+        price = price, imageUrls = emptyList(), handoverMethods = handover, pickupZip = "", shippingPriceCents = 500
+    )
+
+    private fun uri(scheme: String, text: String): Uri = mockk {
+        io.mockk.every { this@mockk.scheme } returns scheme
+        io.mockk.every { this@mockk.toString() } returns text
+    }
+
+    @Test
+    fun anEditKeepsTheOnlinePhotosAndUploadsTheNewOnes() = runTest(dispatcher) {
+        val listings = mockk<com.hodowo.data.ListingsService>()
+        val saved = slot<ListingEdit>()
+        coEvery { listings.updateListingDetails("l1", capture(saved)) } returns mockk(relaxed = true)
+        coEvery { service.uploadListingImage(any()) } returns "https://x.test/new.jpg"
+        val vm = PostProductViewModel(service, aiService, { byteArrayOf(1) }, listings)
+        var done = false
+
+        vm.saveEdit(
+            "l1", edit(),
+            listOf(uri("https", "https://x.test/old.jpg"), uri("content", "content://photo/1")),
+            onSuccess = { done = true }
+        )
+        advanceUntilIdle()
+
+        assertTrue(done)
+        assertEquals(listOf("https://x.test/old.jpg", "https://x.test/new.jpg"), saved.captured.imageUrls)
+        assertEquals("Listing updated", vm.message.value)
+        assertFalse(vm.isSubmitting.value)
+    }
+
+    @Test
+    fun anEditIsCheckedBeforeSaving() {
+        val vm = PostProductViewModel(service, aiService, { byteArrayOf(1) }, mockk(relaxed = true))
+        var done = false
+
+        vm.saveEdit("l1", edit(price = 0.0), listOf(mockUri), onSuccess = { done = true })
+        assertFalse(done)
+        assertEquals("Add the required details, 1–8 photos, a valid price, and a handover method.", vm.message.value)
+
+        vm.saveEdit("l1", edit(handover = listOf("pickup")), listOf(mockUri), onSuccess = { done = true })
+        assertFalse(done)
+    }
+
+    @Test
+    fun withoutTheListingsServiceAnEditIsNotAvailable() {
+        viewModel.saveEdit("l1", edit(), listOf(mockUri), onSuccess = {})
+
+        assertEquals("Editing is not available right now", viewModel.message.value)
+    }
+
+    @Test
+    fun aFailedEditShowsTheError() = runTest(dispatcher) {
+        val listings = mockk<com.hodowo.data.ListingsService>()
+        coEvery { listings.updateListingDetails(any(), any()) } throws java.io.IOException("Server error 500")
+        val vm = PostProductViewModel(service, aiService, { byteArrayOf(1) }, listings)
+        var done = false
+
+        vm.saveEdit("l1", edit(), listOf(uri("https", "https://x.test/old.jpg")), onSuccess = { done = true })
+        advanceUntilIdle()
+
+        assertFalse(done)
+        assertEquals("Server error 500", vm.message.value)
     }
 }

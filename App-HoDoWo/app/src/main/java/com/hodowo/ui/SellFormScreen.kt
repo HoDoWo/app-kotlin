@@ -112,7 +112,9 @@ import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLow
 import com.hodowo.ui.theme.SurfaceContainerLowest
 import com.hodowo.ui.theme.TertiaryFixed
+import com.hodowo.viewmodel.Listing
 import com.hodowo.viewmodel.ListingDetails
+import com.hodowo.viewmodel.ListingEdit
 import com.hodowo.viewmodel.ModelScanResult
 import com.hodowo.viewmodel.PriceEstimate
 import kotlinx.coroutines.delay
@@ -136,6 +138,14 @@ private val APPLIANCE_TYPES = listOf(
     ApplianceType("Oven / Induction Range", "oven-range"),
     ApplianceType("Other Household Device", "other")
 )
+
+/** The form's appliance type of a saved category (its value or its label); unknown ones are "Other". */
+private fun applianceTypeOf(category: String?): String {
+    if (category.isNullOrBlank()) return APPLIANCE_TYPES.first().value
+    return APPLIANCE_TYPES.firstOrNull {
+        it.value.equals(category, ignoreCase = true) || it.label.equals(category, ignoreCase = true)
+    }?.value ?: "other"
+}
 
 private val POPULAR_BRANDS = listOf("Bosch", "Samsung", "LG", "Miele", "Whirlpool", "De'Longhi")
 
@@ -188,21 +198,34 @@ fun PostProductScreen(
     userId: String,
     onPublished: () -> Unit,
     onBack: () -> Unit = onPublished,
-    onOpenCart: () -> Unit = {}
+    onOpenCart: () -> Unit = {},
+    /** A listing to change: the same 4 steps open already filled in, and "Publish" saves the changes. */
+    editing: Listing? = null
 ) {
-    var listingKind by rememberSaveable { mutableStateOf("part") }
-    var applianceType by rememberSaveable { mutableStateOf(APPLIANCE_TYPES.first().value) }
-    var brand by rememberSaveable { mutableStateOf("") }
-    var modelCode by rememberSaveable { mutableStateOf("") }
-    var title by rememberSaveable { mutableStateOf("") }
-    var condition by rememberSaveable { mutableStateOf("used-good") }
-    var description by rememberSaveable { mutableStateOf("") }
-    var priceInput by rememberSaveable { mutableStateOf("") }
-    var pickup by rememberSaveable { mutableStateOf(true) }
-    var shipping by rememberSaveable { mutableStateOf(true) }
-    var pickupZip by rememberSaveable { mutableStateOf("") }
-    var shippingInput by rememberSaveable { mutableStateOf("6.80") }
-    var images by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    val start = editing?.details
+    val editKey = editing?.id
+    val startMethods = start?.handoverMethods.orEmpty()
+    var listingKind by rememberSaveable(editKey) { mutableStateOf(start?.listingKind ?: "part") }
+    var applianceType by rememberSaveable(editKey) { mutableStateOf(applianceTypeOf(start?.category)) }
+    var brand by rememberSaveable(editKey) { mutableStateOf(start?.brand.orEmpty()) }
+    var modelCode by rememberSaveable(editKey) { mutableStateOf(start?.model.orEmpty()) }
+    var title by rememberSaveable(editKey) { mutableStateOf(start?.title ?: editing?.title.orEmpty()) }
+    var condition by rememberSaveable(editKey) {
+        mutableStateOf(start?.condition?.takeIf { it.isNotBlank() } ?: "used-good")
+    }
+    var description by rememberSaveable(editKey) { mutableStateOf(start?.description ?: editing?.description.orEmpty()) }
+    var priceInput by rememberSaveable(editKey) {
+        mutableStateOf(start?.price?.takeIf { it > 0 }?.let { String.format(Locale.US, "%.2f", it) }.orEmpty())
+    }
+    var pickup by rememberSaveable(editKey) { mutableStateOf(startMethods.isEmpty() || "pickup" in startMethods) }
+    var shipping by rememberSaveable(editKey) { mutableStateOf(startMethods.isEmpty() || "shipping" in startMethods) }
+    var pickupZip by rememberSaveable(editKey) { mutableStateOf(start?.pickupZip.orEmpty()) }
+    var shippingInput by rememberSaveable(editKey) {
+        mutableStateOf(start?.shippingPriceCents?.let { String.format(Locale.US, "%.2f", it / 100.0) } ?: "6.80")
+    }
+    var images by remember(editKey) {
+        mutableStateOf<List<Uri>>(start?.imageUrls.orEmpty().map(Uri::parse))
+    }
     var attempted by rememberSaveable { mutableStateOf(false) }
     var publishedSuccess by rememberSaveable { mutableStateOf(false) }
     var priceEstimate by remember { mutableStateOf<PriceEstimate?>(null) }
@@ -333,6 +356,31 @@ fun PostProductScreen(
         } else {
             null
         }
+        if (editing != null) {
+            viewModel.saveEdit(
+                listingId = editing.id,
+                edit = ListingEdit(
+                    title = title,
+                    description = description,
+                    category = applianceType,
+                    brand = brand,
+                    model = modelCode,
+                    listingKind = listingKind,
+                    condition = condition,
+                    price = priceInput.toDoubleOrNull() ?: 0.0,
+                    imageUrls = emptyList(),
+                    handoverMethods = buildList {
+                        if (pickup) add("pickup")
+                        if (shipping) add("shipping")
+                    },
+                    pickupZip = pickupZip,
+                    shippingPriceCents = shippingCents
+                ),
+                photos = images,
+                onSuccess = { publishedSuccess = true }
+            )
+            return
+        }
         viewModel.submit(
             userId = userId,
             title = title,
@@ -359,7 +407,7 @@ fun PostProductScreen(
     Box(modifier = Modifier.fillMaxSize().background(Surface).imePadding()) {
         Column(modifier = Modifier.fillMaxSize()) {
             AppTopBar(
-                subtitle = "SELL AN APPLIANCE OR PART",
+                subtitle = if (editing != null) "EDIT LISTING" else "SELL AN APPLIANCE OR PART",
                 navigationIcon = {
                     IconButton(onClick = ::previous) {
                         Icon(
@@ -485,7 +533,8 @@ fun PostProductScreen(
                 },
                 submitting = submitting,
                 published = publishedSuccess,
-                onPublish = ::publish
+                onPublish = ::publish,
+                editing = editing != null
             )
         }
 
@@ -1400,7 +1449,8 @@ private fun PublishBar(
     breakdown: String?,
     submitting: Boolean,
     published: Boolean,
-    onPublish: () -> Unit
+    onPublish: () -> Unit,
+    editing: Boolean = false
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1455,7 +1505,7 @@ private fun PublishBar(
                             color = OnPrimary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Publishing...", style = MaterialTheme.typography.labelLarge)
+                        Text(if (editing) "Saving..." else "Publishing...", style = MaterialTheme.typography.labelLarge)
                     }
                     published -> {
                         Icon(
@@ -1464,7 +1514,10 @@ private fun PublishBar(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Live on Marketplace!", style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            if (editing) "Changes saved!" else "Live on Marketplace!",
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                     else -> {
                         Icon(
@@ -1473,7 +1526,10 @@ private fun PublishBar(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Publish Community Listing", style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            if (editing) "Save changes" else "Publish Community Listing",
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                 }
             }

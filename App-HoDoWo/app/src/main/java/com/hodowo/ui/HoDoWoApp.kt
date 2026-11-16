@@ -51,6 +51,7 @@ import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.cartProductType
 import com.hodowo.data.toMarketplaceProduct
 import com.hodowo.data.AuthManager
+import com.hodowo.viewmodel.Listing
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.MessagesViewModel
@@ -109,6 +110,8 @@ fun HoDoWoApp(
     var showPostProduct by remember { mutableStateOf(false) }
     var showMarketplaceSearch by remember { mutableStateOf(false) }
     var showMyListings by remember { mutableStateOf(false) }
+    // A listing of "My listings" open in the 4 steps of the sell form.
+    var editingListing by remember { mutableStateOf<Listing?>(null) }
     var showSponsored by remember { mutableStateOf(false) }
     var showCart by remember { mutableStateOf(false) }
     // Messages and offers with buyers and sellers of second-hand listings.
@@ -171,7 +174,7 @@ fun HoDoWoApp(
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
             val layoutInfo = appLayoutInfoFor(width = maxWidth, isLandscape = isLandscape)
-            val useRail = layoutInfo.useNavigationRail && !showPostProduct
+            val useRail = layoutInfo.useNavigationRail && !showPostProduct && editingListing == null
 
             CompositionLocalProvider(LocalAppLayout provides layoutInfo) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -184,6 +187,7 @@ fun HoDoWoApp(
                                 showMarketplaceSearch = false
                                 showPostProduct = false
                                 showMyListings = false
+                                editingListing = null
                                 showSponsored = false
                                 showCart = false
                                 showMessages = false
@@ -227,6 +231,10 @@ fun HoDoWoApp(
                                         onOpenArCore = { currentTab = AppNavTab.AR_CORE },
                                         onOpenMarket = { currentTab = AppNavTab.MARKET },
                                         onOpenProfile = { currentTab = AppNavTab.PROFILE },
+                                        onOpenMyListings = {
+                                            showMyListings = true
+                                            currentTab = AppNavTab.PROFILE
+                                        },
                                         onOpenSponsored = {
                                             showSponsored = true
                                             currentTab = AppNavTab.MARKET
@@ -261,6 +269,24 @@ fun HoDoWoApp(
                                                 currentTab = AppNavTab.AI_CHAT
                                             }
                                         )
+                                    } else if (showMyListings && editingListing != null) {
+                                        val listing = editingListing
+                                        BackHandler { editingListing = null }
+                                        PostProductScreen(
+                                            viewModel = postProductViewModel,
+                                            userId = authManager.currentUserId,
+                                            onPublished = {
+                                                editingListing = null
+                                                myListingsViewModel.load()
+                                            },
+                                            onBack = { editingListing = null },
+                                            onOpenCart = {
+                                                editingListing = null
+                                                currentTab = AppNavTab.MARKET
+                                                showCart = true
+                                            },
+                                            editing = listing
+                                        )
                                     } else if (showMyListings) {
                                         MyListingsScreen(
                                             viewModel = myListingsViewModel,
@@ -274,7 +300,8 @@ fun HoDoWoApp(
                                                 showMyListings = false
                                                 currentTab = AppNavTab.MARKET
                                                 selectedMarketProduct = listing.toMarketplaceProduct()
-                                            }
+                                            },
+                                            onEditListing = { editingListing = it }
                                         )
                                     } else {
                                         ProfileScreen(
@@ -391,7 +418,8 @@ fun HoDoWoApp(
                             // The chat has its own "+" in the header. Product Detail, the cart and the sell
                             // form have their own sticky bar at the bottom, which this button would overlap.
                             if (currentTab != AppNavTab.AI_CHAT && selectedMarketProduct == null && !showCart &&
-                                !showPostProduct && !(showMessages && currentTab == AppNavTab.MARKET)
+                                !showPostProduct && editingListing == null &&
+                                !(showMessages && currentTab == AppNavTab.MARKET)
                             ) {
                                 NewChatButton(
                                     onClick = { startNewChat() },
@@ -404,7 +432,7 @@ fun HoDoWoApp(
 
                         // Bottom Navigation Bar matching HTML mockup. The sell form has its own
                         // sticky publish bar, so the tab bar is hidden while it is open.
-                        if (!showPostProduct && !useRail) {
+                        if (!showPostProduct && editingListing == null && !useRail) {
                             BottomNavBar(
                                 currentTab = currentTab,
                                 onTabSelected = {
@@ -412,6 +440,7 @@ fun HoDoWoApp(
                                     showMarketplaceSearch = false
                                     showPostProduct = false
                                     showMyListings = false
+                                    editingListing = null
                                     showSponsored = false
                                     showCart = false
                                     showMessages = false

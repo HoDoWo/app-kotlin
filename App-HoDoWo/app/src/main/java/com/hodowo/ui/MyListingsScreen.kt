@@ -100,7 +100,9 @@ fun MyListingsScreen(
     onBack: () -> Unit,
     onPostProduct: () -> Unit = {},
     /** Opens the Product Detail page of a listing, as buyers see it (#111). */
-    onOpenListing: (Listing) -> Unit = {}
+    onOpenListing: (Listing) -> Unit = {},
+    /** Opens a listing in the 4 steps of the sell form; null keeps the quick edit dialog. */
+    onEditListing: ((Listing) -> Unit)? = null
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -212,7 +214,7 @@ fun MyListingsScreen(
                                     row.forEach { listing ->
                                         ListingCard(
                                             listing = listing,
-                                            onEdit = { viewModel.startEditing(listing) },
+                                            onEdit = { onEditListing?.invoke(listing) ?: viewModel.startEditing(listing) },
                                             onMarkAsSold = { viewModel.requestMarkAsSold(listing) },
                                             onDelete = { viewModel.requestDelete(listing) },
                                             onOpen = { onOpenListing(listing) },
@@ -226,7 +228,7 @@ fun MyListingsScreen(
                             items(filtered, key = { it.id }) { listing ->
                                 ListingCard(
                                     listing = listing,
-                                    onEdit = { viewModel.startEditing(listing) },
+                                    onEdit = { onEditListing?.invoke(listing) ?: viewModel.startEditing(listing) },
                                     onMarkAsSold = { viewModel.requestMarkAsSold(listing) },
                                     onDelete = { viewModel.requestDelete(listing) },
                                     onOpen = { onOpenListing(listing) }

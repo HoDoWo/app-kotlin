@@ -1,6 +1,8 @@
 package com.hodowo.data
 
 import com.hodowo.viewmodel.Listing
+import com.hodowo.viewmodel.ListingEdit
+import com.hodowo.viewmodel.formatPriceLabel
 import com.hodowo.viewmodel.ListingStatus
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -10,6 +12,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -20,6 +23,10 @@ interface ListingsService {
     suspend fun updateListing(id: String, title: String, description: String, condition: String, priceLabel: String): Listing
     suspend fun markAsSold(id: String): Listing
     suspend fun deleteListing(id: String)
+
+    /** Saves every field of the 4-step form; by default only what [updateListing] knows. */
+    suspend fun updateListingDetails(id: String, edit: ListingEdit): Listing =
+        updateListing(id, edit.title, edit.description, edit.condition, formatPriceLabel(edit.price.toString()))
 }
 
 /**
@@ -82,6 +89,11 @@ class RemoteListingsService(
             .toString()
             .toRequestBody(JSON)
 
+        return parseListing(jsonOf(patch("$LISTINGS_PATH/$id", body)))
+    }
+
+    override suspend fun updateListingDetails(id: String, edit: ListingEdit): Listing {
+        val body = editJson(edit).toString().toRequestBody(JSON)
         return parseListing(jsonOf(patch("$LISTINGS_PATH/$id", body)))
     }
 
@@ -151,6 +163,48 @@ class RemoteListingsService(
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
 
+        /** The PATCH body of an edit: the same fields the sell form publishes. */
+        internal fun editJson(edit: ListingEdit): JSONObject = JSONObject()
+            .put("title", edit.title.trim())
+            .put("description", edit.description.trim())
+            .put("category", edit.category)
+            .put("brand", edit.brand.trim())
+            .put("model", edit.model.trim())
+            .put("part_number", edit.model.trim())
+            .put("listing_kind", edit.listingKind)
+            .put("condition", edit.condition)
+            .put("price", edit.price)
+            .put("image_urls", JSONArray(edit.imageUrls))
+            .put("handover_methods", JSONArray(edit.handoverMethods))
+            .put("pickup_zip", edit.pickupZip.trim())
+            .put("shipping_price_cents", edit.shippingPriceCents ?: JSONObject.NULL)
+
+        private fun JSONObject.stringList(key: String): List<String> {
+            val array = optJSONArray(key) ?: return emptyList()
+            return (0 until array.length()).mapNotNull { array.optString(it).takeIf { url -> url.isNotBlank() } }
+        }
+
+        private fun JSONObject.text(key: String): String = if (isNull(key)) "" else optString(key)
+
+        internal fun parseDetails(json: JSONObject): ListingEdit = ListingEdit(
+            title = json.optString("title"),
+            description = json.optString("description"),
+            category = json.text("category"),
+            brand = json.text("brand"),
+            model = json.text("model").ifBlank { json.text("part_number") },
+            listingKind = json.text("listing_kind").ifBlank { "appliance" },
+            condition = json.text("condition"),
+            price = json.optDouble("price", 0.0),
+            imageUrls = json.stringList("image_urls"),
+            handoverMethods = json.stringList("handover_methods"),
+            pickupZip = json.text("pickup_zip"),
+            shippingPriceCents = if (json.isNull("shipping_price_cents") || !json.has("shipping_price_cents")) {
+                null
+            } else {
+                json.optInt("shipping_price_cents")
+            }
+        )
+
         internal fun parseListing(json: JSONObject): Listing {
             val images = json.optJSONArray("image_urls")
             val firstImage = images?.optString(0)?.takeIf { it.isNotBlank() }
@@ -168,7 +222,8 @@ class RemoteListingsService(
                 status = if (json.optString("status") == "sold") ListingStatus.SOLD else ListingStatus.ACTIVE,
                 inquiryCount = json.optInt("inquiry_count", 0),
                 postedAgo = json.optString("posted_ago"),
-                imageUrl = firstImage
+                imageUrl = firstImage,
+                details = parseDetails(json)
             )
         }
     }
