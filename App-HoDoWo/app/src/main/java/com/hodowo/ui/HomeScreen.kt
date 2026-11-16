@@ -26,10 +26,13 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.DocumentScanner
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Kitchen
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.ShoppingBag
@@ -101,6 +104,7 @@ private val TertiaryFixed = Color(0xFFFFDDB8)
  * @param onSearch sends the text to the AI chat as a question.
  * @param onDiagnose opens the camera to photograph an appliance.
  * @param onAskAboutManual opens the chat with a question about a manual.
+ * @param onOpenManualChat opens the chat in which one of the user's recent manuals was written.
  */
 @Composable
 fun HomeScreen(
@@ -110,13 +114,19 @@ fun HomeScreen(
     onOpenArCore: () -> Unit,
     onOpenMarket: () -> Unit,
     onOpenProfile: () -> Unit,
+    /** Opens the spare parts catalogue (#148). */
+    onOpenParts: () -> Unit = {},
+    /** Opens the sponsored partners page (#141). */
+    onOpenSponsored: () -> Unit = {},
     onAskAboutManual: (ManualGuide) -> Unit,
+    onOpenManualChat: (ManualGuide) -> Unit = onAskAboutManual,
     /** Photo of the signed-in user for the top bar; null shows the default avatar. */
     profilePhotoUrl: String? = null
 ) {
     val state by viewModel.uiState.collectAsState()
     var openedManual by remember { mutableStateOf<RecentManual?>(null) }
     var viewerUrl by remember { mutableStateOf<String?>(null) }
+    var viewerGuide by remember { mutableStateOf<ManualGuide?>(null) }
     val context = LocalContext.current
     val layoutInfo = LocalAppLayout.current
 
@@ -167,9 +177,11 @@ fun HomeScreen(
                     QuickActions(
                         onDiagnose = onDiagnose,
                         onOpenArCore = onOpenArCore,
-                        onOpenMarket = onOpenMarket
+                        onOpenMarket = onOpenMarket,
+                        onOpenParts = onOpenParts
                     )
                 }
+                item { SponsoredPartnersCard(onClick = onOpenSponsored) }
                 item { HelpfulTipCard(state.tip) }
                 item {
                     SectionHeader(section = state.section, onSelect = viewModel::selectSection)
@@ -177,7 +189,12 @@ fun HomeScreen(
                 manualsSection(
                     state = state,
                     isWide = layoutInfo.isWide,
-                    onOpen = { openedManual = it },
+                    onOpen = { manual ->
+                        // Your own manuals reopen their chat, as in a chat app; the most
+                        // popular ones are other users' guides and open as a card.
+                        if (state.section == ManualsSection.RECENT) onOpenManualChat(manual.guide)
+                        else openedManual = manual
+                    },
                     onImageClick = { viewerUrl = it },
                     onRetry = viewModel::refresh,
                     onDiagnose = onDiagnose
@@ -190,7 +207,14 @@ fun HomeScreen(
         ManualDetailDialog(
             manual = manual,
             onDismiss = { openedManual = null },
-            onImageClick = { viewerUrl = it },
+            // With steps the image opens pinned beside them; without, as a plain image.
+            onImageClick = { url ->
+                if (manual.guide.steps.isEmpty()) {
+                    viewerUrl = url
+                } else {
+                    viewerGuide = manual.guide
+                }
+            },
             onAskInChat = {
                 openedManual = null
                 onAskAboutManual(manual.guide)
@@ -200,6 +224,10 @@ fun HomeScreen(
 
     viewerUrl?.let { url ->
         FullscreenImageViewer(url = url, onDismiss = { viewerUrl = null })
+    }
+
+    viewerGuide?.let { guide ->
+        GuideViewerDialog(guide = guide, onDismiss = { viewerGuide = null })
     }
 }
 
@@ -373,7 +401,8 @@ private fun HomeSearchBar(onSearch: (String) -> Unit) {
 private fun QuickActions(
     onDiagnose: () -> Unit,
     onOpenArCore: () -> Unit,
-    onOpenMarket: () -> Unit
+    onOpenMarket: () -> Unit,
+    onOpenParts: () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -402,6 +431,14 @@ private fun QuickActions(
             iconTint = Tertiary,
             iconBackground = TertiaryFixed,
             onClick = onOpenMarket,
+            modifier = Modifier.weight(1f)
+        )
+        QuickActionButton(
+            label = "Parts",
+            icon = Icons.Outlined.Build,
+            iconTint = Primary,
+            iconBackground = Primary.copy(alpha = 0.1f),
+            onClick = onOpenParts,
             modifier = Modifier.weight(1f)
         )
     }
@@ -446,6 +483,40 @@ private fun QuickActionButton(
             subtitle?.let {
                 Text(text = it, style = MaterialTheme.typography.labelMedium, fontSize = 13.sp, color = OnSurfaceVariant)
             }
+        }
+    }
+}
+
+/** Entry to the sponsored partners page (#141). */
+@Composable
+private fun SponsoredPartnersCard(onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = SurfaceContainerLowest,
+        border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.3f)),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(Icons.Default.Campaign, contentDescription = null, tint = Primary)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Sponsored partners",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Offers from our partners",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnSurfaceVariant
+                )
+            }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = OnSurfaceVariant)
         }
     }
 }

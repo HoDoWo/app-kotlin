@@ -137,39 +137,65 @@ object ChatJson {
 
     fun toJson(chats: List<SavedChat>): JSONObject {
         val array = JSONArray()
-        chats.forEach { chat ->
-            val messages = JSONArray()
-            chat.messages.takeLast(FileChatHistoryStore.MAX_MESSAGES).forEach { messages.put(messageToJson(it)) }
-            array.put(
-                JSONObject()
-                    .put("id", chat.id)
-                    .put("title", chat.title)
-                    .put("appliance_name", chat.applianceName ?: JSONObject.NULL)
-                    .put("last_updated", chat.lastUpdated)
-                    .put("messages", messages)
-            )
-        }
+        chats.forEach { chat -> array.put(chatToJson(chat)) }
         return JSONObject().put("chats", array)
+    }
+
+    /** One chat, with its newest [maxMessages] messages. */
+    fun chatToJson(chat: SavedChat, maxMessages: Int = FileChatHistoryStore.MAX_MESSAGES): JSONObject {
+        val messages = JSONArray()
+        chat.messages.takeLast(maxMessages).forEach { messages.put(messageToJson(it)) }
+        return JSONObject()
+            .put("id", chat.id)
+            .put("title", chat.title)
+            .put("appliance_name", chat.applianceName ?: JSONObject.NULL)
+            .put("appliance_kind", chat.applianceKind ?: JSONObject.NULL)
+            .put("appliance_brand", chat.applianceBrand ?: JSONObject.NULL)
+            .put("appliance_model", chat.applianceModel ?: JSONObject.NULL)
+            .put("last_updated", chat.lastUpdated)
+            .put("messages", messages)
     }
 
     /** Reads the chats; broken entries are skipped. */
     fun parse(payload: JSONObject): List<SavedChat> {
         val array = payload.optJSONArray("chats") ?: return emptyList()
-        return (0 until array.length()).mapNotNull { index ->
-            val item = array.optJSONObject(index) ?: return@mapNotNull null
-            val id = item.textOrNull("id") ?: return@mapNotNull null
-            val messagesJson = item.optJSONArray("messages") ?: JSONArray()
+        return (0 until array.length()).mapNotNull { index -> array.optJSONObject(index)?.let(::chatFromJson) }
+    }
 
-            SavedChat(
-                id = id,
-                title = item.optString("title").ifBlank { "Chat" },
-                applianceName = item.textOrNull("appliance_name"),
-                lastUpdated = item.optLong("last_updated"),
-                messages = (0 until messagesJson.length()).mapNotNull { i ->
-                    messagesJson.optJSONObject(i)?.let(::messageFromJson)
-                }
-            )
+    /**
+     * The chat as JSON text of at most [maxChars] characters: the oldest messages
+     * are left out when it is longer (a Firestore document holds at most 1 MiB).
+     */
+    fun compactChat(chat: SavedChat, maxChars: Int = MAX_DOCUMENT_CHARS): String {
+        var kept = FileChatHistoryStore.MAX_MESSAGES
+        var text = chatToJson(chat, kept).toString()
+        while (text.length > maxChars && kept > 1) {
+            kept /= 2
+            text = chatToJson(chat, kept).toString()
         }
+        return text
+    }
+
+    /** 300 000 characters are at most 900 KB of UTF-8: below the 1 MiB limit of a Firestore document. */
+    const val MAX_DOCUMENT_CHARS = 300_000
+
+    /** Reads one chat, or null when it has no id. */
+    fun chatFromJson(item: JSONObject): SavedChat? {
+        val id = item.textOrNull("id") ?: return null
+        val messagesJson = item.optJSONArray("messages") ?: JSONArray()
+
+        return SavedChat(
+            id = id,
+            title = item.optString("title").ifBlank { "Chat" },
+            applianceName = item.textOrNull("appliance_name"),
+            lastUpdated = item.optLong("last_updated"),
+            messages = (0 until messagesJson.length()).mapNotNull { i ->
+                messagesJson.optJSONObject(i)?.let(::messageFromJson)
+            },
+            applianceKind = item.textOrNull("appliance_kind"),
+            applianceBrand = item.textOrNull("appliance_brand"),
+            applianceModel = item.textOrNull("appliance_model")
+        )
     }
 
     private fun messageToJson(message: Message): JSONObject =

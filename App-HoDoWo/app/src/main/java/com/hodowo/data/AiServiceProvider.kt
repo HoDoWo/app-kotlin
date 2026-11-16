@@ -15,6 +15,12 @@ import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.ProductViewModel
+import com.hodowo.viewmodel.PostProductViewModel
+import com.hodowo.viewmodel.SponsoredPartnersViewModel
+import com.hodowo.viewmodel.MyListingsViewModel
+import com.hodowo.viewmodel.ProductDetailViewModel
+import com.hodowo.viewmodel.MessagesViewModel
+import com.hodowo.viewmodel.ProductForumViewModel
 import com.hodowo.viewmodel.greetingName
 import java.io.File
 
@@ -60,6 +66,19 @@ object AiServiceProvider {
             }
         } else {
             RemoteCheckoutService(BuildConfig.BACKEND_URL, { tokens.token() })
+    /** Messages and offers between buyers and sellers, shared by the inbox and the product pages. */
+    val messagesService: MessagesService by lazy {
+        val backendUrl = BuildConfig.BACKEND_URL
+        if (backendUrl.isBlank()) UnavailableMessagesService
+        else RemoteMessagesService(backendUrl, FirebaseTokenProvider()::token)
+    }
+
+    /** Factory that builds [MessagesViewModel]: inbox, conversations and offers. */
+    fun messagesViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                MessagesViewModel(service = messagesService, cartStore = cartStore)
+            }
         }
 
     fun create(context: Context): HoDoWoAiService {
@@ -87,9 +106,13 @@ object AiServiceProvider {
                     aiService = create(context),
                     firebaseRepository = firebaseRepository,
                     authManager = authManager,
-                    chatHistory = FileChatHistoryStore(
-                        directory = File(context.filesDir, "chat_history"),
-                        openImage = { uri -> context.applicationContext.contentResolver.openInputStream(uri) }
+                    chatHistory = SyncedChatHistoryStore(
+                        local = FileChatHistoryStore(
+                            directory = File(context.filesDir, "chat_history"),
+                            openImage = { uri -> context.applicationContext.contentResolver.openInputStream(uri) }
+                        ),
+                        remote = FirestoreChatHistory(),
+                        uploader = FirebaseChatImageUploader(compress = { uri -> compressor.compress(uri) })
                     ),
                     profilePhotoStore = ProfilePhotoStore(context.applicationContext)
                 )
@@ -150,6 +173,17 @@ object AiServiceProvider {
         }
 
     /** Factory for the full cart screen (Backend#42 cart API). */
+    /** Factory that builds [SponsoredPartnersViewModel] (#141). */
+    fun sponsoredPartnersViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                SponsoredPartnersViewModel(
+                    MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token)
+                )
+            }
+        }
+
+    /** Factory that builds [CartViewModel] on the shared [cartStore]. */
     fun cartViewModelFactory(): ViewModelProvider.Factory =
         viewModelFactory {
             initializer { CartViewModel(cartStore) }

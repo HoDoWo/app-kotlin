@@ -19,7 +19,6 @@ import com.hodowo.ui.adaptive.AdaptiveContent
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.viewmodel.Appliance
 import com.hodowo.viewmodel.ChatViewModel
-import com.hodowo.viewmodel.ManualGuide
 
 /**
  * Shows one appliance and every manual / AI guide related to it.
@@ -35,7 +34,6 @@ fun ApplianceManualsScreen(
     val context = LocalContext.current
     val state by viewModel.applianceManuals.collectAsState()
 
-    var selectedGuide by remember { mutableStateOf<ManualGuide?>(null) }
     var showEdit by remember { mutableStateOf(false) }
     var showDelete by remember { mutableStateOf(false) }
     var editName by remember { mutableStateOf("") }
@@ -75,172 +73,167 @@ fun ApplianceManualsScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-            // Header
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                // Header
+                Card(
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Surface(
-                        modifier = Modifier.size(52.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                Icons.Default.Kitchen, null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(28.dp)
-                            )
+                        Surface(
+                            modifier = Modifier.size(52.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLow
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.Default.Kitchen, null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
                         }
-                    }
-                    Column {
-                        Text(ap.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                        val details = listOfNotNull(ap.brand, ap.model).joinToString(" • ")
-                        if (details.isNotBlank()) {
+                        Column {
+                            Text(ap.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            val details = listOfNotNull(ap.brand, ap.model).joinToString(" • ")
+                            if (details.isNotBlank()) {
+                                Text(
+                                    details,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                             Text(
-                                details,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                if (ap.isRegistered) "Registered in your profile" else "Not saved to your profile",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
-                        Text(
-                            if (ap.isRegistered) "Registered in your profile" else "Not saved to your profile",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.SemiBold
-                        )
                     }
                 }
-            }
 
-            // Actions
-            Button(onClick = { troubleshoot() }, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.ChatBubble, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("Troubleshoot in AI Chat")
-            }
+                // Actions
+                Button(onClick = { troubleshoot() }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.ChatBubble, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Troubleshoot in AI Chat")
+                }
 
-            if (ap.isRegistered) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                if (ap.isRegistered) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = {
+                                editName = ap.name
+                                editBrand = ap.brand.orEmpty()
+                                editModel = ap.model.orEmpty()
+                                showEdit = true
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Edit")
+                        }
+                        OutlinedButton(
+                            onClick = { showDelete = true },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Delete")
+                        }
+                    }
+                } else {
                     OutlinedButton(
                         onClick = {
-                            editName = ap.name
-                            editBrand = ap.brand.orEmpty()
-                            editModel = ap.model.orEmpty()
-                            showEdit = true
+                            val saved = viewModel.addAppliance(
+                                name = ap.name,
+                                brand = ap.brand.orEmpty(),
+                                room = ""
+                            )
+                            Toast.makeText(
+                                context,
+                                if (saved) "Saved to your appliances" else "Sign in to keep your appliances",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            onBack()
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Edit")
-                    }
-                    OutlinedButton(
-                        onClick = { showDelete = true },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Delete")
+                        Text("Save to my appliances")
                     }
                 }
-            } else {
-                OutlinedButton(
-                    onClick = {
-                        val saved = viewModel.addAppliance(
-                            name = ap.name,
-                            brand = ap.brand.orEmpty(),
-                            room = ""
-                        )
-                        Toast.makeText(
-                            context,
-                            if (saved) "Saved to your appliances" else "Sign in to keep your appliances",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        onBack()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Save to my appliances")
-                }
-            }
 
-            // Manuals
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("Repair Manuals", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(
-                        "Guides generated for this appliance",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                if (!ap.loading) {
-                    Text(
-                        "${ap.manuals.size}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-
-            when {
-                ap.loading -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-                ap.manuals.isEmpty() -> Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                    modifier = Modifier.fillMaxWidth()
+                // Manuals
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp).fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(Icons.Default.MenuBook, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("No manuals yet", fontWeight = FontWeight.SemiBold)
+                    Column {
+                        Text("Repair Manuals", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                         Text(
-                            "Describe a problem in AI Chat and the guide will show up here.",
+                            "Guides generated for this appliance",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        TextButton(onClick = { troubleshoot() }) { Text("Start troubleshooting") }
+                    }
+                    if (!ap.loading) {
+                        Text(
+                            "${ap.manuals.size}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
-                else -> ap.manuals.forEach { guide ->
-                    BookmarkedGuideCard(guide = guide, onClick = { selectedGuide = guide })
+
+                when {
+                    ap.loading -> Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                    ap.manuals.isEmpty() -> Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(20.dp).fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.MenuBook, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("No manuals yet", fontWeight = FontWeight.SemiBold)
+                            Text(
+                                "Describe a problem in AI Chat and the guide will show up here.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            TextButton(onClick = { troubleshoot() }) { Text("Start troubleshooting") }
+                        }
+                    }
+                    else -> ap.manuals.forEach { guide ->
+                        // Like "Recent Manuals" on Home: the manual opens the chat it was written in.
+                        BookmarkedGuideCard(guide = guide, onClick = {
+                            viewModel.openChatForGuide(
+                                guide,
+                                Appliance(name = ap.name, brand = ap.brand, model = ap.model, confidence = 1.0f)
+                            )
+                            onNavigateAiChat()
+                        })
+                    }
                 }
             }
         }
-        }
-    }
-
-    selectedGuide?.let { guide ->
-        ManualGuideDialog(
-            guide = guide,
-            onDismiss = { selectedGuide = null },
-            onAskAi = {
-                viewModel.sendTextMessage("I need help with \"${guide.issueTitle}\" on my ${guide.applianceName}.")
-                selectedGuide = null
-                onNavigateAiChat()
-            }
-        )
     }
 
     if (showEdit) {

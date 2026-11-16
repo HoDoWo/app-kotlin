@@ -2,7 +2,11 @@ package com.hodowo.data
 
 import com.hodowo.viewmodel.ManualGuide
 import com.hodowo.viewmodel.ManualStep
+import com.hodowo.viewmodel.StepPin
+import com.hodowo.viewmodel.PartCompatibility
 import com.hodowo.viewmodel.RecentManual
+import com.hodowo.viewmodel.SUGGESTED_PART_MIN_CONFIDENCE
+import com.hodowo.viewmodel.SuggestedPart
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -63,6 +67,7 @@ object ManualJson {
                     .put("number", step.number)
                     .put("title", step.title)
                     .put("description", step.description)
+                    .put("pin", step.pin?.let { JSONObject().put("x", it.x.toDouble()).put("y", it.y.toDouble()) } ?: JSONObject.NULL)
             )
         }
 
@@ -74,6 +79,7 @@ object ManualJson {
             .put("steps", steps)
             .put("warnings", JSONArray(guide.warnings))
             .put("image_url", guide.imageUrl ?: JSONObject.NULL)
+            .put("suggested_part", guide.suggestedPart?.let(::suggestedPartToJson) ?: JSONObject.NULL)
     }
 
     /** Reads one guide; null when it has no title. */
@@ -88,9 +94,57 @@ object ManualJson {
             steps = parseSteps(item),
             imageUrl = item.textOrNull("image_url"),
             warnings = parseWarnings(item),
-            manualId = item.textOrNull("id")
+            manualId = item.textOrNull("id"),
+            suggestedPart = suggestedPartFromJson(item.optJSONObject("suggested_part"))
         )
     }
+
+    /**
+     * `{"id", "name", "price_cents" | "price", "image_url", "compatible", "confidence"}`.
+     * Null when it is missing, incomplete or below [SUGGESTED_PART_MIN_CONFIDENCE]: the card then
+     * shows no part block at all (#149).
+     */
+    fun suggestedPartFromJson(json: JSONObject?): SuggestedPart? {
+        if (json == null) return null
+        val id = json.textOrNull("id") ?: return null
+        val name = (json.textOrNull("name") ?: json.textOrNull("title")) ?: return null
+        val confidence = json.optDouble("confidence", 0.0)
+        if (confidence.isNaN() || confidence < SUGGESTED_PART_MIN_CONFIDENCE) return null
+
+        val priceCents = when {
+            json.has("price_cents") && !json.isNull("price_cents") -> json.optInt("price_cents")
+            json.has("price") && !json.isNull("price") -> Math.round(json.optDouble("price") * 100).toInt()
+            else -> null
+        }
+        val compatibility = when (if (json.isNull("compatible")) null else json.opt("compatible")) {
+            true -> PartCompatibility.FITS
+            false -> PartCompatibility.DOES_NOT_FIT
+            else -> PartCompatibility.UNKNOWN
+        }
+        return SuggestedPart(
+            id = id,
+            name = name,
+            priceCents = priceCents,
+            imageUrl = json.textOrNull("image_url") ?: json.textOrNull("image"),
+            compatibility = compatibility,
+            confidence = confidence
+        )
+    }
+
+    private fun suggestedPartToJson(part: SuggestedPart): JSONObject = JSONObject()
+        .put("id", part.id)
+        .put("name", part.name)
+        .put("price_cents", part.priceCents ?: JSONObject.NULL)
+        .put("image_url", part.imageUrl ?: JSONObject.NULL)
+        .put(
+            "compatible",
+            when (part.compatibility) {
+                PartCompatibility.FITS -> true
+                PartCompatibility.DOES_NOT_FIT -> false
+                PartCompatibility.UNKNOWN -> JSONObject.NULL
+            }
+        )
+        .put("confidence", part.confidence)
 
     private fun parseSteps(item: JSONObject): List<ManualStep> {
         val array = item.optJSONArray("steps") ?: return emptyList()
@@ -99,9 +153,29 @@ object ManualJson {
             ManualStep(
                 number = step.optInt("number", index + 1),
                 title = step.optString("title").trim().ifEmpty { "Step ${index + 1}" },
-                description = step.optString("description").trim()
+                description = step.optString("description").trim(),
+                pin = parsePin(step.optJSONObject("pin"))
             )
         }
+    }
+
+    /** A pin as Firestore stores it: `{x, y}`, or null. */
+    fun pinToMap(pin: StepPin?): Map<String, Double>? = pin?.let { mapOf("x" to it.x.toDouble(), "y" to it.y.toDouble()) }
+
+    /** A pin read back from Firestore, or null when missing or outside the image. */
+    fun pinFromMap(value: Any?): StepPin? {
+        val map = value as? Map<*, *> ?: return null
+        val x = (map["x"] as? Number)?.toFloat() ?: return null
+        val y = (map["y"] as? Number)?.toFloat() ?: return null
+        return if (x in 0f..1f && y in 0f..1f) StepPin(x, y) else null
+    }
+
+    /** `{"x": 0..1, "y": 0..1}` of a step, or null when missing or outside the image. */
+    fun parsePin(json: JSONObject?): StepPin? {
+        if (json == null || !json.has("x") || !json.has("y")) return null
+        val x = json.optDouble("x", Double.NaN)
+        val y = json.optDouble("y", Double.NaN)
+        return if (x in 0.0..1.0 && y in 0.0..1.0) StepPin(x.toFloat(), y.toFloat()) else null
     }
 
     private fun parseWarnings(item: JSONObject): List<String> {

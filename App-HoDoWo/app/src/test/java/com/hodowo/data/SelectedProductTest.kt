@@ -1,5 +1,7 @@
 package com.hodowo.data
 
+import com.hodowo.viewmodel.Listing
+import com.hodowo.viewmodel.ListingStatus
 import com.hodowo.viewmodel.PartCompatibility
 import com.hodowo.viewmodel.ProductDetail
 import io.mockk.coEvery
@@ -131,5 +133,50 @@ class SelectedProductTest {
         val cartStore = CartStore(UnavailableCartService)
         val repo = StoreCartRepository(cartStore, null)
         repo.addToCart("prod-1", 1)
+    }
+
+    private fun cartLine(productType: String, sellerKind: String) = CartLine(
+        cartItemId = "c-1", productType = productType, productId = "p-9", title = "Drain pump",
+        imageUrl = "http://example.com/p.jpg", quantity = 1, unitPriceCents = 3850, priceCents = 3850,
+        addedPriceCents = 3500, priceChanged = true, available = true, unavailableReason = null,
+        sellerName = "Bosch Store", sellerKind = sellerKind
+    )
+
+    @Test
+    fun cartLineOpensTheDetailOfItsProductType() {
+        val part = cartLine("part", SELLER_PARTNER).toMarketplaceProduct()
+        assertEquals("p-9", part.id)
+        assertEquals("part", part.type)
+        assertEquals(38.5, part.price, 0.001)
+        assertEquals("Bosch Store", part.partnerName)
+        assertTrue(part.toProductDetail() is ProductDetail.Part)
+
+        val used = cartLine("used", SELLER_COMMUNITY).toMarketplaceProduct()
+        assertEquals(null, used.partnerName)
+        assertTrue(used.toProductDetail() is ProductDetail.SecondHand)
+
+        assertTrue(cartLine("new", SELLER_PARTNER).toMarketplaceProduct().toProductDetail() is ProductDetail.New)
+    }
+
+    @Test
+    fun cartLineWithoutLivePriceFallsBackToThePriceWhenAdded() {
+        val line = cartLine("new", SELLER_PARTNER).copy(unitPriceCents = null)
+        assertEquals(35.0, line.toMarketplaceProduct().price, 0.001)
+        assertEquals(0.0, line.copy(addedPriceCents = null).toMarketplaceProduct().price, 0.001)
+    }
+
+    @Test
+    fun listingOpensAsASecondHandProduct() {
+        val listing = Listing(
+            id = "l-1", title = "Used oven", description = "Works fine", condition = "Used, good",
+            priceLabel = "$120.50", status = ListingStatus.ACTIVE, inquiryCount = 0, postedAgo = "1d ago",
+            imageUrl = "http://example.com/o.jpg"
+        )
+        val product = listing.toMarketplaceProduct()
+        assertEquals("used", product.type)
+        assertEquals(120.5, product.price, 0.001)
+        val detail = product.toProductDetail() as ProductDetail.SecondHand
+        assertEquals("Used, good", detail.condition)
+        assertEquals("Used oven", detail.title)
     }
 }

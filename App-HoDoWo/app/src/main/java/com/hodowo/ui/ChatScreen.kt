@@ -63,12 +63,15 @@ import com.hodowo.ui.theme.SurfaceContainerLowest
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.Feedback
 import com.hodowo.viewmodel.Message
+import com.hodowo.viewmodel.SuggestedPart
 
 @Composable
 fun ChatScreen(
     viewModel: ChatViewModel,
     onOpenCamera: () -> Unit,
-    onOpenAuth: () -> Unit
+    onOpenAuth: () -> Unit,
+    /** "Buy part" of the part suggested by a diagnosis (#149). */
+    onBuyPart: (SuggestedPart) -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
@@ -205,7 +208,8 @@ fun ChatScreen(
                                 dislikeTargetId = message.id
                             },
                             onToggleBookmark = { viewModel.toggleBookmark(message.id) },
-                            onImageClick = { url -> fullscreenImageUrl = url }
+                            onImageClick = { url -> fullscreenImageUrl = url },
+                            onBuyPart = onBuyPart
                         )
                     }
                 }

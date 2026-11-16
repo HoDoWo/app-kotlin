@@ -43,7 +43,8 @@ class FirebaseRepository(
                     mapOf(
                         "number" to it.number,
                         "title" to it.title,
-                        "description" to it.description
+                        "description" to it.description,
+                        "pin" to ManualJson.pinToMap(it.pin)
                     )
                 },
                 "timestamp" to System.currentTimeMillis()
@@ -147,7 +148,8 @@ class FirebaseRepository(
                     ManualStep(
                         number = (map["number"] as? Number)?.toInt() ?: 1,
                         title = map["title"] as? String ?: "",
-                        description = map["description"] as? String ?: ""
+                        description = map["description"] as? String ?: "",
+                        pin = ManualJson.pinFromMap(map["pin"])
                     )
                 } ?: emptyList()
 
@@ -471,7 +473,8 @@ class FirebaseRepository(
             ManualStep(
                 number = (map["number"] as? Number)?.toInt() ?: 1,
                 title = map["title"] as? String ?: "",
-                description = map["description"] as? String ?: ""
+                description = map["description"] as? String ?: "",
+                pin = ManualJson.pinFromMap(map["pin"])
             )
         } ?: emptyList()
         return ManualGuide(

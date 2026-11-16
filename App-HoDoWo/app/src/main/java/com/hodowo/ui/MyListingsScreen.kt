@@ -98,7 +98,9 @@ private val LISTING_CONDITIONS = listOf(
 fun MyListingsScreen(
     viewModel: MyListingsViewModel,
     onBack: () -> Unit,
-    onPostProduct: () -> Unit = {}
+    onPostProduct: () -> Unit = {},
+    /** Opens the Product Detail page of a listing, as buyers see it (#111). */
+    onOpenListing: (Listing) -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -213,6 +215,7 @@ fun MyListingsScreen(
                                             onEdit = { viewModel.startEditing(listing) },
                                             onMarkAsSold = { viewModel.requestMarkAsSold(listing) },
                                             onDelete = { viewModel.requestDelete(listing) },
+                                            onOpen = { onOpenListing(listing) },
                                             modifier = Modifier.weight(1f)
                                         )
                                     }
@@ -225,7 +228,8 @@ fun MyListingsScreen(
                                     listing = listing,
                                     onEdit = { viewModel.startEditing(listing) },
                                     onMarkAsSold = { viewModel.requestMarkAsSold(listing) },
-                                    onDelete = { viewModel.requestDelete(listing) }
+                                    onDelete = { viewModel.requestDelete(listing) },
+                                    onOpen = { onOpenListing(listing) }
                                 )
                             }
                         }
@@ -367,6 +371,7 @@ private fun ListingCard(
     onEdit: () -> Unit,
     onMarkAsSold: () -> Unit,
     onDelete: () -> Unit,
+    onOpen: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isSold = listing.status == ListingStatus.SOLD
@@ -376,7 +381,7 @@ private fun ListingCard(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLowest),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth().clickable(onClickLabel = "View as buyers see it", onClick = onOpen)
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

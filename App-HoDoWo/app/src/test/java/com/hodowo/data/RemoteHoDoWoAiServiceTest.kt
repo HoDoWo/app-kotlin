@@ -249,7 +249,7 @@ class RemoteHoDoWoAiServiceTest {
             data: {"token": "the filter."}
 
             event: response
-            data: {"reply": "Clean the filter.", "is_manual": true, "manual_id": "man-1", "steps": [{"number": 1, "title": "Filter", "description": "Unscrew filter"}]}
+            data: {"reply": "Clean the filter.", "is_manual": true, "manual_id": "man-1", "steps": [{"number": 1, "title": "Filter", "description": "Unscrew filter", "pin": {"x": 0.3, "y": 0.6}}]}
             
         """.trimIndent()
 
@@ -269,6 +269,7 @@ class RemoteHoDoWoAiServiceTest {
         assertNotNull(responseEvent.manualGuide)
         assertEquals("man-1", responseEvent.manualGuide?.manualId)
         assertEquals(1, responseEvent.manualGuide?.steps?.size)
+        assertEquals(com.hodowo.viewmodel.StepPin(0.3f, 0.6f), responseEvent.manualGuide?.steps?.single()?.pin)
     }
 
     @Test

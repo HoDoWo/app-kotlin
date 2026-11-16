@@ -42,7 +42,11 @@ data class CartLine(
     /** "partner" (official partner or HoDoWo part) or "community" (second-hand listing). */
     val sellerKind: String = if (productType == "used") SELLER_COMMUNITY else SELLER_PARTNER,
     /** Part of the purchase being prepared; unselected lines stay in the cart. */
-    val selected: Boolean = available
+    val selected: Boolean = available,
+    /** The seller accepted the buyer's offer: [unitPriceCents] is the offered price. */
+    val offerId: String? = null,
+    /** Price of the listing without the offer, when [offerId] is set. */
+    val listPriceCents: Int? = null
 )
 
 /** Estimated delivery, ISO dates ("2026-11-11"). */
@@ -249,7 +253,9 @@ class RemoteCartService(
                     sellerName = item.textOrNull("seller_name"),
                     sellerKind = item.textOrNull("seller_kind")
                         ?: if (item.optString("product_type") == "used") SELLER_COMMUNITY else SELLER_PARTNER,
-                    selected = if (item.has("selected")) item.optBoolean("selected") else item.optBoolean("available", true)
+                    selected = if (item.has("selected")) item.optBoolean("selected") else item.optBoolean("available", true),
+                    offerId = item.textOrNull("offer_id"),
+                    listPriceCents = item.intOrNull("list_price_cents")
                 )
             }
             val itemCount = json.optInt("item_count", 0)

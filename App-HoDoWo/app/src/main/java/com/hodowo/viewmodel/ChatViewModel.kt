@@ -38,8 +38,13 @@ enum class Feedback(val score: Int) {
 data class ManualStep(
     val number: Int,
     val title: String,
-    val description: String
+    val description: String,
+    /** Where the step happens on the guide image, shown as a numbered pin; null when unknown. */
+    val pin: StepPin? = null
 )
+
+/** A point of the guide image, from 0 to 1 from the left and top edges. */
+data class StepPin(val x: Float, val y: Float)
 
 /**
  * Structured AI manual guide response.
@@ -51,7 +56,22 @@ data class ManualGuide(
     val steps: List<ManualStep> = emptyList(),
     val imageUrl: String? = null,
     val warnings: List<String> = emptyList(),
-    val manualId: String? = null
+    val manualId: String? = null,
+    /** Spare part the diagnosis points to (#149); null when there is no confident suggestion. */
+    val suggestedPart: SuggestedPart? = null
+)
+
+/** Minimum confidence of a diagnosis before its suggested part is shown (#149). */
+const val SUGGESTED_PART_MIN_CONFIDENCE = 0.7
+
+/** The spare part the AI diagnosis points to, shown inside the error resolution card (#149). */
+data class SuggestedPart(
+    val id: String,
+    val name: String,
+    val priceCents: Int?,
+    val imageUrl: String?,
+    val compatibility: PartCompatibility = PartCompatibility.UNKNOWN,
+    val confidence: Double
 )
 
 /**
@@ -125,6 +145,23 @@ data class UserAppliance(
     val subtitle: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )
+
+/**
+ * True when the appliance of the chat is this registered one, so the profile
+ * does not show it twice ("Active session" and the saved card). The same model
+ * number is enough; otherwise brand, name and model must have the same words,
+ * whatever the case and the order ("candy" + "Candy FIDC X502IT" = "Candy FIDC X502IT").
+ */
+fun Appliance.isSameAs(saved: UserAppliance): Boolean {
+    val model = applianceKey(model)
+    if (model.isNotEmpty() && model == applianceKey(saved.model)) return true
+    return applianceWords(brand, name, this.model) == applianceWords(saved.brand, saved.name, saved.model)
+}
+
+private fun applianceKey(text: String?): String = text.orEmpty().lowercase().filter { it.isLetterOrDigit() }
+
+private fun applianceWords(vararg parts: String?): Set<String> =
+    parts.flatMap { it.orEmpty().lowercase().split(Regex("[^\\p{L}\\p{N}]+")) }.filter { it.isNotEmpty() }.toSet()
 
 /**
  * User profile entity stored in Firestore under users/{userId}.
@@ -579,7 +616,7 @@ class ChatViewModel(
         lastImageUri = chat.messages.lastOrNull { it.imageUri != null }?.imageUri
         _uiState.value = ChatUiState(
             messages = chat.messages,
-            appliance = chat.applianceName?.let { Appliance(name = it, brand = null, model = null, confidence = 1f) },
+            appliance = chat.appliance(),
             currentChatId = chat.id,
             chatSessions = _uiState.value.chatSessions,
             bookmarkedGuides = current.bookmarkedGuides,
@@ -587,6 +624,36 @@ class ChatViewModel(
             userAppliances = current.userAppliances,
             userProfile = current.userProfile
         )
+    }
+
+    /**
+     * Opens the chat in which [guide] was written (from "Recent Manuals" on Home).
+     * When it is not in the history (written on the web or before the history
+     * existed), a new chat starts from the guide, so the next question is about it.
+     * [appliance] (brand and model) is used for that new chat when it is known,
+     * as on the appliance page of the profile.
+     */
+    fun openChatForGuide(guide: ManualGuide, appliance: Appliance? = null) {
+        if (_uiState.value.isSending) return
+        val chat = savedChats.chatWithGuide(guide)
+        if (chat != null) {
+            if (chat.id != _uiState.value.currentChatId) openChat(chat.id)
+            return
+        }
+        startNewChat()
+        addMessage(
+            Message(
+                id = nextMessageId(),
+                text = guide.overview,
+                isUser = false,
+                timestamp = clock(),
+                question = guide.issueTitle,
+                manualGuide = guide
+            )
+        )
+        _uiState.update {
+            it.copy(appliance = appliance ?: Appliance(name = guide.applianceName, brand = null, model = null, confidence = 1f))
+        }
     }
 
     /** Removes a chat from the history; deleting the open chat starts a new one. */
@@ -951,18 +1018,9 @@ class ChatViewModel(
             return
         }
 
-        // Build conversation history from previous completed messages
-        val history = _uiState.value.messages
-            .filterNot { it.isStreaming }
-            .mapNotNull { msg ->
-                val content = msg.text?.takeIf { it.isNotBlank() } ?: msg.manualGuide?.overview
-                if (!content.isNullOrBlank()) {
-                    ChatMessageHistory(
-                        role = if (msg.isUser) "user" else "assistant",
-                        content = content
-                    )
-                } else null
-            }
+        // The whole conversation so far, photos and guides included, so a follow-up
+        // question is answered knowing what the chat is about.
+        val history = conversationHistory(_uiState.value.messages, _uiState.value.appliance)
 
         // Clear selected image preview (it was attached to this message)
         if (useSelectedImage) {
