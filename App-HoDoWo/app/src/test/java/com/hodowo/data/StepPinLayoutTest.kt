@@ -3,7 +3,6 @@ package com.hodowo.data
 import com.hodowo.viewmodel.ManualStep
 import com.hodowo.viewmodel.StepPin
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -68,16 +67,17 @@ class StepPinLayoutTest {
     }
 
     @Test
-    fun stepsWithoutAPinGoInARowAtTheBottom() {
+    fun aStepWithoutAPinPointsWhereTheStepBeforeItDoes() {
         val markers = StepPinLayout.markers(
-            listOf(step(1, StepPin(0.5f, 0.2f)), step(2), step(3, StepPin(0.1f, 0.1f)), step(4))
+            listOf(step(1), step(2, StepPin(0.3f, 0.5f)), step(3), step(4, StepPin(0.7f, 0.2f)), step(5))
         )
 
-        assertEquals(listOf(1, 2, 3, 4), markers.map { it.number })
-        val unplaced = markers.filterNot { it.placed }
-        assertEquals(listOf(1, 3), unplaced.map { it.index })
-        assertEquals(listOf(StepPinLayout.SPACING, 2 * StepPinLayout.SPACING), unplaced.map { it.x })
-        assertTrue(unplaced.all { it.y == StepPinLayout.UNPLACED_ROW_Y && it.anchorX == null })
-        assertFalse(markers[0].x == markers[1].x && markers[0].y == markers[1].y)
+        assertEquals(listOf(1, 2, 3, 4, 5), markers.map { it.number })
+        assertTrue(markers.all { it.placed })
+        // The first step has nothing before it: it takes the first pin.
+        assertEquals(listOf(0.3f, 0.3f, 0.3f, 0.7f, 0.7f), markers.map { it.anchorX ?: -1f })
+        assertEquals(listOf(0.5f, 0.5f, 0.5f, 0.2f, 0.2f), markers.map { it.anchorY ?: -1f })
+        // Numbers on the same control do not cover each other.
+        assertEquals(5, markers.map { it.x to it.y }.distinct().size)
     }
 }
