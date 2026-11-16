@@ -35,6 +35,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.hodowo.data.PinMarker
 import com.hodowo.data.StepPinLayout
 import com.hodowo.data.formatPriceCents
 import com.hodowo.ui.adaptive.LocalAppLayout
@@ -329,7 +333,7 @@ private fun GuideImage(
     modifier: Modifier = Modifier
 ) {
     var ratio by remember(url) { mutableStateOf<Float?>(null) }
-    val pins = remember(steps) { StepPinLayout.markers(steps) }
+    val pins = remember(steps, ratio) { StepPinLayout.markers(steps, ratio ?: 1f) }
     BoxWithConstraints(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
@@ -352,6 +356,11 @@ private fun GuideImage(
         )
         // Pins only once the proportions are known, so they land on the right control.
         if (ratio != null) {
+            PinLines(
+                pins,
+                selectedIndex = steps.indexOfFirst { it.number == selectedStep },
+                modifier = Modifier.matchParentSize()
+            )
             pins.forEach { pin ->
                 val step = steps[pin.index]
                 val selected = step.number == selectedStep
@@ -440,4 +449,26 @@ internal fun pinColor(selected: Boolean, placed: Boolean): Color = when {
     selected -> Primary
     placed -> Primary.copy(alpha = 0.85f)
     else -> Primary.copy(alpha = 0.55f)
+}
+
+/**
+ * The line from each number to the exact point of its control, ending in a dot,
+ * like the arrows of the annotated images. [zoom] keeps the lines thin while the
+ * image is zoomed in.
+ */
+@Composable
+internal fun PinLines(pins: List<PinMarker>, selectedIndex: Int?, modifier: Modifier = Modifier, zoom: Float = 1f) {
+    Canvas(modifier = modifier) {
+        pins.forEach { pin ->
+            val anchorX = pin.anchorX ?: return@forEach
+            val anchorY = pin.anchorY ?: return@forEach
+            val anchor = Offset(size.width * anchorX, size.height * anchorY)
+            val number = Offset(size.width * pin.x, size.height * pin.y)
+            val color = if (pin.index == selectedIndex) Primary else Primary.copy(alpha = 0.85f)
+            drawLine(Color.White, number, anchor, strokeWidth = 4.dp.toPx() / zoom, cap = StrokeCap.Round)
+            drawLine(color, number, anchor, strokeWidth = 2.dp.toPx() / zoom, cap = StrokeCap.Round)
+            drawCircle(Color.White, radius = 5.dp.toPx() / zoom, center = anchor)
+            drawCircle(color, radius = 3.5f.dp.toPx() / zoom, center = anchor)
+        }
+    }
 }

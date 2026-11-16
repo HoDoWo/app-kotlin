@@ -7,8 +7,10 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Every step of a guide with pins gets a number to tap on the image. */
+/** Every step of a guide with pins gets a number on the image, joined to its control. */
 class StepPinLayoutTest {
+
+    private val delta = 0.0001f
 
     private fun step(number: Int, pin: StepPin? = null) = ManualStep(number, "Step $number", "", pin)
 
@@ -18,30 +20,51 @@ class StepPinLayoutTest {
     }
 
     @Test
-    fun pinsStayOnTheirControl() {
-        val markers = StepPinLayout.markers(listOf(step(1, StepPin(0.2f, 0.3f)), step(2, StepPin(0.7f, 0.6f))))
+    fun theNumberSitsOutsideItsControlAndPointsAtIt() {
+        val marker = StepPinLayout.markers(listOf(step(1, StepPin(0.2f, 0.5f)))).single()
 
-        assertEquals(
-            listOf(PinMarker(0, 1, 0.2f, 0.3f), PinMarker(1, 2, 0.7f, 0.6f)),
-            markers
-        )
+        assertTrue(marker.placed)
+        assertEquals(0.2f, marker.anchorX ?: -1f, delta)
+        assertEquals(0.5f, marker.anchorY ?: -1f, delta)
+        // Left of the centre: the number goes further left.
+        assertEquals(0.2f - StepPinLayout.CALLOUT_DISTANCE, marker.x, delta)
+        assertEquals(0.5f, marker.y, delta)
     }
 
     @Test
-    fun stepsOnTheSameControlAreSetSideBySide() {
+    fun aControlInTheMiddleHasItsNumberAbove() {
+        val marker = StepPinLayout.markers(listOf(step(1, StepPin(0.5f, 0.5f)))).single()
+
+        assertEquals(0.5f, marker.x, delta)
+        assertEquals(0.5f - StepPinLayout.CALLOUT_DISTANCE, marker.y, delta)
+    }
+
+    @Test
+    fun onAWideImageTheLineKeepsItsLengthUpwards() {
+        val marker = StepPinLayout.markers(listOf(step(1, StepPin(0.5f, 0.4f))), ratio = 2f).single()
+
+        assertEquals(0.4f - 2 * StepPinLayout.CALLOUT_DISTANCE, marker.y, delta)
+    }
+
+    @Test
+    fun stepsOnTheSameControlFanOutAroundIt() {
         val markers = StepPinLayout.markers(
-            listOf(step(1, StepPin(0.4f, 0.5f)), step(2, StepPin(0.41f, 0.5f)), step(3, StepPin(0.4f, 0.52f)))
+            listOf(step(1, StepPin(0.3f, 0.5f)), step(2, StepPin(0.31f, 0.5f)), step(3, StepPin(0.3f, 0.52f)))
         )
 
-        assertEquals(listOf(0.4f, 0.41f + StepPinLayout.SPACING, 0.4f + 2 * StepPinLayout.SPACING), markers.map { it.x })
+        assertEquals(3, markers.map { it.x to it.y }.distinct().size)
         assertTrue(markers.all { it.placed })
+        // The second turns above the first and the third below it.
+        assertTrue(markers[1].y < markers[0].y)
+        assertTrue(markers[2].y > markers[0].y)
     }
 
     @Test
-    fun nearTheRightEdgeTheExtraPinGoesLeft() {
-        val markers = StepPinLayout.markers(listOf(step(1, StepPin(0.97f, 0.5f)), step(2, StepPin(0.97f, 0.5f))))
+    fun numbersStayInsideTheImage() {
+        val marker = StepPinLayout.markers(listOf(step(1, StepPin(0.98f, 0.5f)))).single()
 
-        assertEquals(0.97f - StepPinLayout.SPACING, markers[1].x, 0.0001f)
+        assertEquals(1f - StepPinLayout.MARGIN, marker.x, delta)
+        assertEquals(0.98f, marker.anchorX ?: -1f, delta)
     }
 
     @Test
@@ -54,7 +77,7 @@ class StepPinLayoutTest {
         val unplaced = markers.filterNot { it.placed }
         assertEquals(listOf(1, 3), unplaced.map { it.index })
         assertEquals(listOf(StepPinLayout.SPACING, 2 * StepPinLayout.SPACING), unplaced.map { it.x })
-        assertTrue(unplaced.all { it.y == StepPinLayout.UNPLACED_ROW_Y })
+        assertTrue(unplaced.all { it.y == StepPinLayout.UNPLACED_ROW_Y && it.anchorX == null })
         assertFalse(markers[0].x == markers[1].x && markers[0].y == markers[1].y)
     }
 }

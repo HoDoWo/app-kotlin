@@ -240,7 +240,7 @@ private fun ZoomableGuideImage(
     modifier: Modifier = Modifier
 ) {
     var ratio by remember(url) { mutableStateOf<Float?>(null) }
-    val pinMarkers = remember(steps) { StepPinLayout.markers(steps) }
+    val pinMarkers = remember(steps, ratio) { StepPinLayout.markers(steps, ratio ?: 1f) }
     var scale by remember(url) { mutableFloatStateOf(1f) }
     var offset by remember(url) { mutableStateOf(Offset.Zero) }
 
@@ -304,6 +304,7 @@ private fun ZoomableGuideImage(
             )
             // Pins only once the proportions are known, so they land on the right control.
             if (imageRatio != null) {
+                PinLines(pinMarkers, selectedIndex = selected, modifier = Modifier.fillMaxSize(), zoom = scale)
                 pinMarkers.forEach { pin ->
                     val index = pin.index
                     val step = steps[index]
