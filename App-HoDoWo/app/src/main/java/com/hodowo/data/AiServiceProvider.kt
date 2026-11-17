@@ -16,6 +16,7 @@ import com.hodowo.viewmodel.PostProductViewModel
 import com.hodowo.viewmodel.SponsoredPartnersViewModel
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
+import com.hodowo.viewmodel.ProductViewModel
 import com.hodowo.viewmodel.MessagesViewModel
 import com.hodowo.viewmodel.NotificationsViewModel
 import com.hodowo.viewmodel.ProductForumViewModel
@@ -175,6 +176,19 @@ object AiServiceProvider {
                 MarketplaceViewModel(
                     MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
                     cartStore
+                )
+            }
+        }
+
+    /** Factory of the product search screen: the marketplace search, with the shared cart. */
+    fun productViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                ProductViewModel(
+                    repository = MarketplaceProductSearchService(
+                        MarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token)
+                    ),
+                    cart = cartStore
                 )
             }
         }

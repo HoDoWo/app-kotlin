@@ -660,43 +660,7 @@ fun ProductSearchAndFiltersScreen(
                                     )
                                 }
                             }
-
-                            // Bottom padding for floating map button
-                            item { Spacer(modifier = Modifier.height(72.dp)) }
                         }
-                    }
-                }
-
-                // Floating Sticky Filter / Map Shortcut Pill
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 16.dp)
-                        .clip(CircleShape)
-                        .clickable {
-                            Toast.makeText(context, "Toggling between card list and community map view (3 nearby).", Toast.LENGTH_SHORT).show()
-                        },
-                    color = InverseSurface,
-                    shape = CircleShape,
-                    shadowElevation = 8.dp
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = TertiaryFixed,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = "View On Map (3 Nearby)",
-                            color = InverseOnSurface,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
                     }
                 }
             }
