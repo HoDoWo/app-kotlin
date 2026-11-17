@@ -335,7 +335,14 @@ fun HoDoWoApp(
                                         ChatScreen(
                                             viewModel = chatViewModel,
                                             onOpenCamera = ::openCamera,
-                                            onOpenAuth = { showAuthDialog = true }
+                                            onOpenAuth = { showAuthDialog = true },
+                                            // "Buy part" of the part the diagnosis suggests (#30): its Product Detail page.
+                                            onBuyPart = { part ->
+                                                showCart = false
+                                                showMessages = false
+                                                currentTab = AppNavTab.MARKET
+                                                selectedMarketProduct = part.toMarketplaceProduct()
+                                            }
                                         )
                                     }
                                     AppNavTab.PROFILE -> {
