@@ -74,6 +74,7 @@ import com.hodowo.viewmodel.PartCompatibility
 import com.hodowo.viewmodel.ProductDetail
 import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.ProductForumViewModel
+import com.hodowo.viewmodel.ProductReviewsViewModel
 
 /** Green used only for the "Fits" compatibility badge: not part of the theme palette. */
 private val CompatibilityFitsGreen = Color(0xFF1B8A3A)
@@ -89,6 +90,8 @@ fun ProductDetailScreen(
     onBack: () -> Unit,
     /** Community questions about this product (app #150); null hides the section. */
     forumViewModel: ProductForumViewModel? = null,
+    /** Reviews of buyers, with stars; null hides the section. */
+    reviewsViewModel: ProductReviewsViewModel? = null,
     /** "Buy now" put the product in the cart: show the cart to pay. */
     onOpenCart: () -> Unit = {},
     /** Second-hand listings: message the seller, or make an offer (true). Null hides the buttons. */
@@ -119,6 +122,15 @@ fun ProductDetailScreen(
         forumState?.message?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             forumViewModel?.consumeMessage()
+        }
+    }
+
+    val reviewsState = reviewsViewModel?.uiState?.collectAsState()?.value
+    LaunchedEffect(reviewsViewModel) { reviewsViewModel?.load() }
+    LaunchedEffect(reviewsState?.message) {
+        reviewsState?.message?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            reviewsViewModel?.consumeMessage()
         }
     }
 
@@ -159,8 +171,13 @@ fun ProductDetailScreen(
                 state.product != null -> {
                     AdaptiveContent(maxWidth = 1000.dp) {
                         ProductDetailContent(product = state.product!!, onContactSeller = onContactSeller) {
-                            if (forumViewModel != null && forumState != null) {
-                                ProductForumSection(state = forumState, viewModel = forumViewModel)
+                            Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+                                if (reviewsViewModel != null && reviewsState != null) {
+                                    ProductReviewsSection(state = reviewsState, viewModel = reviewsViewModel)
+                                }
+                                if (forumViewModel != null && forumState != null) {
+                                    ProductForumSection(state = forumState, viewModel = forumViewModel)
+                                }
                             }
                         }
                     }
