@@ -132,8 +132,8 @@
   "title": "Parts catalogue and diagnosis link (app)"
  },
  "PVTI_lADOFCkyKM4Bl88jzhCeYCk": {
-  "c": 5.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 30,
   "title": "Diagnosis to suggested spare part"
  },

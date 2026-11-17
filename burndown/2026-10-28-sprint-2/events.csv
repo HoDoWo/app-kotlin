@@ -58,3 +58,4 @@ timestamp,issue,title,type,delta_hours
 2026-11-11T00:17:39+00:00,148,"Parts catalogue UI (list, filters and detail)",completed,-8.0
 2026-11-11T00:17:41+00:00,149,Error resolution card: suggested spare part CTA,completed,-3.0
 2026-11-16T18:08:23+00:00,36,Listing image upload and compression,completed,-4.0
+2026-11-17T17:18:59+00:00,30,Diagnosis to suggested spare part,completed,-5.0
