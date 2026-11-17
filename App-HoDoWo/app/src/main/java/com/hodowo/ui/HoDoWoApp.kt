@@ -66,6 +66,7 @@ import com.hodowo.viewmodel.NotificationsViewModel
 import com.hodowo.data.AppNotification
 import com.hodowo.data.NotificationTarget
 import com.hodowo.viewmodel.ProductForumViewModel
+import com.hodowo.viewmodel.ProductReviewsViewModel
 import com.hodowo.ui.adaptive.LocalAppLayout
 import com.hodowo.ui.adaptive.appLayoutInfoFor
 import com.hodowo.ui.components.AppNavTab
@@ -448,6 +449,12 @@ fun HoDoWoApp(
                                                     viewModel<ProductForumViewModel>(
                                                         key = "forum-$it-${product.id}",
                                                         factory = AiServiceProvider.productForumViewModelFactory(it, product.id)
+                                                    )
+                                                },
+                                                reviewsViewModel = productType?.let {
+                                                    viewModel<ProductReviewsViewModel>(
+                                                        key = "reviews-$it-${product.id}",
+                                                        factory = AiServiceProvider.productReviewsViewModelFactory(it, product.id)
                                                     )
                                                 },
                                                 onBack = { selectedMarketProduct = null },
