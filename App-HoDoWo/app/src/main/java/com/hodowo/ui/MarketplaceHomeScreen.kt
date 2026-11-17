@@ -164,18 +164,12 @@ fun MarketplaceHomeScreen(
             .background(MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // Top bar: search + cart always visible; profile avatar moves to the rail in landscape.
+            // Top bar: messages, sponsored, cart and bell; the profile avatar moves to the rail in landscape.
             val useRail = LocalAppLayout.current.useNavigationRail
             AppTopBar(
                 subtitle = "MARKETPLACE",
                 actions = {
-                    IconButton(onClick = onOpenSearch) {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = OnSurfaceVariant
-                        )
-                    }
+                    // No search icon here: the search bar is right below, and the logo needs the room.
                     if (onOpenMessages != null) {
                         BadgedBox(
                             badge = {
