@@ -19,6 +19,7 @@ import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.MessagesViewModel
 import com.hodowo.viewmodel.NotificationsViewModel
 import com.hodowo.viewmodel.ProductForumViewModel
+import com.hodowo.viewmodel.ProductReviewsViewModel
 import com.hodowo.viewmodel.greetingName
 import java.io.File
 
@@ -215,6 +216,18 @@ object AiServiceProvider {
             initializer {
                 ProductForumViewModel(
                     service = RemoteForumService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
+                    productType = productType,
+                    productId = productId
+                )
+            }
+        }
+
+    /** Factory of the reviews of one product: read by everyone, written by its buyers. */
+    fun productReviewsViewModelFactory(productType: String, productId: String): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                ProductReviewsViewModel(
+                    service = RemoteReviewsService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
                     productType = productType,
                     productId = productId
                 )
