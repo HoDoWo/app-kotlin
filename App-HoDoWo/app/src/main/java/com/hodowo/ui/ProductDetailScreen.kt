@@ -72,6 +72,7 @@ import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLow
 import com.hodowo.ui.theme.SurfaceContainerLowest
+import com.hodowo.data.MyReview
 import com.hodowo.viewmodel.CustomerReview
 import com.hodowo.viewmodel.PartCompatibility
 import com.hodowo.viewmodel.ProductDetail
@@ -173,6 +174,7 @@ fun ProductDetailScreen(
                         ProductDetailContent(
                             product = state.product!!,
                             onContactSeller = onContactSeller,
+                            reviewsAvailable = state.reviewsAvailable,
                             onWriteReview = if (state.canReview) ({ showReviewForm = true }) else null
                         ) {
                             if (forumViewModel != null && forumState != null) {
@@ -187,6 +189,7 @@ fun ProductDetailScreen(
 
     if (showReviewForm) {
         WriteReviewDialog(
+            initial = state.myReview,
             isSending = state.isSubmittingReview,
             error = state.reviewError,
             onSend = viewModel::submitReview,
@@ -216,6 +219,7 @@ fun ProductDetailScreen(
 private fun ProductDetailContent(
     product: ProductDetail,
     onContactSeller: ((makeOffer: Boolean) -> Unit)? = null,
+    reviewsAvailable: Boolean = false,
     onWriteReview: (() -> Unit)? = null,
     forum: @Composable () -> Unit = {}
 ) {
@@ -266,7 +270,7 @@ private fun ProductDetailContent(
         }
 
         when (product) {
-            is ProductDetail.New -> NewProductSections(product, onWriteReview)
+            is ProductDetail.New -> NewProductSections(product, reviewsAvailable, onWriteReview)
             is ProductDetail.SecondHand -> SecondHandSection(product, onContactSeller)
             is ProductDetail.Part -> PartSection(product)
         }
@@ -371,7 +375,11 @@ private fun RatingRow(rating: Double, reviewCount: Int) {
 // ---------- New product ----------
 
 @Composable
-private fun NewProductSections(product: ProductDetail.New, onWriteReview: (() -> Unit)? = null) {
+private fun NewProductSections(
+    product: ProductDetail.New,
+    reviewsAvailable: Boolean = false,
+    onWriteReview: (() -> Unit)? = null
+) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -384,12 +392,12 @@ private fun NewProductSections(product: ProductDetail.New, onWriteReview: (() ->
             SpecsCard(specs = product.specs)
         }
 
-        if (product.reviews.isNotEmpty() || onWriteReview != null) {
+        if (product.reviews.isNotEmpty() || reviewsAvailable) {
             SectionTitle("Customer Reviews")
             product.reviews.forEach { ReviewCard(it) }
             if (product.reviews.isEmpty()) {
                 Text(
-                    text = "No reviews yet. Be the first to review this product.",
+                    text = "No reviews yet.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -398,6 +406,12 @@ private fun NewProductSections(product: ProductDetail.New, onWriteReview: (() ->
                 OutlinedButton(onClick = onWriteReview, modifier = Modifier.fillMaxWidth()) {
                     Text("Write a review")
                 }
+            } else if (reviewsAvailable) {
+                Text(
+                    text = "Only people who bought this product can review it.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -504,17 +518,18 @@ private fun ReviewCard(review: CustomerReview) {
 /** Form to rate a product from 1 to 5 stars with an optional comment (app #200). */
 @Composable
 private fun WriteReviewDialog(
+    initial: MyReview?,
     isSending: Boolean,
     error: String?,
     onSend: (rating: Int, body: String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var rating by remember { mutableIntStateOf(0) }
-    var body by remember { mutableStateOf("") }
+    var rating by remember { mutableIntStateOf(initial?.rating ?: 0) }
+    var body by remember { mutableStateOf(initial?.text.orEmpty()) }
 
     AlertDialog(
         onDismissRequest = { if (!isSending) onDismiss() },
-        title = { Text("Write a review") },
+        title = { Text(if (initial != null) "Edit your review" else "Write a review") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

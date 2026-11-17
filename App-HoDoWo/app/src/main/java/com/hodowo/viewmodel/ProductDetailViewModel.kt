@@ -7,6 +7,7 @@ import com.hodowo.data.CartRepository
 import com.hodowo.data.DemoMarketplaceService
 import com.hodowo.data.InMemoryCartRepository
 import com.hodowo.data.MarketplaceService
+import com.hodowo.data.MyReview
 import com.hodowo.data.ReviewsService
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,8 +27,11 @@ data class ProductDetailUiState(
     val cartMessage: String? = null,
     /** "Buy now" put the product in the cart: the screen opens the cart; cleared by [ProductDetailViewModel.onCartOpened]. */
     val openCart: Boolean = false,
-    /** Official products can be reviewed (app #200): shows the "Write a review" button. */
+    /** Official products show their reviews (app #200); only buyers can write one ([canReview]). */
+    val reviewsAvailable: Boolean = false,
     val canReview: Boolean = false,
+    /** What the user wrote already, to prefill the form. */
+    val myReview: MyReview? = null,
     val isSubmittingReview: Boolean = false,
     /** A review was sent: the screen closes its form; cleared by [ProductDetailViewModel.consumeReviewSent]. */
     val reviewSent: Boolean = false,
@@ -62,12 +66,8 @@ class ProductDetailViewModel(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
 
             _uiState.value = try {
-                val product = marketplaceService.getProductDetail(productId)
-                _uiState.value.copy(
-                    isLoading = false,
-                    product = withReviews(product),
-                    canReview = reviewsService != null && product is ProductDetail.New
-                )
+                val product = withReviews(marketplaceService.getProductDetail(productId))
+                _uiState.value.copy(isLoading = false, product = product)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -81,7 +81,10 @@ class ProductDetailViewModel(
         val service = reviewsService
         if (service == null || product !is ProductDetail.New) return product
         return try {
-            val loaded = service.loadReviews(product.id)
+            val loaded = service.loadReviews(REVIEW_TYPE_NEW, product.id)
+            _uiState.value = _uiState.value.copy(
+                reviewsAvailable = true, canReview = loaded.canReview, myReview = loaded.myReview
+            )
             product.copy(
                 reviews = loaded.reviews,
                 rating = loaded.rating ?: product.rating,
@@ -94,8 +97,8 @@ class ProductDetailViewModel(
         }
     }
 
-    /** Sends the signed-in user's review (1-5 stars, optional text) and shows it. */
-    fun submitReview(rating: Int, body: String) {
+    /** Sends the buyer's review (1-5 stars, optional text) and shows it. */
+    fun submitReview(rating: Int, text: String) {
         val service = reviewsService ?: return
         if (!_uiState.value.canReview || _uiState.value.isSubmittingReview) return
         if (rating !in MIN_STARS..MAX_STARS) {
@@ -105,8 +108,9 @@ class ProductDetailViewModel(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isSubmittingReview = true, reviewError = null)
             _uiState.value = try {
-                service.submitReview(productId, rating, body.trim())
+                service.submitReview(REVIEW_TYPE_NEW, productId, rating, text.trim())
                 val product = _uiState.value.product?.let { withReviews(it) }
+                // Read the state after withReviews: it updates canReview and myReview.
                 _uiState.value.copy(isSubmittingReview = false, product = product, reviewSent = true)
             } catch (e: CancellationException) {
                 throw e
@@ -195,6 +199,7 @@ class ProductDetailViewModel(
     }
 
     private companion object {
+        const val REVIEW_TYPE_NEW = "new"
         const val MIN_STARS = 1
         const val MAX_STARS = 5
     }
