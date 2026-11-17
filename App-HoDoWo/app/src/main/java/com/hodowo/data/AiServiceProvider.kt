@@ -204,7 +204,8 @@ object AiServiceProvider {
                 ProductDetailViewModel(
                     productId = product.id,
                     marketplaceService = SelectedProductService(product),
-                    cartRepository = StoreCartRepository(cartStore, product.cartProductType())
+                    cartRepository = StoreCartRepository(cartStore, product.cartProductType()),
+                    reviewsService = RemoteReviewsService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token)
                 )
             }
         }

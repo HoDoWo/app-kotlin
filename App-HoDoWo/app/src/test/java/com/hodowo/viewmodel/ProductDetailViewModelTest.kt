@@ -4,6 +4,9 @@ import com.hodowo.data.CartException
 import com.hodowo.data.CartRepository
 import com.hodowo.data.DemoMarketplaceService
 import com.hodowo.data.MarketplaceService
+import com.hodowo.data.ProductReviews
+import com.hodowo.data.ReviewException
+import com.hodowo.data.ReviewsService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -56,8 +59,122 @@ class ProductDetailViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(productId: String) =
-        ProductDetailViewModel(productId = productId, marketplaceService = service, cartRepository = cart)
+    private fun viewModel(productId: String, reviews: ReviewsService? = null) =
+        ProductDetailViewModel(
+            productId = productId, marketplaceService = service, cartRepository = cart, reviewsService = reviews
+        )
+
+    // ---------- reviews (#200) ----------
+
+    private val anna = CustomerReview("Anna", 5, true, "Great", "1d ago")
+
+    @Test
+    fun theRealReviewsReplaceTheOnesOfTheSearchResult() = runTest(dispatcher) {
+        val reviews = FakeReviewsService(ProductReviews(listOf(anna), 4.8, 12))
+        val vm = viewModel(NEW.id, reviews)
+
+        vm.load()
+        advanceUntilIdle()
+
+        val product = vm.uiState.value.product as ProductDetail.New
+        assertEquals(listOf(anna), product.reviews)
+        assertEquals(4.8, product.rating, 0.0)
+        assertEquals(12, product.reviewCount)
+        assertTrue(vm.uiState.value.canReview)
+    }
+
+    @Test
+    fun onlyOfficialProductsCanBeReviewed() = runTest(dispatcher) {
+        val vm = viewModel(SECOND_HAND.id, FakeReviewsService(ProductReviews(emptyList(), null, 0)))
+
+        vm.load()
+        advanceUntilIdle()
+
+        assertFalse(vm.uiState.value.canReview)
+        vm.submitReview(5, "x")
+        advanceUntilIdle()
+        assertFalse(vm.uiState.value.reviewSent)
+    }
+
+    @Test
+    fun withoutAReviewsServiceTheProductStaysAsItWas() = runTest(dispatcher) {
+        val vm = viewModel(NEW.id)
+
+        vm.load()
+        advanceUntilIdle()
+
+        assertEquals(NEW, vm.uiState.value.product)
+        assertFalse(vm.uiState.value.canReview)
+    }
+
+    @Test
+    fun reviewsThatFailToLoadDoNotBreakTheProduct() = runTest(dispatcher) {
+        val reviews = FakeReviewsService(ProductReviews(emptyList(), null, 0)).apply { error = IOException("offline") }
+        val vm = viewModel(NEW.id, reviews)
+
+        vm.load()
+        advanceUntilIdle()
+
+        assertEquals(NEW, vm.uiState.value.product)
+        assertNull(vm.uiState.value.error)
+    }
+
+    @Test
+    fun sendingAReviewPostsItAndReloadsTheList() = runTest(dispatcher) {
+        val reviews = FakeReviewsService(ProductReviews(emptyList(), null, 0))
+        val vm = viewModel(NEW.id, reviews)
+        vm.load()
+        advanceUntilIdle()
+        reviews.current = ProductReviews(listOf(anna), 5.0, 1)
+
+        vm.submitReview(5, "  Great  ")
+        advanceUntilIdle()
+
+        assertEquals(listOf(Triple(NEW.id, 5, "Great")), reviews.sent)
+        val state = vm.uiState.value
+        assertTrue(state.reviewSent)
+        assertFalse(state.isSubmittingReview)
+        assertEquals(listOf(anna), (state.product as ProductDetail.New).reviews)
+        vm.consumeReviewSent()
+        assertFalse(vm.uiState.value.reviewSent)
+    }
+
+    @Test
+    fun aRatingOutsideOneToFiveIsNotSent() = runTest(dispatcher) {
+        val reviews = FakeReviewsService(ProductReviews(emptyList(), null, 0))
+        val vm = viewModel(NEW.id, reviews)
+        vm.load()
+        advanceUntilIdle()
+
+        vm.submitReview(0, "x")
+        vm.submitReview(6, "x")
+        advanceUntilIdle()
+
+        assertTrue(reviews.sent.isEmpty())
+        assertEquals("Choose from 1 to 5 stars", vm.uiState.value.reviewError)
+    }
+
+    @Test
+    fun aRefusedReviewShowsTheReasonAndCanBeRetried() = runTest(dispatcher) {
+        val reviews = FakeReviewsService(ProductReviews(emptyList(), null, 0))
+        val vm = viewModel(NEW.id, reviews)
+        vm.load()
+        advanceUntilIdle()
+        reviews.sendError = ReviewException("product not found")
+
+        vm.submitReview(4, "")
+        advanceUntilIdle()
+
+        assertEquals("product not found", vm.uiState.value.reviewError)
+        assertFalse(vm.uiState.value.reviewSent)
+        assertFalse(vm.uiState.value.isSubmittingReview)
+
+        reviews.sendError = null
+        vm.submitReview(4, "")
+        advanceUntilIdle()
+        assertTrue(vm.uiState.value.reviewSent)
+        assertNull(vm.uiState.value.reviewError)
+    }
 
     // ---------- load ----------
 
@@ -318,5 +435,22 @@ private class FakeCartRepository : CartRepository {
         error?.let { throw it }
         bought.add(productId)
         return true
+    }
+}
+
+/** In-memory [ReviewsService] that records what was sent. */
+private class FakeReviewsService(var current: ProductReviews) : ReviewsService {
+    var error: IOException? = null
+    var sendError: IOException? = null
+    val sent = mutableListOf<Triple<String, Int, String>>()
+
+    override suspend fun loadReviews(productId: String): ProductReviews {
+        error?.let { throw it }
+        return current
+    }
+
+    override suspend fun submitReview(productId: String, rating: Int, body: String) {
+        sendError?.let { throw it }
+        sent.add(Triple(productId, rating, body))
     }
 }

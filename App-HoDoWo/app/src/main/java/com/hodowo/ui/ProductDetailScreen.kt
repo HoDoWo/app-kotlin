@@ -27,6 +27,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.LocationOn
@@ -40,6 +41,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -49,6 +51,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -106,6 +109,15 @@ fun ProductDetailScreen(
         }
     }
 
+    var showReviewForm by remember { mutableStateOf(false) }
+    LaunchedEffect(state.reviewSent) {
+        if (state.reviewSent) {
+            viewModel.consumeReviewSent()
+            showReviewForm = false
+            Toast.makeText(context, "Thanks for your review", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     LaunchedEffect(state.openCart) {
         if (state.openCart) {
             viewModel.onCartOpened()
@@ -158,7 +170,11 @@ fun ProductDetailScreen(
                 }
                 state.product != null -> {
                     AdaptiveContent(maxWidth = 1000.dp) {
-                        ProductDetailContent(product = state.product!!, onContactSeller = onContactSeller) {
+                        ProductDetailContent(
+                            product = state.product!!,
+                            onContactSeller = onContactSeller,
+                            onWriteReview = if (state.canReview) ({ showReviewForm = true }) else null
+                        ) {
                             if (forumViewModel != null && forumState != null) {
                                 ProductForumSection(state = forumState, viewModel = forumViewModel)
                             }
@@ -167,6 +183,18 @@ fun ProductDetailScreen(
                 }
             }
         }
+    }
+
+    if (showReviewForm) {
+        WriteReviewDialog(
+            isSending = state.isSubmittingReview,
+            error = state.reviewError,
+            onSend = viewModel::submitReview,
+            onDismiss = {
+                showReviewForm = false
+                viewModel.consumeReviewError()
+            }
+        )
     }
 
     if (state.pendingIncompatibleConfirmation) {
@@ -188,6 +216,7 @@ fun ProductDetailScreen(
 private fun ProductDetailContent(
     product: ProductDetail,
     onContactSeller: ((makeOffer: Boolean) -> Unit)? = null,
+    onWriteReview: (() -> Unit)? = null,
     forum: @Composable () -> Unit = {}
 ) {
     Column(
@@ -237,7 +266,7 @@ private fun ProductDetailContent(
         }
 
         when (product) {
-            is ProductDetail.New -> NewProductSections(product)
+            is ProductDetail.New -> NewProductSections(product, onWriteReview)
             is ProductDetail.SecondHand -> SecondHandSection(product, onContactSeller)
             is ProductDetail.Part -> PartSection(product)
         }
@@ -342,7 +371,7 @@ private fun RatingRow(rating: Double, reviewCount: Int) {
 // ---------- New product ----------
 
 @Composable
-private fun NewProductSections(product: ProductDetail.New) {
+private fun NewProductSections(product: ProductDetail.New, onWriteReview: (() -> Unit)? = null) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -355,9 +384,21 @@ private fun NewProductSections(product: ProductDetail.New) {
             SpecsCard(specs = product.specs)
         }
 
-        if (product.reviews.isNotEmpty()) {
+        if (product.reviews.isNotEmpty() || onWriteReview != null) {
             SectionTitle("Customer Reviews")
             product.reviews.forEach { ReviewCard(it) }
+            if (product.reviews.isEmpty()) {
+                Text(
+                    text = "No reviews yet. Be the first to review this product.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            if (onWriteReview != null) {
+                OutlinedButton(onClick = onWriteReview, modifier = Modifier.fillMaxWidth()) {
+                    Text("Write a review")
+                }
+            }
         }
     }
 }
@@ -459,6 +500,62 @@ private fun ReviewCard(review: CustomerReview) {
         }
     }
 }
+
+/** Form to rate a product from 1 to 5 stars with an optional comment (app #200). */
+@Composable
+private fun WriteReviewDialog(
+    isSending: Boolean,
+    error: String?,
+    onSend: (rating: Int, body: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var rating by remember { mutableIntStateOf(0) }
+    var body by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = { if (!isSending) onDismiss() },
+        title = { Text("Write a review") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    (1..REVIEW_MAX_STARS).forEach { star ->
+                        IconButton(onClick = { rating = star }, enabled = !isSending) {
+                            Icon(
+                                imageVector = if (star <= rating) Icons.Default.Star else Icons.Outlined.StarBorder,
+                                contentDescription = "$star ${if (star == 1) "star" else "stars"}",
+                                tint = if (star <= rating) Color(0xFFEF9900) else OutlineVariant,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+                }
+                OutlinedTextField(
+                    value = body,
+                    onValueChange = { if (it.length <= REVIEW_MAX_CHARS) body = it },
+                    label = { Text("Your experience (optional)") },
+                    minLines = 3,
+                    maxLines = 6,
+                    enabled = !isSending,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (error != null) {
+                    Text(text = error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSend(rating, body) }, enabled = rating > 0 && !isSending) {
+                Text(if (isSending) "Sending..." else "Send")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss, enabled = !isSending) { Text("Cancel") }
+        }
+    )
+}
+
+private const val REVIEW_MAX_STARS = 5
+private const val REVIEW_MAX_CHARS = 1000
 
 @Composable
 private fun StarRow(rating: Int) {
