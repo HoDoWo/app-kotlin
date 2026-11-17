@@ -405,29 +405,29 @@ class RemoteMarketplaceService(
         val isRefurbishedVal = conditionVal.contains("refurbished", ignoreCase = true)
 
         val imageUrl = item.optJSONArray("image_urls")?.optString(0)?.takeIf { it.isNotBlank() }
-            ?: item.optString("image_url").takeIf { it.isNotBlank() }
+            ?: item.textOrNull("image_url")
 
         return MarketplaceProduct(
             id = item.optString("id"),
             title = item.optString("title").ifBlank { item.optString("name", "Marketplace item") },
-            description = item.optString("description"),
+            description = item.textOrNull("description").orEmpty(),
             type = item.optString("type", if (isPartVal) "part" else "appliance"),
             condition = conditionVal,
             price = rawPrice,
             originalPrice = origPrice,
             discountPercent = if (item.has("discount_percent") && !item.isNull("discount_percent")) item.optInt("discount_percent") else null,
-            sellerName = item.optString("seller_name", "Community seller"),
-            partnerName = item.optString("partner_name").takeIf { it.isNotBlank() },
+            sellerName = item.textOrNull("seller_name") ?: "Community seller",
+            partnerName = item.textOrNull("partner_name"),
             sponsored = item.optBoolean("sponsored", false),
             imageUrl = imageUrl,
-            category = item.optString("category").takeIf { it.isNotBlank() },
-            brand = item.optString("brand").takeIf { it.isNotBlank() },
-            model = item.optString("model").takeIf { it.isNotBlank() },
-            partNumber = item.optString("part_number").takeIf { it.isNotBlank() },
+            category = item.textOrNull("category"),
+            brand = item.textOrNull("brand"),
+            model = item.textOrNull("model"),
+            partNumber = item.textOrNull("part_number"),
             rating = item.optDouble("rating", 0.0).takeUnless { it.isNaN() } ?: 0.0,
             reviewCount = item.optInt("review_count", 0),
             distanceKm = if (item.has("distance_km") && !item.isNull("distance_km")) item.optDouble("distance_km") else null,
-            warrantyInfo = item.optString("warranty_info").takeIf { it.isNotBlank() },
+            warrantyInfo = item.textOrNull("warranty_info"),
             isPart = isPartVal,
             isRefurbished = isRefurbishedVal,
             compatibility = parseProductCompatibility(item)
@@ -585,6 +585,13 @@ class RemoteMarketplaceService(
             }
             return list
         }
+
+        /**
+         * The text of [key], or null when it is missing, blank or JSON null
+         * (optString turns a JSON null into the text "null", shown on the cards).
+         */
+        internal fun JSONObject.textOrNull(key: String): String? =
+            if (isNull(key)) null else optString(key).takeIf { it.isNotBlank() }
 
         private fun JSONObject.toPairList(): List<Pair<String, String>> {
             val list = ArrayList<Pair<String, String>>(length())

@@ -120,6 +120,34 @@ class RemoteMarketplaceServiceTest {
     }
 
     @Test
+    fun jsonNullFieldsAreNotShownAsTheTextNull() = runTest {
+        server.enqueue(
+            json(
+                """{"id": "p1", "title": "Brezza fridge", "price": 549.0, "description": null, "seller_name": null,
+                    "partner_name": null, "warranty_info": null, "part_number": null, "model": null, "brand": null,
+                    "category": null, "image_url": null}"""
+            )
+        )
+
+        val product = service.createListing(
+            title = "Brezza fridge", description = "A fridge freezer in good condition, collected from home.",
+            category = "refrigerator", brand = "", model = "", partNumber = "", listingKind = "appliance",
+            condition = "used-good", price = 549.0, imageUrls = emptyList(), diagnosticMediaUrls = emptyList(),
+            handoverMethods = listOf("pickup"), pickupZip = "28001", shippingPriceCents = null
+        )
+
+        assertNull(product.warrantyInfo)
+        assertNull(product.partNumber)
+        assertNull(product.model)
+        assertNull(product.brand)
+        assertNull(product.category)
+        assertNull(product.partnerName)
+        assertNull(product.imageUrl)
+        assertEquals("", product.description)
+        assertEquals("Community seller", product.sellerName)
+    }
+
+    @Test
     fun uploadListingImagePostsThePhotoAsMultipart() = runTest {
         server.enqueue(
             MockResponse().setResponseCode(201)
