@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.hodowo.BuildConfig
-import com.hodowo.data.ProductRepository
 import com.hodowo.viewmodel.CartViewModel
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.CheckoutViewModel
@@ -13,8 +12,15 @@ import com.hodowo.viewmodel.DemoHoDoWoAiService
 import com.hodowo.viewmodel.HoDoWoAiService
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
+import com.hodowo.viewmodel.PostProductViewModel
+import com.hodowo.viewmodel.SponsoredPartnersViewModel
+import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.ProductViewModel
+import com.hodowo.viewmodel.MessagesViewModel
+import com.hodowo.viewmodel.NotificationsViewModel
+import com.hodowo.viewmodel.ProductForumViewModel
+import com.hodowo.viewmodel.ProductReviewsViewModel
 import com.hodowo.viewmodel.greetingName
 import java.io.File
 
@@ -28,16 +34,48 @@ object AiServiceProvider {
 
     private val tokens by lazy { FirebaseTokenProvider() }
 
-    /** Shared cart state (Backend#42 cart API), so every screen shows the same badge. */
+    /**
+     * The real cart (Backend#42), shared by the badge, the marketplace screens and the
+     * cart screen. Without a backend URL the cart stays empty and refuses changes.
+     */
     val cartStore: CartStore by lazy {
-        val service = if (BuildConfig.BACKEND_URL.isBlank()) {
-            UnavailableCartService
-        } else {
-            RemoteCartService(BuildConfig.BACKEND_URL, { tokens.token() })
-        }
-        CartStore(service)
+        val backendUrl = BuildConfig.BACKEND_URL
+        CartStore(
+            if (backendUrl.isBlank()) UnavailableCartService
+            else RemoteCartService(backendUrl, { tokens.token() })
+        )
     }
 
+    /**
+     * The listings service, kept as a singleton so edits/mark-as-sold/delete
+     * survive navigating away from the screen.
+     *
+     * Without a backend URL there is no data source, so
+     * [UnavailableListingsService] reports an error instead of fake listings.
+     */
+    val listingsService: ListingsService by lazy {
+        val backendUrl = BuildConfig.BACKEND_URL
+        if (backendUrl.isNotBlank()) {
+            RemoteListingsService(
+                backendUrl = backendUrl,
+                tokenProvider = FirebaseTokenProvider()::token
+            )
+        } else {
+            UnavailableListingsService()
+        }
+    }
+
+    /** Messages and offers between buyers and sellers, shared by the inbox and the product pages. */
+    val messagesService: MessagesService by lazy {
+        val backendUrl = BuildConfig.BACKEND_URL
+        if (backendUrl.isBlank()) UnavailableMessagesService
+        else RemoteMessagesService(backendUrl, FirebaseTokenProvider()::token)
+    }
+
+    /**
+     * Marketplace service used to open one product by id (the API product search).
+     * Without a backend URL the demo catalogue answers, so the screen still works.
+     */
     private fun marketplaceService(): MarketplaceService =
         if (BuildConfig.BACKEND_URL.isBlank()) {
             DemoMarketplaceService()
@@ -45,6 +83,7 @@ object AiServiceProvider {
             RemoteMarketplaceService(BuildConfig.BACKEND_URL, { tokens.token() })
         }
 
+    /** Source of the API product search (demo catalogue or the remote `/products` endpoint). */
     private fun productSearchService(): ProductSearchService =
         if (BuildConfig.BACKEND_URL.isBlank()) {
             ProductRepository()
@@ -52,14 +91,30 @@ object AiServiceProvider {
             RemoteProductSearchService(BuildConfig.BACKEND_URL, { tokens.token() })
         }
 
-    private fun checkoutService(): CheckoutService =
-        if (BuildConfig.BACKEND_URL.isBlank()) {
-            object : CheckoutService {
-                override suspend fun startCheckout(selection: CartSelection): CheckoutSession =
-                    throw CheckoutException("Checkout is not available right now")
+    /** Factory that builds [MessagesViewModel]: inbox, conversations and offers. */
+    fun messagesViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                MessagesViewModel(service = messagesService, cartStore = cartStore)
             }
-        } else {
-            RemoteCheckoutService(BuildConfig.BACKEND_URL, { tokens.token() })
+        }
+
+    /** Factory of the bell: messages, offers, price changes in the cart and a sponsored product. */
+    fun notificationsViewModelFactory(context: Context): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                val backendUrl = BuildConfig.BACKEND_URL
+                NotificationsViewModel(
+                    service = if (backendUrl.isBlank()) {
+                        UnavailableNotificationsService
+                    } else {
+                        RemoteNotificationsService(backendUrl, FirebaseTokenProvider()::token)
+                    },
+                    seenStore = PrefsNotificationSeenStore(
+                        context.applicationContext.getSharedPreferences("notifications", Context.MODE_PRIVATE)
+                    )
+                )
+            }
         }
 
     fun create(context: Context): HoDoWoAiService {
@@ -83,15 +138,29 @@ object AiServiceProvider {
     fun chatViewModelFactory(context: Context): ViewModelProvider.Factory =
         viewModelFactory {
             initializer {
+                val compressor = ImageCompressor(context.applicationContext)
                 ChatViewModel(
                     aiService = create(context),
                     firebaseRepository = firebaseRepository,
                     authManager = authManager,
-                    chatHistory = FileChatHistoryStore(
-                        directory = File(context.filesDir, "chat_history"),
-                        openImage = { uri -> context.applicationContext.contentResolver.openInputStream(uri) }
+                    chatHistory = SyncedChatHistoryStore(
+                        local = FileChatHistoryStore(
+                            directory = File(context.filesDir, "chat_history"),
+                            openImage = { uri -> context.applicationContext.contentResolver.openInputStream(uri) }
+                        ),
+                        remote = FirestoreChatHistory(),
+                        uploader = FirebaseChatImageUploader(compress = { uri -> compressor.compress(uri) })
                     ),
-                    profilePhotoStore = ProfilePhotoStore(context.applicationContext)
+                    profilePhotoStore = ProfilePhotoStore(context.applicationContext),
+                    encodeProfilePhoto = { uri ->
+                        try {
+                            val bytes = compressor.compress(uri, maxSide = 512, quality = 75)
+                            val base64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                            "data:image/jpeg;base64,$base64"
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
                 )
             }
         }
@@ -112,13 +181,12 @@ object AiServiceProvider {
             }
         }
 
-    /** Factory for the Marketplace Home screen (partner deals + community items). */
     fun marketplaceViewModelFactory(): ViewModelProvider.Factory =
         viewModelFactory {
             initializer {
                 MarketplaceViewModel(
-                    service = marketplaceService(),
-                    cart = cartStore
+                    RemoteMarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
+                    cartStore
                 )
             }
         }
@@ -134,7 +202,38 @@ object AiServiceProvider {
             }
         }
 
-    /** Factory for the Product Detail screen of one product (loads `/api/marketplace/products/{id}`). */
+    fun postProductViewModelFactory(context: Context): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                val compressor = ImageCompressor(context.applicationContext)
+                PostProductViewModel(
+                    service = RemoteMarketplaceService(
+                        BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token
+                    ),
+                    aiService = create(context),
+                    loadImage = { uri -> compressor.compress(uri) },
+                    listingsService = listingsService
+                )
+            }
+        }
+
+    /**
+     * Factory that builds [ProductDetailViewModel] for a product tapped in the marketplace:
+     * the page is built from the search result (no detail endpoint yet, Backend#38) and
+     * "Add" / "Buy now" use the real cart.
+     */
+    fun productDetailViewModelFactory(product: MarketplaceProduct): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                ProductDetailViewModel(
+                    productId = product.id,
+                    marketplaceService = SelectedProductService(product),
+                    cartRepository = StoreCartRepository(cartStore, product.cartProductType())
+                )
+            }
+        }
+
+    /** Factory for the Product Detail screen of one API search result (loads `/api/marketplace/products/{id}`). */
     fun productDetailViewModelFactory(
         productId: String,
         productType: String? = null
@@ -149,21 +248,68 @@ object AiServiceProvider {
             }
         }
 
-    /** Factory for the full cart screen (Backend#42 cart API). */
-    fun cartViewModelFactory(): ViewModelProvider.Factory =
+    /** Factory that builds [ProductForumViewModel] (app #150) for one product's questions. */
+    fun productForumViewModelFactory(productType: String, productId: String): ViewModelProvider.Factory =
         viewModelFactory {
-            initializer { CartViewModel(cartStore) }
+            initializer {
+                ProductForumViewModel(
+                    service = RemoteForumService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
+                    productType = productType,
+                    productId = productId
+                )
+            }
         }
 
-    /** Factory for the checkout (Stripe PaymentSheet, Backend#43). */
+    /** Factory of the reviews of one product: read by everyone, written by its buyers. */
+    fun productReviewsViewModelFactory(productType: String, productId: String): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                ProductReviewsViewModel(
+                    service = RemoteReviewsService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
+                    productType = productType,
+                    productId = productId
+                )
+            }
+        }
+
+    /** Factory that builds [SponsoredPartnersViewModel] (#141). */
+    fun sponsoredPartnersViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                SponsoredPartnersViewModel(
+                    RemoteMarketplaceService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token)
+                )
+            }
+        }
+
+    /** Factory that builds [CartViewModel] on the shared [cartStore]. */
+    fun cartViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                CartViewModel(cartStore)
+            }
+        }
+
+    /**
+     * Factory that builds [CheckoutViewModel] (#143): orders from the backend checkout,
+     * payment in the Stripe PaymentSheet with the publishable test key of local.properties.
+     */
     fun checkoutViewModelFactory(): ViewModelProvider.Factory =
         viewModelFactory {
             initializer {
                 CheckoutViewModel(
-                    checkout = checkoutService(),
+                    checkout = RemoteCheckoutService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token),
                     cart = cartStore,
                     publishableKey = BuildConfig.STRIPE_PUBLISHABLE_KEY
                 )
+            }
+        }
+
+    /** Factory that builds [MyListingsViewModel] with the shared listings service. */
+    fun myListingsViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                MyListingsViewModel(service = listingsService)
             }
         }
 }
