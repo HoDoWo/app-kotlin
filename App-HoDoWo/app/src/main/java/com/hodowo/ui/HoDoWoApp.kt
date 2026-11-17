@@ -54,6 +54,7 @@ import com.hodowo.BuildConfig
 import com.hodowo.data.AiServiceProvider
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.cartProductType
+import com.hodowo.data.model.toMarketplaceProduct as searchResultToMarketplaceProduct
 import com.hodowo.data.toMarketplaceProduct
 import com.hodowo.data.AuthManager
 import com.hodowo.data.auth.FirebaseAuthRepository
@@ -85,6 +86,7 @@ import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.CheckoutViewModel
 import com.hodowo.viewmodel.HomeViewModel
 import com.hodowo.viewmodel.MarketplaceViewModel
+import com.hodowo.viewmodel.ProductViewModel
 import com.hodowo.viewmodel.PostProductViewModel
 import com.hodowo.viewmodel.SponsoredPartnersViewModel
 
@@ -137,6 +139,7 @@ fun HoDoWoApp(
     val sponsoredPartnersViewModel: SponsoredPartnersViewModel = viewModel(
         factory = AiServiceProvider.sponsoredPartnersViewModelFactory()
     )
+    val productViewModel: ProductViewModel = viewModel(factory = AiServiceProvider.productViewModelFactory())
     val myListingsViewModel: MyListingsViewModel = viewModel(factory = AiServiceProvider.myListingsViewModelFactory())
     var currentTab by rememberSaveable { mutableStateOf(AppNavTab.HOME) }
     var showCamera by rememberSaveable { mutableStateOf(false) }
@@ -483,11 +486,11 @@ fun HoDoWoApp(
                                                 onOpenProduct = { selectedMarketProduct = it }
                                             )
                                         } else if (showMarketplaceSearch) {
-                                            ProductSearchAndFiltersScreen(
-                                                viewModel = marketplaceViewModel,
+                                            ProductSearchScreen(
+                                                viewModel = productViewModel,
                                                 onBack = { showMarketplaceSearch = false },
-                                                onCartClick = { showCart = true },
-                                                onOpenProduct = { selectedMarketProduct = it }
+                                                onCart = { showCart = true },
+                                                onProductClick = { selectedMarketProduct = it.searchResultToMarketplaceProduct() }
                                             )
                                         } else {
                                             MarketplaceHomeScreen(
