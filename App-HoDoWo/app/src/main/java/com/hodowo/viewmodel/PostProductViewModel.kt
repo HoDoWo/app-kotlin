@@ -3,6 +3,7 @@ package com.hodowo.viewmodel
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hodowo.data.ListingsService
 import com.hodowo.data.MarketplaceService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +14,9 @@ class PostProductViewModel(
     private val service: MarketplaceService,
     private val aiService: HoDoWoAiService,
     /** Reads and compresses a picked photo so it can be uploaded. */
-    private val loadImage: suspend (Uri) -> ByteArray
+    private val loadImage: suspend (Uri) -> ByteArray,
+    /** Saves the changes of a listing edited in the same 4 steps; null when editing is not available. */
+    private val listingsService: ListingsService? = null
 ) : ViewModel() {
     private val _isSubmitting = MutableStateFlow(false)
     val isSubmitting: StateFlow<Boolean> = _isSubmitting.asStateFlow()
@@ -69,6 +72,40 @@ class PostProductViewModel(
                 _message.value = "Listing published"
                 onSuccess()
             }.onFailure { _message.value = it.message ?: "Could not publish listing" }
+            _isSubmitting.value = false
+        }
+    }
+
+    /**
+     * Saves the changes to listing [listingId], edited in the same 4 steps as a
+     * new one. [photos] keep their order (the first is the cover): the ones
+     * already online are kept as they are, the new ones are uploaded first.
+     */
+    fun saveEdit(listingId: String, edit: ListingEdit, photos: List<Uri>, onSuccess: () -> Unit) {
+        val listings = listingsService
+        if (listings == null) {
+            _message.value = "Editing is not available right now"
+            return
+        }
+        if (edit.title.trim().length < 3 || edit.description.trim().length < 30 || edit.price <= 0 ||
+            photos.isEmpty() || photos.size > 8 || edit.handoverMethods.isEmpty() ||
+            (edit.handoverMethods.contains("pickup") && edit.pickupZip.isBlank())
+        ) {
+            _message.value = "Add the required details, 1–8 photos, a valid price, and a handover method."
+            return
+        }
+        viewModelScope.launch {
+            _isSubmitting.value = true
+            _message.value = null
+            runCatching {
+                val urls = photos.map { uri ->
+                    if (isOnline(uri)) uri.toString() else service.uploadListingImage(loadImage(uri))
+                }
+                listings.updateListingDetails(listingId, edit.copy(imageUrls = urls))
+            }.onSuccess {
+                _message.value = "Listing updated"
+                onSuccess()
+            }.onFailure { _message.value = it.message ?: "Could not update the listing" }
             _isSubmitting.value = false
         }
     }
@@ -145,3 +182,6 @@ fun localPolishDescription(raw: String): String {
     }
     return if (capitalised.last() in ".!?") capitalised else "$capitalised."
 }
+
+/** A photo already uploaded (an https link), not one picked on the phone. */
+fun isOnline(uri: Uri): Boolean = uri.scheme.equals("https", ignoreCase = true)

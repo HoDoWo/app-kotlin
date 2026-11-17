@@ -1,4 +1,5 @@
 import java.util.Properties
+import groovy.json.JsonSlurper
 
 val localProperties = Properties()
 val localPropertiesFile = rootProject.file("local.properties")
@@ -6,7 +7,38 @@ if (localPropertiesFile.exists()) {
     localPropertiesFile.inputStream().use(localProperties::load)
 }
 
+/** Web OAuth client (`client_type == 3`) of google-services.json, or "" (#54). */
+fun googleWebClientIdFromServices(): String {
+    val candidates = listOf(
+        rootProject.file("app/google-services.json"),
+        rootProject.file("google-services.json"),
+    )
+    for (file in candidates) {
+        if (!file.exists()) continue
+        val json = JsonSlurper().parse(file) as? Map<*, *> ?: continue
+        val clients = json["client"] as? List<*> ?: continue
+        for (client in clients) {
+            val oauthClients = (client as? Map<*, *>)?.get("oauth_client") as? List<*> ?: continue
+            for (oauth in oauthClients) {
+                val entry = oauth as? Map<*, *> ?: continue
+                if ((entry["client_type"] as? Number)?.toInt() == 3) {
+                    val id = entry["client_id"] as? String
+                    if (!id.isNullOrBlank()) return id
+                }
+            }
+        }
+    }
+    return ""
+}
+
 val backendUrl = localProperties.getProperty("backend.url", "")
+// OAuth *Web* client ID of the Firebase project, used by Google sign-in (#54).
+// When local.properties has no value it is read from google-services.json
+// (the oauth_client of type 3), so the button works after enabling Google in
+// the Firebase console without editing local files.
+val googleWebClientId: String = localProperties.getProperty("google.web.client.id", "").trim()
+    .ifBlank { googleWebClientIdFromServices() }
+
 // Stripe publishable TEST key (pk_test_...) for the PaymentSheet (#143). It is not a secret,
 // but it stays in local.properties like backend.url. Empty = payments disabled in the app.
 val stripePublishableKey = localProperties.getProperty("stripe.publishable.key", "")
@@ -31,6 +63,10 @@ android {
             xml.outputLocation.set(layout.buildDirectory.file("reports/jacoco/jacocoDebugUnitTestReport/jacocoDebugUnitTestReport.xml"))
             html.required.set(true)
         }
+        // The classes that need the Android framework (or a real Firebase
+        // project) are left out of the report; the rest of them are pure
+        // Kotlin and are covered by the unit tests. The same list is in
+        // sonar.coverage.exclusions (root project).
         val excludes = listOf(
             "**/ui/**",
             "**/*MainActivity*.class",
@@ -44,6 +80,9 @@ android {
             "**/*BitmapPanelCropper*.class",
             "**/*AiServiceProvider*.class",
             "**/*FirebaseTokenProvider*.class",
+            // Android / Firebase bound, so they cannot be unit tested (#54).
+            "**/*FirebaseAuthRepository*.class",
+            "**/*GoogleSignInHelper*.class",
             "**/BuildConfig.class"
         )
         val kotlinClasses = fileTree(layout.buildDirectory.dir("intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes")) {
@@ -72,6 +111,7 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "BACKEND_URL", "\"$backendUrl\"")
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
         buildConfigField("String", "STRIPE_PUBLISHABLE_KEY", "\"$stripePublishableKey\"")
     }
 
@@ -129,6 +169,11 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
+    // Google sign-in through Credential Manager (#54). Same versions that
+    // firebase-auth already pulls in, so they are in verification-metadata.xml.
+    implementation("androidx.credentials:credentials:1.2.0-rc01")
+    implementation("androidx.credentials:credentials-play-services-auth:1.2.0-rc01")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.storage)
     implementation(libs.coil.compose)

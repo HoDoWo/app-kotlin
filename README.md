@@ -84,9 +84,39 @@ project documentation live in a separate repository: [HoDoWo/Backend](https://gi
 ```
 2. Open the `App-HoDoWo/` folder in Android Studio.
 3. Add your own `google-services.json` to `App-HoDoWo/app/` (not tracked by Git).
-4. Set the backend URL in `App-HoDoWo/local.properties` (not tracked by Git), for example
-   `backend.url=https://backend-howdowo.vercel.app`. Without it the app uses demo answers.
+4. Copy `App-HoDoWo/local.properties.template` to `App-HoDoWo/local.properties`
+   and fill in the values below (the file is ignored by Git). At minimum set
+   `backend.url` (for example `backend.url=https://backend-howdowo.vercel.app`).
 5. Sync Gradle and run the app.
+
+#### `local.properties`
+
+| Property | What it is | Without it |
+|----------|------------|------------|
+| `backend.url` | URL of the backend (see the backend repository) | The app runs with the offline demo service |
+| `google.web.client.id` | OAuth **web** client ID of the Firebase project (Firebase console → Authentication → Sign-in method → Google → Web client ID) | Gradle falls back to the web client of `google-services.json`; if there is none the app explains that Google sign-in is not configured in this build |
+
+`google.web.client.id` is read at build time into `BuildConfig.GOOGLE_WEB_CLIENT_ID`.
+When the property is missing, Gradle reads it from the OAuth **web** client
+(`client_type: 3`) listed in `google-services.json`, so enabling Google in the
+Firebase console and downloading the updated file is enough. If neither has a
+web client (Google sign-in not enabled in the project yet) the value is empty
+in CI too, and the app explains that Google sign-in is not configured in this
+build instead of failing.
+
+#### Enabling Google sign-in in the Firebase project
+
+The app cannot create the OAuth client itself: it has to exist in the Firebase
+project. In the [Firebase console](https://console.firebase.google.com/project/howdowo/authentication/providers):
+
+1. **Authentication → Sign-in method → Add new provider → Google → Enable**.
+   The console creates the OAuth *web* client of the project.
+2. **Project settings → Your apps → `com.hodowo` → Add fingerprint**: add the
+   SHA-1 (and SHA-256) of the keystore used to sign the app (`./gradlew signingReport`).
+   Google checks it when the account picker returns the ID token.
+3. Download the new `google-services.json` to `App-HoDoWo/app/`.
+4. Rebuild. Gradle picks its `client_type: 3` client up automatically, so no
+   `local.properties` change is needed.
 
 ## Contributing
 
