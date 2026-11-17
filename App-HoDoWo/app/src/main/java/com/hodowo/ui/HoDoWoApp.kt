@@ -36,6 +36,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -137,20 +138,20 @@ fun HoDoWoApp(
         factory = AiServiceProvider.sponsoredPartnersViewModelFactory()
     )
     val myListingsViewModel: MyListingsViewModel = viewModel(factory = AiServiceProvider.myListingsViewModelFactory())
-    var currentTab by remember { mutableStateOf(AppNavTab.HOME) }
-    var showCamera by remember { mutableStateOf(false) }
+    var currentTab by rememberSaveable { mutableStateOf(AppNavTab.HOME) }
+    var showCamera by rememberSaveable { mutableStateOf(false) }
     val chatState by chatViewModel.uiState.collectAsState()
-    var showAuthDialog by remember { mutableStateOf(false) }
-    var showApplianceManuals by remember { mutableStateOf(false) }
-    var showPostProduct by remember { mutableStateOf(false) }
-    var showMarketplaceSearch by remember { mutableStateOf(false) }
-    var showMyListings by remember { mutableStateOf(false) }
+    var showAuthDialog by rememberSaveable { mutableStateOf(false) }
+    var showApplianceManuals by rememberSaveable { mutableStateOf(false) }
+    var showPostProduct by rememberSaveable { mutableStateOf(false) }
+    var showMarketplaceSearch by rememberSaveable { mutableStateOf(false) }
+    var showMyListings by rememberSaveable { mutableStateOf(false) }
     // A listing of "My listings" open in the 4 steps of the sell form.
     var editingListing by remember { mutableStateOf<Listing?>(null) }
-    var showSponsored by remember { mutableStateOf(false) }
-    var showCart by remember { mutableStateOf(false) }
+    var showSponsored by rememberSaveable { mutableStateOf(false) }
+    var showCart by rememberSaveable { mutableStateOf(false) }
     // Messages and offers with buyers and sellers of second-hand listings.
-    var showMessages by remember { mutableStateOf(false) }
+    var showMessages by rememberSaveable { mutableStateOf(false) }
     val messagesViewModel: MessagesViewModel = viewModel(factory = AiServiceProvider.messagesViewModelFactory())
     val messagesState by messagesViewModel.uiState.collectAsState()
     // The unread badge on the marketplace: refreshed every time the marketplace is shown.
