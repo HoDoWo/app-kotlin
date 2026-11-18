@@ -1,6 +1,7 @@
 package com.hodowo.ui
 
 import android.content.Context
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,7 +29,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.PhotoCamera
-import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Visibility
@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -391,8 +392,10 @@ private fun AuthFormCard(
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) {
-                Icon(
-                    Icons.Outlined.AccountCircle,
+                // Official Google "G" shipped by Google Play services (play-services-base),
+                // as the Google sign-in branding guidelines ask: never redrawn by hand.
+                Image(
+                    painter = painterResource(com.google.android.gms.base.R.drawable.googleg_standard_color_18),
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                 )
