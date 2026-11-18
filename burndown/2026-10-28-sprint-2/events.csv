@@ -63,3 +63,6 @@ timestamp,issue,title,type,delta_hours
 2026-11-17T18:54:25+00:00,37,Spare parts search and filter API,completed,-7.0
 2026-11-17T18:53:08+00:00,34,Composite indexes for search and ranking,completed,-2.0
 2026-11-17T18:53:37+00:00,38,Part detail and compatibility resolution API,completed,-5.0
+2026-11-18T17:54:10+00:00,41,"Partner tiers, sponsored ranking and 'for me' ordering",completed,-6.0
+2026-11-18T15:56:35+00:00,122,"Mockups: marketplace, ads and cart pages",completed,-6.0
+2026-11-18T18:38:32+00:00,45,Marketplace end-to-end tests (API and device),completed,-6.0

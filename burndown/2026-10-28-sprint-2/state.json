@@ -1,4 +1,28 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzg-7rNk": {
+  "c": 4.0,
+  "done": false,
+  "issue": 13,
+  "title": "Sprint 2 documentation and presentation "
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4WQ": {
+  "c": 0.0,
+  "done": true,
+  "issue": 41,
+  "title": "Partner tiers, sponsored ranking and 'for me' ordering"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeYMc": {
+  "c": 0.0,
+  "done": true,
+  "issue": 27,
+  "title": "Second-hand listings API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW9jY": {
+  "c": 0.0,
+  "done": true,
+  "issue": 122,
+  "title": "Mockups: marketplace, ads and cart pages"
+ },
  "PVTI_lADOFCkyKM4Bl88jzhCeXzk": {
   "c": 0.0,
   "done": true,
@@ -11,23 +35,11 @@
   "issue": 25,
   "title": "Marketplace: data model and seed data"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-7rNk": {
-  "c": 4.0,
-  "done": false,
-  "issue": 13,
-  "title": "Sprint 2 documentation"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW9lE": {
-  "c": 6.0,
-  "done": false,
-  "issue": 45,
-  "title": "Marketplace end-to-end tests (API and device)"
- },
- "PVTI_lADOFCkyKM4Bl88jzhCeYMc": {
   "c": 0.0,
   "done": true,
-  "issue": 27,
-  "title": "Second-hand listings API"
+  "issue": 45,
+  "title": "Marketplace end-to-end tests (API and device)"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Lk": {
   "c": 0.0,
@@ -37,7 +49,7 @@
  },
  "PVTI_lADOFCkyKM4Bl88jzhCeYkc": {
   "c": 0.0,
-  "done": false,
+  "done": true,
   "issue": 29,
   "title": "Search ranking: partner sponsorship and personalisation"
  },
@@ -89,23 +101,11 @@
   "issue": 143,
   "title": "Payment section (Stripe test checkout UI)"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW9jY": {
-  "c": 6.0,
-  "done": false,
-  "issue": 122,
-  "title": "Mockups: marketplace, ads and cart pages"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Q0": {
   "c": 0.0,
   "done": true,
   "issue": 37,
   "title": "Spare parts search and filter API"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4WQ": {
-  "c": 6.0,
-  "done": false,
-  "issue": 41,
-  "title": "Partner tiers, sponsored ranking and 'for me' ordering"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Kg": {
   "c": 0.0,
