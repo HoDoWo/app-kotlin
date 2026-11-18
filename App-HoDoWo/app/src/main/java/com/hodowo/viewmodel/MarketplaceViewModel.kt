@@ -9,6 +9,8 @@ import com.hodowo.data.MarketplaceService
 import com.hodowo.data.UnavailableCartService
 import com.hodowo.data.cartProductType
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -156,13 +158,27 @@ class MarketplaceViewModel(
             _isLoading.value = true
             _error.value = null
             runCatching {
-                service.search(
-                    query = _query.value,
-                    type = _classification.value,
-                    condition = if (_condition.value == "all") null else _condition.value,
-                    brand = if (_fitsBoschSerie4.value) "Bosch" else null,
-                    maxPrice = if (_under50.value) 50.0 else null
-                )
+                val condition = if (_condition.value == "all") null else _condition.value
+                val brand = if (_fitsBoschSerie4.value) "Bosch" else null
+                val maxPrice = if (_under50.value) 50.0 else null
+                if (_classification.value == "all") {
+                    // The backend ranks sponsored partners first and returns one page,
+                    // so with "all" the community listings never fit in it. The Market
+                    // home shows both sections: ask for each kind and join them.
+                    coroutineScope {
+                        val catalogue = async { service.search(_query.value, "new", condition, null, brand, maxPrice) }
+                        val community = async { service.search(_query.value, "used", condition, null, brand, maxPrice) }
+                        (catalogue.await() + community.await()).distinctBy { it.type to it.id }
+                    }
+                } else {
+                    service.search(
+                        query = _query.value,
+                        type = _classification.value,
+                        condition = condition,
+                        brand = brand,
+                        maxPrice = maxPrice
+                    )
+                }
             }.onSuccess {
                 _products.value = it
             }.onFailure {

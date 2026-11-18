@@ -6,6 +6,7 @@ import com.hodowo.data.CartService
 import com.hodowo.data.CartStore
 import com.hodowo.data.MarketplaceProduct
 import com.hodowo.data.MarketplaceService
+import io.mockk.clearMocks
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -211,5 +212,36 @@ class MarketplaceViewModelTest {
 
         assertEquals("Network down", viewModel.error.value)
         assertFalse(viewModel.isLoading.value)
+    }
+
+    @Test
+    fun allAsksForCatalogueAndCommunitySoTheListingsAreNotCrowdedOut() = runTest(dispatcher) {
+        val partnerDeal = MarketplaceProduct(
+            id = "nordhome_NOR-AW-107", title = "Aurora washing machine", description = "", price = 399.0,
+            type = "new", partnerName = "NordHome"
+        )
+        val listing = MarketplaceProduct(
+            id = "l1", title = "Used Bosch washer", description = "", price = 120.0, type = "used", condition = "used-good"
+        )
+        coEvery { service.search(any(), "new", any(), any(), any(), any()) } returns listOf(partnerDeal)
+        coEvery { service.search(any(), "used", any(), any(), any(), any()) } returns listOf(listing)
+
+        viewModel.setClassification("all")
+        advanceUntilIdle()
+
+        assertEquals(listOf(partnerDeal, listing), viewModel.products.value)
+        coVerify(exactly = 0) { service.search(any(), "all", any(), any(), any(), any()) }
+    }
+
+    @Test
+    fun aSingleKindIsAskedOnce() = runTest(dispatcher) {
+        advanceUntilIdle()
+        clearMocks(service, answers = false)
+
+        viewModel.setClassification("part")
+        advanceUntilIdle()
+
+        coVerify { service.search(any(), "part", any(), any(), any(), any()) }
+        coVerify(exactly = 0) { service.search(any(), "used", any(), any(), any(), any()) }
     }
 }
