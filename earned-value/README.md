@@ -1,32 +1,32 @@
 # Earned Value – HoDoWo
 
-Status on **2026-11-18** (generated 2026-11-18 14:02 UTC).
+Status on **2026-11-18** (generated 2026-11-18 18:35 UTC).
 
 | KPI | Name | Formula | Sprint 2 | Cumulative | Hours (cumulative) |
 |---|---|---|---:|---:|---:|
 | **PV** | Planned Value | % planned × BAC | 2,789 € | 5,663 € | 252.2 h |
-| **EV** | Earned Value | % completed × BAC | 3,390 € | 6,489 € | 289.0 h |
-| **AC** | Actual Cost | hours spent × rate + services | 1,970 € | 4,747 € | 231.7 h |
+| **EV** | Earned Value | % completed × BAC | 3,750 € | 6,848 € | 305.0 h |
+| **AC** | Actual Cost | hours spent × rate + services | 3,930 € | 6,707 € | 329.7 h |
 | **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 4,311 € | 9,879 € | 440.0 h |
-| **EAC** | Estimate at Completion | BAC / CPI | 2,504 € | 7,227 € | 321.9 h |
-| **ETC** | Estimate to Complete | EAC − AC | 535 € | 2,480 € | 90.2 h |
-| **VAC** | Variance at Completion | BAC − EAC | 1,807 € | 2,652 € | 118.1 h |
-| **CPI** | Cost Performance Index | EV / AC | 1.72 | 1.37 | – |
-| **SPI** | Schedule Performance Index | EV / PV | 1.22 | 1.15 | – |
+| **EAC** | Estimate at Completion | BAC / CPI | 4,518 € | 9,676 € | 430.9 h |
+| **ETC** | Estimate to Complete | EAC − AC | 588 € | 2,969 € | 101.2 h |
+| **VAC** | Variance at Completion | BAC − EAC | −207 € | 203 € | 9.1 h |
+| **CPI** | Cost Performance Index | EV / AC | 0.95 | 1.02 | – |
+| **SPI** | Schedule Performance Index | EV / PV | 1.34 | 1.21 | – |
 
 ## Reading
 
-- CPI 1.37: under budget (the completed work cost less than planned)
-- SPI 1.15: ahead of or on schedule
-- VAC 2,652 €: saving money
-- Sprint 2: budget 4,311 € (its share of the BAC), EAC 2,504 € with the current CPI, so VAC 1,807 € (saving money).
+- CPI 1.02: under budget (the completed work cost less than planned)
+- SPI 1.21: ahead of or on schedule
+- VAC 203 €: saving money
+- Sprint 2: budget 4,311 € (its share of the BAC), EAC 4,518 € with the current CPI, so VAC −207 € (over the Sprint budget).
 
 ## Inputs
 
 - BAC: 9,879 € (total cost estimated in Sprint 0), 440 h planned for the whole project.
 - % planned: 252.2 h of the Sprint 0 baseline by 2026-11-18 → 57.3%.
-- % completed: 289.0 h estimated on the items in Done → 65.7%.
-- AC: 231.7 h spent × 20 €/h + 113 € of services.
+- % completed: 305.0 h estimated on the items in Done → 69.3%.
+- AC: 329.7 h spent × 20 €/h + 113 € of services.
 - Hypothetical costs: the team uses free tiers and pays nothing. Each service counts with the price planned in Sprint 0 from the date it is used.
 - Not counted (outside Sprint 1, Sprint 2, Sprint 3): 15 items, 47 h estimated, 29 h spent.
   - #1 Create KanBan Board – Sprint 0 (2 h estimated, 2 h spent)
@@ -47,15 +47,13 @@ Status on **2026-11-18** (generated 2026-11-18 14:02 UTC).
 
 ## Sprint 2 (2026-10-28 → 2026-11-24)
 
-- Items: 39, estimated 186.0 h, completed 151.0 h, spent 97.0 h.
+- Items: 39, estimated 190.0 h, completed 167.0 h, spent 195.0 h.
 - Open items:
-  - #13 Sprint 2 documentation – In Progress (4 h estimated, 0 h spent)
+  - #13 Sprint 2 documentation – In Progress (4 h estimated, 5 h spent)
   - #111 Marketplace app screens – In Progress (0 h estimated, 0 h spent)
   - #29 Search ranking: partner sponsorship and personalisation – In preview (0 h estimated, 0 h spent)
-  - #41 Partner tiers, sponsored ranking and 'for me' ordering – In preview (6 h estimated, 0 h spent)
-  - #45 Marketplace end-to-end tests (API and device) – In preview (6 h estimated, 0 h spent)
-  - #122 Mockups: marketplace, ads and cart pages – In preview (6 h estimated, 0 h spent)
-  - #139 Product search page with new / second-hand / parts filters – Todo (9 h estimated, 0 h spent)
-  - #144 Order confirmation and purchase history screens – Todo (4 h estimated, 0 h spent)
+  - #45 Marketplace end-to-end tests (API and device) – In preview (6 h estimated, 6 h spent)
+  - #139 Product search page with new / second-hand / parts filters – Todo (9 h estimated, 10 h spent)
+  - #144 Order confirmation and purchase history screens – Todo (4 h estimated, 7 h spent)
 
 ![PV, EV and AC over time](ev.svg)
