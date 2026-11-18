@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "804247891417-tqp2gjiuns2a1r1ec63vesgmrqi15k67.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hodowo",
+            "certificate_hash": "01f4bd706311e73c35791ff7ed97f4bdaa64644a"
+          }
+        },
+        {
           "client_id": "804247891417-m3aetqq3a2vj0edholbspkfu2ke8jgf7.apps.googleusercontent.com",
           "client_type": 3
         }
