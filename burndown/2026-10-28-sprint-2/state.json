@@ -1,4 +1,28 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzhCeXzk": {
+  "c": 0.0,
+  "done": true,
+  "issue": 26,
+  "title": "Marketplace catalogue and search API"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhCeXsE": {
+  "c": 0.0,
+  "done": true,
+  "issue": 25,
+  "title": "Marketplace: data model and seed data"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7rNk": {
+  "c": 4.0,
+  "done": false,
+  "issue": 13,
+  "title": "Sprint 2 documentation"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW9lE": {
+  "c": 6.0,
+  "done": false,
+  "issue": 45,
+  "title": "Marketplace end-to-end tests (API and device)"
+ },
  "PVTI_lADOFCkyKM4Bl88jzhCeYMc": {
   "c": 0.0,
   "done": true,
@@ -6,8 +30,8 @@
   "title": "Second-hand listings API"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Lk": {
-  "c": 3.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 32,
   "title": "Security rules for marketplace and forum collections"
  },
@@ -72,8 +96,8 @@
   "title": "Mockups: marketplace, ads and cart pages"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Q0": {
-  "c": 7.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 37,
   "title": "Spare parts search and filter API"
  },
@@ -107,24 +131,6 @@
   "issue": 40,
   "title": "Unified product search: new, second-hand and spare parts"
  },
- "PVTI_lADOFCkyKM4Bl88jzg-7rNk": {
-  "c": 4.0,
-  "done": false,
-  "issue": 13,
-  "title": "Sprint 2 documentation"
- },
- "PVTI_lADOFCkyKM4Bl88jzhCeXsE": {
-  "c": 0.0,
-  "done": false,
-  "issue": 25,
-  "title": "Marketplace: data model and seed data"
- },
- "PVTI_lADOFCkyKM4Bl88jzhCeXzk": {
-  "c": 0.0,
-  "done": false,
-  "issue": 26,
-  "title": "Marketplace catalogue and search API"
- },
  "PVTI_lADOFCkyKM4Bl88jzhCeX7o": {
   "c": 0.0,
   "done": true,
@@ -138,8 +144,8 @@
   "title": "Diagnosis to suggested spare part"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Nw": {
-  "c": 2.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 34,
   "title": "Composite indexes for search and ranking"
  },
@@ -150,8 +156,8 @@
   "title": "Listing image upload and compression"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4Rk": {
-  "c": 5.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 38,
   "title": "Part detail and compatibility resolution API"
  },
@@ -226,11 +232,5 @@
   "done": true,
   "issue": 149,
   "title": "Error resolution card: suggested spare part CTA"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW9lE": {
-  "c": 6.0,
-  "done": false,
-  "issue": 45,
-  "title": "Marketplace end-to-end tests (API and device)"
  }
 }
