@@ -5,6 +5,12 @@
   "issue": 13,
   "title": "Sprint 2 documentation and presentation "
  },
+ "PVTI_lADOFCkyKM4Bl88jzhCeYWk": {
+  "c": 0.0,
+  "done": false,
+  "issue": 111,
+  "title": "Marketplace app screens"
+ },
  "PVTI_lADOFCkyKM4Bl88jzhDW4WQ": {
   "c": 0.0,
   "done": true,
@@ -76,12 +82,6 @@
   "done": true,
   "issue": 24,
   "title": "Partner catalogue import from CSV/JSON feeds"
- },
- "PVTI_lADOFCkyKM4Bl88jzhCeYWk": {
-  "c": 0.0,
-  "done": false,
-  "issue": 111,
-  "title": "Marketplace app screens"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4SE": {
   "c": 0.0,
