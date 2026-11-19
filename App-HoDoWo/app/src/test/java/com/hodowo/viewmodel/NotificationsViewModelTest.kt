@@ -45,19 +45,59 @@ class NotificationsViewModelTest {
     }
 
     @Test
-    fun theBadgeCountsUnreadNotificationsNotSeenYet() = runTest(dispatcher) {
+    fun theBadgeCountsMessagesOffersAndANewSponsoredProduct() = runTest(dispatcher) {
         coEvery { service.notifications() } returns listOf(
-            notification("m1"), notification("o1", kind = "offer"), notification("s1", unread = false, kind = "sponsored")
+            notification("m1"), notification("o1", kind = "offer"), notification("s1", unread = false, kind = "sponsored"),
+            notification("old", unread = false, kind = "message")
         )
         val vm = NotificationsViewModel(service, store)
 
         vm.load()
         advanceUntilIdle()
 
-        assertEquals(3, vm.uiState.value.items.size)
-        assertEquals(2, vm.uiState.value.badge)
+        assertEquals(4, vm.uiState.value.items.size)
+        assertEquals(3, vm.uiState.value.badge)
         assertTrue(vm.uiState.value.isNew(vm.uiState.value.items[0]))
-        assertFalse(vm.uiState.value.isNew(vm.uiState.value.items[2]))
+        assertTrue(vm.uiState.value.isNew(vm.uiState.value.items[2]))
+        assertFalse(vm.uiState.value.isNew(vm.uiState.value.items[3]))
+    }
+
+    @Test
+    fun openingTheListClearsTheBadgeButKeepsTheNewOnesHighlighted() = runTest(dispatcher) {
+        store.save(setOf("m1"))
+        coEvery { service.notifications() } returns listOf(notification("m1"), notification("m2"))
+        val vm = NotificationsViewModel(service, store)
+        vm.load()
+        advanceUntilIdle()
+        assertEquals(1, vm.uiState.value.badge)
+
+        vm.open()
+        advanceUntilIdle()
+
+        val state = vm.uiState.value
+        assertEquals(0, state.badge)
+        assertTrue(state.isNew(state.items[1]))
+        assertFalse(state.isNew(state.items[0]))
+
+        vm.close()
+        assertFalse(vm.uiState.value.isNew(vm.uiState.value.items[1]))
+    }
+
+    @Test
+    fun aNewSponsoredProductCountsOnceThenIsSeen() = runTest(dispatcher) {
+        coEvery { service.notifications() } returns listOf(notification("sponsored:p1", unread = false, kind = "sponsored"))
+        val vm = NotificationsViewModel(service, store)
+        vm.load()
+        advanceUntilIdle()
+        assertEquals(1, vm.uiState.value.badge)
+
+        vm.open()
+        advanceUntilIdle()
+        vm.close()
+        vm.load()
+        advanceUntilIdle()
+
+        assertEquals(0, vm.uiState.value.badge)
     }
 
     @Test
@@ -100,6 +140,8 @@ class NotificationsViewModelTest {
 
         assertEquals(0, vm.uiState.value.badge)
         assertEquals(setOf("m1", "m2"), store.seen())
+        // The one that arrived while the list was open is still shown as new.
+        assertTrue(vm.uiState.value.isNew(vm.uiState.value.items[1]))
     }
 
     @Test

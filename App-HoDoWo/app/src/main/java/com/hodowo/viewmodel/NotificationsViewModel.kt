@@ -22,19 +22,35 @@ data class NotificationsUiState(
     /** Notifications already shown to the user: they no longer count in the badge. */
     val seen: Set<String> = emptySet(),
     /** The list is open. */
-    val isOpen: Boolean = false
+    val isOpen: Boolean = false,
+    /**
+     * While the list is open: the notifications that were new when it was opened (or
+     * arrived while it was open). They stay highlighted although the badge is already 0.
+     */
+    val highlighted: Set<String> = emptySet()
 ) {
-    /** The number on the bell: new messages, offers and price changes not seen yet. */
-    val badge: Int get() = items.count { it.unread && it.id !in seen }
+    /** The number on the bell: new messages, offers, price changes and sponsored products not seen yet. */
+    val badge: Int get() = items.count { counts(it) && it.id !in seen }
 
     /** A notification the user has not seen yet, shown highlighted in the list. */
-    fun isNew(item: AppNotification): Boolean = item.unread && item.id !in seen
+    fun isNew(item: AppNotification): Boolean =
+        if (isOpen) item.id in highlighted else counts(item) && item.id !in seen
+
+    /** The ids that are new now: they count in the badge. */
+    internal fun newIds(): Set<String> = items.filter { counts(it) && it.id !in seen }.map { it.id }.toSet()
+
+    private companion object {
+        /** The sponsored product is not "unread" for the backend, but a new one still counts on the bell. */
+        fun counts(item: AppNotification): Boolean = item.unread || item.kind == SPONSORED
+        const val SPONSORED = "sponsored"
+    }
 }
 
 /**
  * The notifications of the bell (messages, offers on the user's listings and
  * on what they want to buy, price changes in the cart, a sponsored product).
- * Opening the list marks everything in it as seen.
+ * Opening the list marks everything in it as seen: the badge goes to 0, but what
+ * was new stays highlighted until the list is closed.
  */
 class NotificationsViewModel(
     private val service: NotificationsService,
@@ -49,7 +65,10 @@ class NotificationsViewModel(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val items = service.notifications()
-                _uiState.update { it.copy(isLoading = false, items = items) }
+                _uiState.update { state ->
+                    val loaded = state.copy(isLoading = false, items = items)
+                    if (state.isOpen) loaded.copy(highlighted = state.highlighted + loaded.newIds()) else loaded
+                }
                 if (_uiState.value.isOpen) markSeen()
             } catch (e: CancellationException) {
                 throw e
@@ -60,14 +79,15 @@ class NotificationsViewModel(
     }
 
     fun open() {
-        _uiState.update { it.copy(isOpen = true) }
+        _uiState.update { it.copy(isOpen = true, highlighted = it.newIds()) }
+        markSeen()
         load()
     }
 
     /** Closes the list; what was in it is now seen. */
     fun close() {
         markSeen()
-        _uiState.update { it.copy(isOpen = false) }
+        _uiState.update { it.copy(isOpen = false, highlighted = emptySet()) }
     }
 
     /**
@@ -76,7 +96,7 @@ class NotificationsViewModel(
      */
     private fun markSeen() {
         val ids = _uiState.value.items.map { it.id }.toSet()
-        if (ids == _uiState.value.seen) return
+        if (ids.isEmpty() || ids == _uiState.value.seen) return
         seenStore.save(ids)
         _uiState.update { it.copy(seen = ids) }
     }

@@ -27,7 +27,7 @@ sealed interface NotificationTarget {
 /**
  * One notification of the bell. [kind] is "message", "offer", "offer_accepted",
  * "offer_declined", "price_drop", "price_change" or "sponsored". [unread] is
- * false for the sponsored product, which never adds to the badge.
+ * false for the sponsored product; a new one still counts on the bell once.
  */
 data class AppNotification(
     val id: String,
