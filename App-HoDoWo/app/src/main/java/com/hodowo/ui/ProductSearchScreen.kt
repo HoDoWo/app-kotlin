@@ -2,6 +2,14 @@ package com.hodowo.ui
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import com.hodowo.ui.theme.PrimaryFixed
+import com.hodowo.ui.theme.Outline
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Badge
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +24,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -58,8 +65,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -250,86 +255,95 @@ private fun SearchHeader(
                 modifier = Modifier.weight(1f)
             )
             IconButton(onClick = onCart) {
-                Box {
-                    Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = OnSurfaceVariant)
-                    if (cartCount > 0) {
-                        CountBadge(cartCount, Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = (-6).dp))
+                // The badge sits on the icon's corner, inside the button (it used to be cut off).
+                BadgedBox(
+                    badge = {
+                        if (cartCount > 0) {
+                            Badge(containerColor = SearchPrimary) {
+                                Text(if (cartCount > 9) "9+" else cartCount.toString(), color = OnPrimary)
+                            }
+                        }
                     }
+                ) {
+                    Icon(Icons.Default.ShoppingCart, contentDescription = "Cart", tint = OnSurfaceVariant)
                 }
             }
         }
+        // Same compact bar as the Market home: one line, small text.
         Row(
             modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            TextField(
-                value = query,
-                onValueChange = onQueryChange,
-                placeholder = { Text("Part, appliance, brand or model…") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = OnSurfaceVariant) },
-                trailingIcon = {
+            Surface(
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                color = SurfaceContainerLowest,
+                shadowElevation = 1.dp
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(44.dp).padding(start = 12.dp, end = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = Outline, modifier = Modifier.size(20.dp))
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                        if (query.isEmpty()) {
+                            Text(
+                                "Model code, part or appliance…",
+                                color = Outline,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        BasicTextField(
+                            value = query,
+                            onValueChange = onQueryChange,
+                            singleLine = true,
+                            textStyle = TextStyle(fontSize = 13.sp, color = OnSurface),
+                            cursorBrush = SolidColor(SearchPrimary),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
                     if (query.isNotEmpty()) {
-                        IconButton(onClick = onClearQuery) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear search", tint = OnSurfaceVariant)
+                        IconButton(onClick = onClearQuery, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Clear search",
+                                tint = OnSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = SurfaceContainer,
-                    unfocusedContainerColor = SurfaceContainerLow,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent
-                ),
-                modifier = Modifier.weight(1f)
-            )
-            Box {
-                Surface(
-                    onClick = onOpenFilters,
-                    shape = RoundedCornerShape(14.dp),
-                    color = if (sheetFilterCount > 0) SearchPrimary else SurfaceContainerLow,
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
+                }
+            }
+            Surface(
+                onClick = onOpenFilters,
+                shape = RoundedCornerShape(12.dp),
+                color = if (sheetFilterCount > 0) PrimaryFixed else SurfaceContainerLowest,
+                shadowElevation = 1.dp,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    BadgedBox(
+                        badge = {
+                            if (sheetFilterCount > 0) {
+                                Badge(containerColor = SearchPrimary) { Text("$sheetFilterCount", color = OnPrimary) }
+                            }
+                        }
+                    ) {
                         Icon(
                             Icons.Default.Tune,
                             contentDescription = "Filters",
-                            tint = if (sheetFilterCount > 0) OnPrimary else OnSurface
+                            tint = if (sheetFilterCount > 0) SearchPrimary else OnSurface,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
-                if (sheetFilterCount > 0) {
-                    CountBadge(
-                        sheetFilterCount,
-                        Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp),
-                        background = TertiaryFixed,
-                        content = OnTertiaryFixed
-                    )
-                }
             }
         }
-    }
-}
-
-@Composable
-private fun CountBadge(
-    count: Int,
-    modifier: Modifier = Modifier,
-    background: Color = SearchPrimary,
-    content: Color = OnPrimary
-) {
-    Box(
-        modifier = modifier.size(18.dp).background(background, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = if (count > 9) "9+" else count.toString(),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Bold,
-            color = content
-        )
     }
 }
 
