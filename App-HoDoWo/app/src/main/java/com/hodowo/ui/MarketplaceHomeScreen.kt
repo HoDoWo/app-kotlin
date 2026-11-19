@@ -155,8 +155,9 @@ fun MarketplaceHomeScreen(
     var searchInput by remember { mutableStateOf("") }
 
     // Partition products into Partner Deals and Community Items
-    val partnerDeals = products.filter { it.partnerName != null || it.condition in listOf("new", "unopened", "brand-new") }
-    val communityDeals = products.filter { it.partnerName == null && it.condition !in listOf("new", "unopened", "brand-new") }
+    // Who sells decides the section, not the condition: a brand-new part listed by a user is still community.
+    val partnerDeals = products.filter { it.type != "used" }
+    val communityDeals = products.filter { it.type == "used" }
 
     Box(
         modifier = Modifier
@@ -337,7 +338,7 @@ fun MarketplaceHomeScreen(
                         FeaturedPartnerBanner(
                             onViewPartDetails = {
                                 // Opens a real part when the catalogue has one; otherwise the search.
-                                products.firstOrNull { it.type == "part" }?.let(onOpenProduct) ?: onOpenSearch()
+                                partnerDeals.firstOrNull { it.isPart }?.let(onOpenProduct) ?: onOpenSearch()
                             }
                         )
                     }
@@ -447,19 +448,6 @@ fun MarketplaceHomeScreen(
                                         fontSize = 17.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = OnSurface
-                                    )
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .background(SurfaceContainer, CircleShape)
-                                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                                ) {
-                                    Text(
-                                        text = "Near You",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = OnSurfaceVariant
                                     )
                                 }
                             }
