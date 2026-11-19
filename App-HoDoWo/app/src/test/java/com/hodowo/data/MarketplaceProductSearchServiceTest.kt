@@ -1,6 +1,7 @@
 package com.hodowo.data
 
 import com.hodowo.data.model.FilterOptions
+import com.hodowo.data.model.activeFilterCount
 import com.hodowo.data.model.Product
 import com.hodowo.data.model.SearchKind
 import com.hodowo.data.model.cartProductType
@@ -177,4 +178,35 @@ class MarketplaceProductSearchServiceTest {
     }
 
     private fun MarketplaceProduct.toProductForTest(): Product = toProduct()
+
+    @Test
+    fun aMarketplaceWithoutPagesGivesOnePageAndNoFilterOptions() = runTest {
+        val legacy = object : MarketplaceService {
+            override suspend fun getProductDetail(id: String): ProductDetail = throw UnsupportedOperationException()
+            override suspend fun recommendedDemoIds(): List<String> = emptyList()
+            override suspend fun search(
+                query: String, type: String, condition: String?, category: String?, brand: String?, maxPrice: Double?
+            ): List<MarketplaceProduct> = listOf(pump)
+        }
+
+        assertEquals(listOf("p1"), legacy.searchPage().items.map { it.id })
+        assertNull(legacy.searchPage(cursor = "x").nextCursor)
+        assertTrue(legacy.searchPage(cursor = "x").items.isEmpty())
+        assertEquals(emptyList<String>() to emptyList<String>(), legacy.searchFilters())
+    }
+
+    @Test
+    fun theFilterBadgeCountsOnlyTheSheetFilters() {
+        assertTrue(ProductFilters().isEmpty())
+        assertFalse(ProductFilters(query = "pump").isEmpty())
+        assertEquals(0, ProductFilters(query = "pump", kind = SearchKind.PARTS).activeFilterCount())
+        assertEquals(2, ProductFilters(category = "oven", maxPrice = 50.0).activeFilterCount())
+        val noSource = Product(
+            id = "x", title = "Seal", partner = "Acme", partnerVerified = true, price = 1.0,
+            type = ProductType.REPLACEMENT_PART, condition = ProductCondition.NEW, imageUrl = null, rating = 0.0, reviews = 0
+        )
+        assertEquals(SearchKind.PARTS, noSource.kind())
+        assertEquals(SearchKind.NEW, noSource.copy(type = ProductType.WHOLE_APPLIANCE).kind())
+        assertEquals(SearchKind.SECOND_HAND, noSource.copy(condition = ProductCondition.SECOND_HAND).kind())
+    }
 }

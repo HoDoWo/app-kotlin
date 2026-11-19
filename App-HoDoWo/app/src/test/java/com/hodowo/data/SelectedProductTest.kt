@@ -179,4 +179,21 @@ class SelectedProductTest {
         assertEquals("Used, good", detail.condition)
         assertEquals("Used oven", detail.title)
     }
+
+    @Test
+    fun aBoughtItemOpensItsProductDetailPage() {
+        val used = OrderItem("used", "l1", "Fridge", "https://img/f.jpg", 1, 12000, 12000).toMarketplaceProduct("Marc")
+        assertEquals("used", used.type)
+        assertEquals("used-good", used.condition)
+        assertEquals(120.0, used.price, 0.0)
+        assertEquals("Marc", used.sellerName)
+        assertEquals(null, used.partnerName)
+        assertEquals(false, used.isPart)
+
+        val part = OrderItem("part", "p1", "Drain pump", null, 2, 2490, 4980).toMarketplaceProduct("FixParts Hub")
+        assertEquals("new", part.condition)
+        assertEquals("FixParts Hub", part.partnerName)
+        assertTrue(part.isPart)
+        assertEquals(24.9, part.price, 0.001)
+    }
 }

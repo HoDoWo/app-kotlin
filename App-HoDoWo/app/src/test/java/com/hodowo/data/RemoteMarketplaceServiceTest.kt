@@ -229,4 +229,57 @@ class RemoteMarketplaceServiceTest {
 
         assertEquals(emptyList<String>(), service.recommendedDemoIds())
     }
+
+    @Test
+    fun aSearchPageSendsEveryFilterAndReadsTheNextCursor() = runTest {
+        server.enqueue(
+            json(
+                """{"items": [
+                    {"id": "oven-1", "title": "Oven", "type": "new", "listing_kind": "appliance", "price": 399.0,
+                     "partner_name": "VoltaCasa", "sponsored": true},
+                    {"id": "belt-1", "title": "Drum belt", "type": "part", "price": 12.9},
+                    {"id": "l1", "title": "Pump", "type": "used", "listing_kind": "part", "condition": "like-new",
+                     "seller_name": "Marc", "price": 15.0}
+                   ], "next_cursor": "used:l1"}"""
+            )
+        )
+
+        val page = service.searchPage(
+            query = " pump ", type = "used", condition = "like-new", category = "washing machine",
+            brand = "Bosch", minPrice = 5.0, maxPrice = 50.0, cursor = "new:oven-1", limit = 20
+        )
+
+        val path = server.takeRequest().path!!
+        assertTrue(path.startsWith("/api/marketplace/search?type=used&limit=20"))
+        listOf("q=pump", "condition=like-new", "category=washing+machine", "brand=Bosch", "min_price=5.0",
+            "max_price=50.0", "cursor=new%3Aoven-1").forEach { assertTrue(it, path.contains(it)) }
+        assertEquals("used:l1", page.nextCursor)
+        assertEquals(listOf("oven-1", "belt-1", "l1"), page.items.map { it.id })
+        assertEquals(false, page.items[0].isPart) // a partner appliance is not a part
+        assertEquals(true, page.items[1].isPart) // a catalogue part without listing_kind
+        assertEquals(true, page.items[2].isPart)
+        assertEquals("Marc", page.items[2].sellerName)
+    }
+
+    @Test
+    fun theLastSearchPageHasNoCursorAndNoFilterIsSentWhenUnset() = runTest {
+        server.enqueue(json("""{"items": [], "next_cursor": null}"""))
+
+        val page = service.searchPage()
+
+        assertEquals("/api/marketplace/search?type=all&limit=20", server.takeRequest().path)
+        assertNull(page.nextCursor)
+        assertTrue(page.items.isEmpty())
+    }
+
+    @Test
+    fun theFilterSheetOptionsComeFromTheBackend() = runTest {
+        server.enqueue(json("""{"categories": ["dishwasher", " ", "oven"], "brands": ["Bosch"]}"""))
+
+        val (categories, brands) = service.searchFilters()
+
+        assertEquals("/api/marketplace/search/filters", server.takeRequest().path)
+        assertEquals(listOf("dishwasher", "oven"), categories)
+        assertEquals(listOf("Bosch"), brands)
+    }
 }
