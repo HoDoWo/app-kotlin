@@ -227,6 +227,10 @@ fun HoDoWoApp(
             }
             NotificationTarget.Cart -> showCart = true
             is NotificationTarget.Product -> selectedMarketProduct = target.product
+            NotificationTarget.MyListings -> {
+                showMyListings = true
+                currentTab = AppNavTab.PROFILE
+            }
         }
     }
 

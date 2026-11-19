@@ -80,8 +80,15 @@ class PostProductViewModel(
      * Saves the changes to listing [listingId], edited in the same 4 steps as a
      * new one. [photos] keep their order (the first is the cover): the ones
      * already online are kept as they are, the new ones are uploaded first.
+     * With [relist] the listing was sold and goes back on sale with these edits.
      */
-    fun saveEdit(listingId: String, edit: ListingEdit, photos: List<Uri>, onSuccess: () -> Unit) {
+    fun saveEdit(
+        listingId: String,
+        edit: ListingEdit,
+        photos: List<Uri>,
+        onSuccess: () -> Unit,
+        relist: Boolean = false
+    ) {
         val listings = listingsService
         if (listings == null) {
             _message.value = "Editing is not available right now"
@@ -101,11 +108,14 @@ class PostProductViewModel(
                 val urls = photos.map { uri ->
                     if (isOnline(uri)) uri.toString() else service.uploadListingImage(loadImage(uri))
                 }
-                listings.updateListingDetails(listingId, edit.copy(imageUrls = urls))
+                val saved = edit.copy(imageUrls = urls)
+                if (relist) listings.relistListing(listingId, saved) else listings.updateListingDetails(listingId, saved)
             }.onSuccess {
-                _message.value = "Listing updated"
+                _message.value = if (relist) "Listing back on sale" else "Listing updated"
                 onSuccess()
-            }.onFailure { _message.value = it.message ?: "Could not update the listing" }
+            }.onFailure {
+                _message.value = it.message ?: if (relist) "Could not put the listing back on sale" else "Could not update the listing"
+            }
             _isSubmitting.value = false
         }
     }
