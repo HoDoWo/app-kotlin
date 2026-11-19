@@ -1,56 +1,60 @@
 package com.hodowo.data
 
+import com.hodowo.data.model.FilterOptions
 import com.hodowo.data.model.Product
 import com.hodowo.data.model.ProductCondition
 import com.hodowo.data.model.ProductFilters
 import com.hodowo.data.model.ProductPage
 import com.hodowo.data.model.ProductType
+import com.hodowo.data.model.SearchKind
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
 /**
- * Feeds the product search screen with the marketplace search (`/api/marketplace/search`):
- * official products, second-hand listings and spare parts, with the filters applied by the
- * backend. The backend answers with one list, so the screen gets a single page.
+ * Feeds the product search screen (#139) with the marketplace search (`/api/marketplace/search`):
+ * official products, second-hand listings and spare parts. Every filter is applied by the
+ * backend and the pages follow its cursor, so changing a filter always asks again.
  */
 class MarketplaceProductSearchService(
     private val marketplace: MarketplaceService
 ) : ProductSearchService {
 
     override fun search(filters: ProductFilters, cursor: String?, pageSize: Int): Flow<ProductPage> = flow {
-        val found = marketplace.search(
+        val page = marketplace.searchPage(
             query = filters.query,
-            type = when (filters.type) {
-                ProductType.REPLACEMENT_PART -> "part"
-                ProductType.WHOLE_APPLIANCE -> "appliance"
-                null -> "all"
-            },
-            condition = when (filters.condition) {
-                ProductCondition.NEW -> "new"
-                ProductCondition.SECOND_HAND -> "used"
-                null -> null
-            },
+            type = filters.kind.apiType,
+            condition = filters.usedCondition?.takeIf { filters.kind == SearchKind.SECOND_HAND },
             category = filters.category,
             brand = filters.brand,
-            maxPrice = filters.maxPrice
+            minPrice = filters.minPrice,
+            maxPrice = filters.maxPrice,
+            cursor = cursor,
+            limit = pageSize
         )
-        val products = found.map { it.toProduct() }.filter { filters.minPrice == null || it.price >= filters.minPrice }
-        emit(ProductPage(products = products, nextCursor = null, hasMore = false))
+        emit(
+            ProductPage(
+                products = page.items.map { it.toProduct() },
+                nextCursor = page.nextCursor,
+                hasMore = page.nextCursor != null
+            )
+        )
     }
 
-    override fun categories(): List<String> = CATEGORIES
+    /** No invented lists: the sheet offers what the backend has on sale, or nothing. */
+    override fun categories(): List<String> = emptyList()
 
-    override fun brands(): List<String> = BRANDS
+    override fun brands(): List<String> = emptyList()
 
-    private companion object {
-        val CATEGORIES = listOf("Pumps", "Filters", "Hoses", "Seals", "Motors", "Electronics")
-        val BRANDS = listOf("Bosch", "Siemens", "Universal", "OEM", "Community")
+    override suspend fun filterOptions(): FilterOptions {
+        val (categories, brands) = marketplace.searchFilters()
+        return FilterOptions(categories, brands)
     }
 }
 
 /** One search result as the product search screen shows it. */
 internal fun MarketplaceProduct.toProduct(): Product {
-    val isNew = type == "new" || condition.equals("new", true) || condition.equals("unopened", true)
+    // A community listing is second-hand whatever its condition says ("unopened" included).
+    val isNew = type != "used" && (type == "new" || type == "part" || condition.equals("new", true))
     return Product(
         id = id,
         title = title,

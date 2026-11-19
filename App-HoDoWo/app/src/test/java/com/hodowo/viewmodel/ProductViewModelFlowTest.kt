@@ -6,16 +6,19 @@ import com.hodowo.data.CartSelection
 import com.hodowo.data.CartService
 import com.hodowo.data.CartStore
 import com.hodowo.data.ProductSearchService
+import com.hodowo.data.model.FilterOptions
 import com.hodowo.data.model.Product
 import com.hodowo.data.model.ProductCondition
 import com.hodowo.data.model.ProductFilters
 import com.hodowo.data.model.ProductPage
 import com.hodowo.data.model.ProductType
 import com.hodowo.data.model.ProductUiState
+import com.hodowo.data.model.SearchKind
 import com.hodowo.data.model.activeFilterCount
 import com.hodowo.data.model.cartProductType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -44,9 +47,11 @@ private class PagedSearch : ProductSearchService {
     val asked = mutableListOf<Pair<ProductFilters, String?>>()
     var failure: Exception? = null
     var empty = false
+    var delayMs = 0L
 
     override fun search(filters: ProductFilters, cursor: String?, pageSize: Int): Flow<ProductPage> = flow {
         asked.add(filters to cursor)
+        if (delayMs > 0) delay(delayMs)
         failure?.let { throw it }
         emit(
             when {
@@ -108,13 +113,12 @@ class ProductViewModelFlowTest {
     private fun ProductViewModel.success() = uiState.value as ProductUiState.Success
 
     @Test
-    fun theScreenKnowsTheCategoriesBrandsTypesAndConditionsToOffer() = runTest(dispatcher) {
+    fun theSheetOffersTheCategoriesAndBrandsOfTheSearchService() = runTest(dispatcher) {
         val vm = viewModel()
+        advanceUntilIdle()
 
-        assertEquals(listOf("Pumps"), vm.categories)
-        assertEquals(listOf("Bosch"), vm.brands)
-        assertEquals(listOf(ProductType.WHOLE_APPLIANCE, ProductType.REPLACEMENT_PART), vm.types)
-        assertEquals(listOf(ProductCondition.NEW, ProductCondition.SECOND_HAND), vm.conditions)
+        assertEquals(FilterOptions(listOf("Pumps"), listOf("Bosch")), vm.filterOptions.value)
+        assertEquals(SearchKind.entries, vm.kinds)
     }
 
     @Test
@@ -125,6 +129,7 @@ class ProductViewModelFlowTest {
         assertTrue(vm.success().hasMore)
 
         vm.loadMore()
+        assertTrue(vm.success().isLoadingMore)
         vm.loadMore() // ignored while the page is loading
         advanceUntilIdle()
 
@@ -135,6 +140,24 @@ class ProductViewModelFlowTest {
         vm.loadMore() // no more pages: nothing is asked
         advanceUntilIdle()
         assertEquals(2, search.asked.size)
+    }
+
+    @Test
+    fun aFailedNextPageKeepsTheResultsAndCanBeRetried() = runTest(dispatcher) {
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        search.failure = IOException("offline")
+        vm.loadMore()
+        advanceUntilIdle()
+        assertTrue(vm.success().loadMoreFailed)
+        assertEquals(listOf("a", "b"), vm.success().products.map { it.id })
+
+        search.failure = null
+        vm.loadMore()
+        advanceUntilIdle()
+        assertEquals(listOf("a", "b", "c"), vm.success().products.map { it.id })
+        assertFalse(vm.success().loadMoreFailed)
     }
 
     @Test
@@ -151,31 +174,78 @@ class ProductViewModelFlowTest {
     }
 
     @Test
-    fun everyFilterIsSentToTheSearch() = runTest(dispatcher) {
+    fun everyFilterIsSentToTheSearchAndTheyCombine() = runTest(dispatcher) {
         val vm = viewModel()
         advanceUntilIdle()
 
-        vm.onCategorySelected("Pumps")
-        vm.onBrandSelected("Bosch")
-        vm.onConditionSelected(ProductCondition.SECOND_HAND)
-        vm.onTypeSelected(ProductType.WHOLE_APPLIANCE)
-        vm.onPriceRangeSelected(5.0, 50.0)
+        vm.onKindSelected(SearchKind.SECOND_HAND)
+        vm.applyFilters(category = "Pumps", brand = "Bosch", minPrice = 50.0, maxPrice = 5.0, usedCondition = "like-new")
         advanceUntilIdle()
 
         val filters = vm.filters
+        assertEquals(SearchKind.SECOND_HAND, filters.kind)
         assertEquals("Pumps", filters.category)
         assertEquals("Bosch", filters.brand)
-        assertEquals(ProductCondition.SECOND_HAND, filters.condition)
-        assertEquals(ProductType.WHOLE_APPLIANCE, filters.type)
-        assertEquals(5.0, filters.minPrice!!, 0.0)
+        assertEquals(5.0, filters.minPrice!!, 0.0) // swapped: the minimum was above the maximum
         assertEquals(50.0, filters.maxPrice!!, 0.0)
-        assertEquals(6, filters.activeFilterCount())
+        assertEquals("like-new", filters.usedCondition)
+        assertEquals(4, filters.activeFilterCount())
         assertEquals(filters, search.asked.last().first)
+        assertEquals(filters, vm.success().filters)
+
+        vm.removeFilter(ActiveFilter.BRAND)
+        vm.removeFilter(ActiveFilter.PRICE)
+        advanceUntilIdle()
+        assertEquals(null, vm.filters.brand)
+        assertEquals(null, vm.filters.minPrice)
+        assertEquals("Pumps", vm.filters.category)
 
         vm.onClearFilters()
         advanceUntilIdle()
-        assertTrue(vm.filters.isEmpty())
+        assertEquals(ProductFilters(kind = SearchKind.SECOND_HAND), vm.filters)
         assertEquals(0, vm.filters.activeFilterCount())
+    }
+
+    @Test
+    fun changingTheTypeAsksTheBackendAgainAndDropsTheSecondHandCondition() = runTest(dispatcher) {
+        val vm = viewModel()
+        advanceUntilIdle()
+        vm.onKindSelected(SearchKind.SECOND_HAND)
+        vm.applyFilters(null, null, null, null, usedCondition = "used-good")
+        advanceUntilIdle()
+        val asked = search.asked.size
+
+        vm.onKindSelected(SearchKind.PARTS)
+        advanceUntilIdle()
+
+        assertEquals(asked + 1, search.asked.size)
+        assertEquals(SearchKind.PARTS, search.asked.last().first.kind)
+        assertNull(vm.filters.usedCondition)
+
+        vm.onKindSelected(SearchKind.PARTS) // the same chip again: nothing to ask
+        advanceUntilIdle()
+        assertEquals(asked + 1, search.asked.size)
+    }
+
+    @Test
+    fun aConditionIsIgnoredOutsideSecondHand() = runTest(dispatcher) {
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        vm.applyFilters(null, null, null, null, usedCondition = "like-new")
+        advanceUntilIdle()
+
+        assertNull(vm.filters.usedCondition)
+    }
+
+    @Test
+    fun onlyTheLastSearchIsShown() = runTest(dispatcher) {
+        search.delayMs = 1_000
+        val vm = viewModel()
+        vm.onKindSelected(SearchKind.NEW)
+        advanceUntilIdle()
+
+        assertEquals(SearchKind.NEW, vm.success().filters.kind)
     }
 
     @Test
@@ -185,7 +255,7 @@ class ProductViewModelFlowTest {
 
         vm.onQueryChanged("pu")
         advanceTimeBy(100)
-        vm.onQueryChanged("pump")
+        vm.onQueryChanged("pump ")
         advanceUntilIdle()
 
         assertEquals("pump", vm.filters.query)
@@ -200,6 +270,26 @@ class ProductViewModelFlowTest {
 
         val error = vm.uiState.value as ProductUiState.Error
         assertTrue(error.canRetry)
+
+        search.failure = null
+        vm.retry()
+        advanceUntilIdle()
+        assertEquals(listOf("a", "b"), vm.success().products.map { it.id })
+    }
+
+    @Test
+    fun pullToRefreshKeepsTheResultsOnScreenAndReportsAFailure() = runTest(dispatcher) {
+        val vm = viewModel()
+        advanceUntilIdle()
+
+        search.failure = IOException("offline")
+        vm.onRefresh()
+        assertTrue(vm.success().isRefreshing)
+        advanceUntilIdle()
+
+        assertFalse(vm.success().isRefreshing)
+        assertEquals(listOf("a", "b"), vm.success().products.map { it.id })
+        assertEquals("Couldn't refresh the results, check your connection", vm.message.value)
 
         search.failure = null
         vm.onRefresh()

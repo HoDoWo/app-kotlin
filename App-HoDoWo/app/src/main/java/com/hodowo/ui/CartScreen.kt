@@ -131,7 +131,9 @@ fun CartScreen(
     onBack: () -> Unit,
     onBrowse: () -> Unit,
     /** Opens the Product Detail page of a cart line (#111). */
-    onOpenProduct: (CartLine) -> Unit = {}
+    onOpenProduct: (CartLine) -> Unit = {},
+    /** The order confirmation page (#144); without it a dialog confirms the order. */
+    onOrderPlaced: ((CheckoutSession) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
@@ -166,8 +168,17 @@ fun CartScreen(
             checkoutViewModel.consumeMessage()
         }
     }
-    checkout.placedOrder?.let { order ->
-        OrderPlacedDialog(order = order, onDismiss = { checkoutViewModel.dismissConfirmation() })
+    LaunchedEffect(checkout.placedOrder) {
+        val order = checkout.placedOrder
+        if (order != null && onOrderPlaced != null) {
+            checkoutViewModel.dismissConfirmation()
+            onOrderPlaced(order)
+        }
+    }
+    if (onOrderPlaced == null) {
+        checkout.placedOrder?.let { order ->
+            OrderPlacedDialog(order = order, onDismiss = { checkoutViewModel.dismissConfirmation() })
+        }
     }
 
     LaunchedEffect(Unit) { viewModel.load() }
