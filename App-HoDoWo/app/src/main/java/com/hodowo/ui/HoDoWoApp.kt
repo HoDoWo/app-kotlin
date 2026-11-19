@@ -166,8 +166,9 @@ fun HoDoWoApp(
         factory = AiServiceProvider.notificationsViewModelFactory(context)
     )
     val notificationsState by notificationsViewModel.uiState.collectAsState()
-    // Checked again every minute while the app is open, so the badge follows new messages and offers.
-    LaunchedEffect(Unit) {
+    // Checked again every 15 seconds while the app is open, and at once when the section
+    // changes, so the bell follows new messages, offers and sponsored products.
+    LaunchedEffect(currentTab) {
         while (true) {
             notificationsViewModel.load()
             delay(NOTIFICATIONS_REFRESH_MS)
@@ -638,4 +639,4 @@ private fun NotImplementedScreen(
 }
 
 /** How often the bell asks the backend for new notifications while the app is open. */
-private const val NOTIFICATIONS_REFRESH_MS = 60_000L
+private const val NOTIFICATIONS_REFRESH_MS = 15_000L
