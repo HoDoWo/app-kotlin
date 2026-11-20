@@ -334,6 +334,21 @@ class PostProductViewModelTest {
     }
 
     @Test
+    fun aSoldListingGoesBackOnSaleInsteadOfBeingEdited() = runTest(dispatcher) {
+        val listings = mockk<com.hodowo.data.ListingsService>()
+        coEvery { listings.relistListing("l1", any()) } returns mockk(relaxed = true)
+        val vm = PostProductViewModel(service, aiService, { byteArrayOf(1) }, listings)
+        var done = false
+
+        vm.saveEdit("l1", edit(), listOf(uri("https", "https://x.test/old.jpg")), onSuccess = { done = true }, relist = true)
+        advanceUntilIdle()
+
+        assertTrue(done)
+        assertEquals("Listing back on sale", vm.message.value)
+        io.mockk.coVerify(exactly = 0) { listings.updateListingDetails(any(), any()) }
+    }
+
+    @Test
     fun anEditIsCheckedBeforeSaving() {
         val vm = PostProductViewModel(service, aiService, { byteArrayOf(1) }, mockk(relaxed = true))
         var done = false

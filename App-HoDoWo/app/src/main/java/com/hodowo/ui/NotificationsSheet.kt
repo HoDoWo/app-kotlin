@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.HighlightOff
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material.icons.outlined.NotificationsNone
+import androidx.compose.material.icons.outlined.Sell
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -199,5 +200,6 @@ private fun iconOf(kind: String): ImageVector = when (kind) {
     "price_drop" -> Icons.AutoMirrored.Outlined.TrendingDown
     "price_change" -> Icons.AutoMirrored.Outlined.TrendingUp
     "sponsored" -> Icons.Outlined.Campaign
+    "sale" -> Icons.Outlined.Sell
     else -> Icons.Outlined.ChatBubbleOutline
 }

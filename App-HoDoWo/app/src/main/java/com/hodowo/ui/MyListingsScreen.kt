@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.Storefront
@@ -442,10 +443,16 @@ private fun ListingCard(
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onEdit, shape = RoundedCornerShape(8.dp)) {
-                    Text("Edit", style = MaterialTheme.typography.labelMedium)
-                }
-                if (!isSold) {
+                if (isSold) {
+                    // A sold listing cannot be edited: the same form puts it back on sale.
+                    OutlinedButton(onClick = onEdit, shape = RoundedCornerShape(8.dp)) {
+                        Icon(Icons.Default.Autorenew, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                        Text("Put back on sale", style = MaterialTheme.typography.labelMedium)
+                    }
+                } else {
+                    OutlinedButton(onClick = onEdit, shape = RoundedCornerShape(8.dp)) {
+                        Text("Edit", style = MaterialTheme.typography.labelMedium)
+                    }
                     OutlinedButton(onClick = onMarkAsSold, shape = RoundedCornerShape(8.dp)) {
                         Icon(Icons.Default.Sell, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
                         Text("Mark as sold", style = MaterialTheme.typography.labelMedium)

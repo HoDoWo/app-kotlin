@@ -102,6 +102,20 @@ class RemoteNotificationsServiceTest {
     }
 
     @Test
+    fun aSaleOpensMyListings() {
+        val items = RemoteNotificationsService.parse(
+            JSONObject(
+                """{"items": [{"id": "sale:o1", "kind": "sale", "title": "Sold: Drum belt",
+                    "body": "Paid €12.00, to ship", "created_at": 1700000000000,
+                    "unread": true, "target": {"type": "my_listings"}}]}"""
+            )
+        )
+
+        assertEquals("sale", items.single().kind)
+        assertEquals(NotificationTarget.MyListings, items.single().target)
+    }
+
+    @Test
     fun itemsWithoutIdOrWithAnUnknownTargetAreHandled() {
         val items = RemoteNotificationsService.parse(
             JSONObject(

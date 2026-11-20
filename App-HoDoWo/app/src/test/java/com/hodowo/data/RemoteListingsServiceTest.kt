@@ -189,6 +189,25 @@ class RemoteListingsServiceTest {
     }
 
     @Test
+    fun aSoldListingIsPutBackOnSaleWithTheEditsOfTheForm() = runTest {
+        server.enqueue(json("""{"id": "l1", "title": "Airfryer", "price": 39.0, "status": "active"}"""))
+        val edit = com.hodowo.viewmodel.ListingEdit(
+            title = "Airfryer", description = "Still works, cleaned and checked again", category = "airfryer",
+            brand = "Philips", model = "HD9200", listingKind = "appliance", condition = "used-good", price = 39.0,
+            imageUrls = listOf("https://x.test/a.jpg"), handoverMethods = listOf("pickup"),
+            pickupZip = "28001", shippingPriceCents = null
+        )
+
+        val relisted = service.relistListing("l1", edit)
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/api/marketplace/listings/l1/relist", request.path)
+        assertEquals(39.0, JSONObject(request.body.readUtf8()).getDouble("price"), 0.001)
+        assertEquals(ListingStatus.ACTIVE, relisted.status)
+    }
+
+    @Test
     fun deleteListingSendsADeleteRequest() = runTest {
         server.enqueue(MockResponse().setResponseCode(200).setBody(""))
 

@@ -115,6 +115,7 @@ import com.hodowo.ui.theme.TertiaryFixed
 import com.hodowo.viewmodel.Listing
 import com.hodowo.viewmodel.ListingDetails
 import com.hodowo.viewmodel.ListingEdit
+import com.hodowo.viewmodel.ListingStatus
 import com.hodowo.viewmodel.ModelScanResult
 import com.hodowo.viewmodel.PriceEstimate
 import kotlinx.coroutines.delay
@@ -204,6 +205,8 @@ fun PostProductScreen(
 ) {
     val start = editing?.details
     val editKey = editing?.id
+    // A sold listing is not edited: the same form puts it back on sale.
+    val relisting = editing?.status == ListingStatus.SOLD
     val startMethods = start?.handoverMethods.orEmpty()
     var listingKind by rememberSaveable(editKey) { mutableStateOf(start?.listingKind ?: "part") }
     var applianceType by rememberSaveable(editKey) { mutableStateOf(applianceTypeOf(start?.category)) }
@@ -377,7 +380,8 @@ fun PostProductScreen(
                     shippingPriceCents = shippingCents
                 ),
                 photos = images,
-                onSuccess = { publishedSuccess = true }
+                onSuccess = { publishedSuccess = true },
+                relist = relisting
             )
             return
         }
@@ -407,7 +411,11 @@ fun PostProductScreen(
     Box(modifier = Modifier.fillMaxSize().background(Surface).imePadding()) {
         Column(modifier = Modifier.fillMaxSize()) {
             AppTopBar(
-                subtitle = if (editing != null) "EDIT LISTING" else "SELL AN APPLIANCE OR PART",
+                subtitle = when {
+                    relisting -> "PUT BACK ON SALE"
+                    editing != null -> "EDIT LISTING"
+                    else -> "SELL AN APPLIANCE OR PART"
+                },
                 navigationIcon = {
                     IconButton(onClick = ::previous) {
                         Icon(
@@ -534,7 +542,8 @@ fun PostProductScreen(
                 submitting = submitting,
                 published = publishedSuccess,
                 onPublish = ::publish,
-                editing = editing != null
+                editing = editing != null,
+                relisting = relisting
             )
         }
 
@@ -1450,7 +1459,8 @@ private fun PublishBar(
     submitting: Boolean,
     published: Boolean,
     onPublish: () -> Unit,
-    editing: Boolean = false
+    editing: Boolean = false,
+    relisting: Boolean = false
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1505,7 +1515,14 @@ private fun PublishBar(
                             color = OnPrimary
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (editing) "Saving..." else "Publishing...", style = MaterialTheme.typography.labelLarge)
+                        Text(
+                            when {
+                                relisting -> "Putting back on sale..."
+                                editing -> "Saving..."
+                                else -> "Publishing..."
+                            },
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                     published -> {
                         Icon(
@@ -1515,7 +1532,7 @@ private fun PublishBar(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            if (editing) "Changes saved!" else "Live on Marketplace!",
+                            if (editing && !relisting) "Changes saved!" else "Live on Marketplace!",
                             style = MaterialTheme.typography.labelLarge
                         )
                     }
@@ -1527,7 +1544,11 @@ private fun PublishBar(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            if (editing) "Save changes" else "Publish Community Listing",
+                            when {
+                                relisting -> "Put back on sale"
+                                editing -> "Save changes"
+                                else -> "Publish Community Listing"
+                            },
                             style = MaterialTheme.typography.labelLarge
                         )
                     }

@@ -27,6 +27,10 @@ interface ListingsService {
     /** Saves every field of the 4-step form; by default only what [updateListing] knows. */
     suspend fun updateListingDetails(id: String, edit: ListingEdit): Listing =
         updateListing(id, edit.title, edit.description, edit.condition, formatPriceLabel(edit.price.toString()))
+
+    /** Puts a sold listing back on sale with the edits of the 4-step form. */
+    suspend fun relistListing(id: String, edit: ListingEdit): Listing =
+        throw IOException("Putting a listing back on sale is not available")
 }
 
 /**
@@ -97,6 +101,11 @@ class RemoteListingsService(
         return parseListing(jsonOf(patch("$LISTINGS_PATH/$id", body)))
     }
 
+    override suspend fun relistListing(id: String, edit: ListingEdit): Listing {
+        val body = editJson(edit).toString().toRequestBody(JSON)
+        return parseListing(jsonOf(post("$LISTINGS_PATH/$id/relist", body)))
+    }
+
     override suspend fun markAsSold(id: String): Listing =
         parseListing(jsonOf(post("$LISTINGS_PATH/$id/sold")))
 
@@ -108,9 +117,10 @@ class RemoteListingsService(
         execute(requestBuilder(path).get().build())
     }
 
-    private suspend fun post(path: String): String = withContext(ioDispatcher) {
-        execute(requestBuilder(path).post("".toRequestBody(JSON)).build())
-    }
+    private suspend fun post(path: String, body: RequestBody = "".toRequestBody(JSON)): String =
+        withContext(ioDispatcher) {
+            execute(requestBuilder(path).post(body).build())
+        }
 
     private suspend fun patch(path: String, body: RequestBody): String = withContext(ioDispatcher) {
         execute(requestBuilder(path).patch(body).build())
@@ -163,7 +173,7 @@ class RemoteListingsService(
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
 
-        /** The PATCH body of an edit: the same fields the sell form publishes. */
+        /** The body of an edit (PATCH) or a relist (POST): the same fields the sell form publishes. */
         internal fun editJson(edit: ListingEdit): JSONObject = JSONObject()
             .put("title", edit.title.trim())
             .put("description", edit.description.trim())

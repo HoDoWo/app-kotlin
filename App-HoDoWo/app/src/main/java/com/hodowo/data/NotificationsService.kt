@@ -22,6 +22,9 @@ sealed interface NotificationTarget {
 
     /** The Product Detail page of a (sponsored) product. */
     data class Product(val product: MarketplaceProduct) : NotificationTarget
+
+    /** My listings, where the seller sees what was sold. */
+    data object MyListings : NotificationTarget
 }
 
 /**
@@ -108,6 +111,7 @@ class RemoteNotificationsService(
         private fun parseTarget(json: JSONObject): NotificationTarget? = when (json.optString("type")) {
             "conversation" -> json.textOrNull("id")?.let { NotificationTarget.Conversation(it) }
             "cart" -> NotificationTarget.Cart
+            "my_listings" -> NotificationTarget.MyListings
             "product" -> json.optJSONObject("product")?.let { NotificationTarget.Product(parseProduct(it)) }
             else -> null
         }
