@@ -50,6 +50,12 @@ data class MarketplaceProduct(
     val compatibility: PartCompatibility = PartCompatibility.UNKNOWN
 )
 
+/** One page of `/api/marketplace/search` (#139): [nextCursor] is null on the last page. */
+data class MarketplaceSearchPage(
+    val items: List<MarketplaceProduct>,
+    val nextCursor: String?
+)
+
 /** Backend for the marketplace Product Detail screen (issue #140) and Marketplace items. */
 interface MarketplaceService {
     /** The product/listing/part shown at the given id, in its matching variant. */
@@ -66,6 +72,29 @@ interface MarketplaceService {
         brand: String? = null,
         maxPrice: Double? = null
     ): List<MarketplaceProduct> = emptyList()
+
+    /**
+     * One page of the search screen (#139): every filter is applied by the backend, so the
+     * pages follow one another with [cursor]. [type] is "all", "new", "used" or "part";
+     * [condition] is "new", "used" or one second-hand condition ("like-new"...).
+     */
+    suspend fun searchPage(
+        query: String = "",
+        type: String = "all",
+        condition: String? = null,
+        category: String? = null,
+        brand: String? = null,
+        minPrice: Double? = null,
+        maxPrice: Double? = null,
+        cursor: String? = null,
+        limit: Int = 20
+    ): MarketplaceSearchPage = MarketplaceSearchPage(
+        items = if (cursor == null) search(query, type, condition, category, brand, maxPrice) else emptyList(),
+        nextCursor = null
+    )
+
+    /** Categories and brands on sale now, for the filter sheet (#139); empty lists when unknown. */
+    suspend fun searchFilters(): Pair<List<String>, List<String>> = emptyList<String>() to emptyList()
 
     suspend fun createListing(
         title: String,
@@ -288,6 +317,42 @@ class RemoteMarketplaceService(
         return filterProducts(products.distinctBy { it.id }, query, type, condition, category, brand, maxPrice)
     }
 
+    override suspend fun searchPage(
+        query: String,
+        type: String,
+        condition: String?,
+        category: String?,
+        brand: String?,
+        minPrice: Double?,
+        maxPrice: Double?,
+        cursor: String?,
+        limit: Int
+    ): MarketplaceSearchPage {
+        val params = mutableListOf("type=${type.ifBlank { "all" }.urlEncode()}", "limit=$limit")
+        if (query.isNotBlank()) params.add("q=${query.trim().urlEncode()}")
+        if (!condition.isNullOrBlank()) params.add("condition=${condition.urlEncode()}")
+        if (!category.isNullOrBlank()) params.add("category=${category.urlEncode()}")
+        if (!brand.isNullOrBlank()) params.add("brand=${brand.urlEncode()}")
+        if (minPrice != null && minPrice > 0) params.add("min_price=$minPrice")
+        if (maxPrice != null && maxPrice > 0) params.add("max_price=$maxPrice")
+        if (!cursor.isNullOrBlank()) params.add("cursor=${cursor.urlEncode()}")
+        val response = jsonOf(get("/api/marketplace/search?" + params.joinToString("&")))
+        val items = response.optJSONArray("items") ?: JSONArray()
+        return MarketplaceSearchPage(
+            items = (0 until items.length()).map { parseMarketplaceProduct(items.getJSONObject(it)) },
+            nextCursor = response.textOrNull("next_cursor")
+        )
+    }
+
+    override suspend fun searchFilters(): Pair<List<String>, List<String>> {
+        val response = jsonOf(get("/api/marketplace/search/filters"))
+        fun strings(name: String): List<String> {
+            val array = response.optJSONArray(name) ?: return emptyList()
+            return (0 until array.length()).mapNotNull { array.optString(it).trim().takeIf(String::isNotEmpty) }
+        }
+        return strings("categories") to strings("brands")
+    }
+
     override suspend fun createListing(
         title: String,
         description: String,
@@ -401,7 +466,9 @@ class RemoteMarketplaceService(
         } else null
 
         val conditionVal = item.optString("condition", "used-good")
-        val isPartVal = item.optString("listing_kind", item.optString("item_type", "part")) == "part"
+        // A partner product has no listing_kind: it is a part only when the backend says so.
+        val kind = item.textOrNull("listing_kind") ?: item.textOrNull("item_type")
+        val isPartVal = if (kind != null) kind == "part" else item.optString("type") == "part"
         val isRefurbishedVal = conditionVal.contains("refurbished", ignoreCase = true)
 
         val imageUrl = item.optJSONArray("image_urls")?.optString(0)?.takeIf { it.isNotBlank() }

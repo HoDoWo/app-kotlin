@@ -62,6 +62,7 @@ import com.hodowo.data.auth.GoogleSignInHelper
 import com.hodowo.viewmodel.AuthViewModel
 import com.hodowo.viewmodel.Listing
 import com.hodowo.viewmodel.MyListingsViewModel
+import com.hodowo.viewmodel.OrdersViewModel
 import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.MessagesViewModel
 import com.hodowo.viewmodel.NotificationsViewModel
@@ -153,6 +154,10 @@ fun HoDoWoApp(
     var editingListing by remember { mutableStateOf<Listing?>(null) }
     var showSponsored by rememberSaveable { mutableStateOf(false) }
     var showCart by rememberSaveable { mutableStateOf(false) }
+    // Order confirmation after paying and the purchase history in the profile (#144).
+    val ordersViewModel: OrdersViewModel = viewModel(factory = AiServiceProvider.ordersViewModelFactory())
+    var showOrderConfirmation by rememberSaveable { mutableStateOf(false) }
+    var showOrders by rememberSaveable { mutableStateOf(false) }
     // Messages and offers with buyers and sellers of second-hand listings.
     var showMessages by rememberSaveable { mutableStateOf(false) }
     val messagesViewModel: MessagesViewModel = viewModel(factory = AiServiceProvider.messagesViewModelFactory())
@@ -216,6 +221,8 @@ fun HoDoWoApp(
         showMyListings = false
         editingListing = null
         showSponsored = false
+        showOrders = false
+        showOrderConfirmation = false
         showCart = false
         showMessages = false
         selectedMarketProduct = null
@@ -280,6 +287,8 @@ fun HoDoWoApp(
                                     showMyListings = false
                                     editingListing = null
                                     showSponsored = false
+                                    showOrders = false
+                                    showOrderConfirmation = false
                                     showCart = false
                                     showMessages = false
                                     selectedMarketProduct = null
@@ -296,6 +305,8 @@ fun HoDoWoApp(
                                             showPostProduct = false
                                             showMyListings = false
                                             showSponsored = false
+                                            showOrders = false
+                                            showOrderConfirmation = false
                                             showCart = false
                                             selectedMarketProduct = null
                                             currentTab = AppNavTab.PROFILE
@@ -356,7 +367,23 @@ fun HoDoWoApp(
                                         )
                                     }
                                     AppNavTab.PROFILE -> {
-                                        if (showApplianceManuals) {
+                                        if (showOrders) {
+                                            BackHandler { showOrders = false }
+                                            PurchaseHistoryScreen(
+                                                viewModel = ordersViewModel,
+                                                onBack = { showOrders = false },
+                                                onBrowse = {
+                                                    showOrders = false
+                                                    currentTab = AppNavTab.MARKET
+                                                    showMarketplaceSearch = true
+                                                },
+                                                onOpenItem = { item, order ->
+                                                    showOrders = false
+                                                    currentTab = AppNavTab.MARKET
+                                                    selectedMarketProduct = item.toMarketplaceProduct(order.sellerName)
+                                                }
+                                            )
+                                        } else if (showApplianceManuals) {
                                             ApplianceManualsScreen(
                                                 viewModel = chatViewModel,
                                                 onBack = { showApplianceManuals = false },
@@ -412,6 +439,7 @@ fun HoDoWoApp(
                                                 onNavigateProfile = { currentTab = AppNavTab.PROFILE },
                                                 onOpenApplianceManuals = { showApplianceManuals = true },
                                                 onOpenMyListings = { showMyListings = true },
+                                                onOpenOrders = { showOrders = true },
                                                 onPostProduct = {
                                                     currentTab = AppNavTab.MARKET
                                                     showPostProduct = true
@@ -425,7 +453,27 @@ fun HoDoWoApp(
                                     }
                                     AppNavTab.MARKET -> {
                                         val product = selectedMarketProduct
-                                        if (showMessages && !showCart) {
+                                        if (showOrderConfirmation) {
+                                            fun leaveConfirmation() {
+                                                showOrderConfirmation = false
+                                                showCart = false
+                                                ordersViewModel.closeConfirmation()
+                                            }
+                                            BackHandler { leaveConfirmation() }
+                                            OrderConfirmationScreen(
+                                                viewModel = ordersViewModel,
+                                                onViewOrders = {
+                                                    leaveConfirmation()
+                                                    currentTab = AppNavTab.PROFILE
+                                                    showOrders = true
+                                                },
+                                                onBackToMarket = { leaveConfirmation() },
+                                                onOpenItem = { item, order ->
+                                                    leaveConfirmation()
+                                                    selectedMarketProduct = item.toMarketplaceProduct(order.sellerName)
+                                                }
+                                            )
+                                        } else if (showMessages && !showCart) {
                                             MessagesScreen(
                                                 viewModel = messagesViewModel,
                                                 onBack = { showMessages = false },
@@ -444,6 +492,10 @@ fun HoDoWoApp(
                                                 onOpenProduct = { line ->
                                                     showCart = false
                                                     selectedMarketProduct = line.toMarketplaceProduct()
+                                                },
+                                                onOrderPlaced = { session ->
+                                                    ordersViewModel.showConfirmation(session)
+                                                    showOrderConfirmation = true
                                                 }
                                             )
                                         } else if (product != null) {
@@ -548,6 +600,8 @@ fun HoDoWoApp(
                                         showMyListings = false
                                         editingListing = null
                                         showSponsored = false
+                                        showOrders = false
+                                        showOrderConfirmation = false
                                         showCart = false
                                         showMessages = false
                                         selectedMarketProduct = null

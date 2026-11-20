@@ -1,9 +1,9 @@
 package com.hodowo.viewmodel
 
 import com.hodowo.data.ProductRepository
-import com.hodowo.data.model.ProductCondition
 import com.hodowo.data.model.ProductFilters
-import com.hodowo.data.model.ProductType
+import com.hodowo.data.model.SearchKind
+import com.hodowo.data.model.kind
 import com.hodowo.data.model.ProductUiState
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -50,19 +50,16 @@ class ProductViewModelTest {
     }
 
     @Test
-    fun changingTypeFilterRequeries() = runTest(dispatcher) {
+    fun changingTheTypeChipRequeries() = runTest(dispatcher) {
         val vm = viewModel()
         advanceUntilIdle()
 
-        val initialCount = (vm.uiState.value as ProductUiState.Success).products.size
-
-        vm.onTypeSelected(ProductType.WHOLE_APPLIANCE)
+        vm.onKindSelected(SearchKind.PARTS)
         advanceUntilIdle()
 
         val state = vm.uiState.value as ProductUiState.Success
-        assertEquals(ProductType.WHOLE_APPLIANCE, state.filters.type)
-        // Only whole appliances should remain
-        assertTrue(state.products.all { it.type == ProductType.WHOLE_APPLIANCE })
+        assertEquals(SearchKind.PARTS, state.filters.kind)
+        assertTrue(state.products.all { it.kind() == SearchKind.PARTS })
     }
 
     @Test
@@ -70,13 +67,13 @@ class ProductViewModelTest {
         val vm = viewModel()
         advanceUntilIdle()
 
-        vm.onTypeSelected(ProductType.REPLACEMENT_PART)
-        vm.onConditionSelected(ProductCondition.NEW)
+        vm.onKindSelected(SearchKind.SECOND_HAND)
+        vm.applyFilters(category = null, brand = null, minPrice = null, maxPrice = 20.0, usedCondition = null)
         advanceUntilIdle()
 
         val state = vm.uiState.value as ProductUiState.Success
-        assertTrue(state.products.all { it.type == ProductType.REPLACEMENT_PART })
-        assertTrue(state.products.all { it.condition == ProductCondition.NEW })
+        assertTrue(state.products.all { it.kind() == SearchKind.SECOND_HAND })
+        assertTrue(state.products.all { it.price <= 20.0 })
     }
 
     @Test
@@ -84,7 +81,7 @@ class ProductViewModelTest {
         val vm = viewModel()
         advanceUntilIdle()
 
-        vm.onTypeSelected(ProductType.WHOLE_APPLIANCE)
+        vm.applyFilters(category = "Pumps", brand = null, minPrice = 5.0, maxPrice = null, usedCondition = null)
         advanceUntilIdle()
 
         vm.onClearFilters()

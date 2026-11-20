@@ -1,10 +1,13 @@
 package com.hodowo.data
 
+import com.hodowo.data.model.FilterOptions
 import com.hodowo.data.model.Product
 import com.hodowo.data.model.ProductCondition
 import com.hodowo.data.model.ProductFilters
 import com.hodowo.data.model.ProductPage
 import com.hodowo.data.model.ProductType
+import com.hodowo.data.model.SearchKind
+import com.hodowo.data.model.kind
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -20,6 +23,9 @@ interface ProductSearchService {
 
     fun categories(): List<String>
     fun brands(): List<String>
+
+    /** What the filter sheet offers; the marketplace asks the backend for what is on sale now. */
+    suspend fun filterOptions(): FilterOptions = FilterOptions(categories(), brands())
 }
 
 /**
@@ -189,8 +195,8 @@ class ProductRepository(private val delayMillis: Long = 600) : ProductSearchServ
                 product.title.contains(filters.query, ignoreCase = true) ||
                 product.partner.contains(filters.query, ignoreCase = true)
 
-            val matchesType = filters.type == null || product.type == filters.type
-            val matchesCondition = filters.condition == null || product.condition == filters.condition
+            val matchesType = filters.kind == SearchKind.ALL || product.kind() == filters.kind
+            val matchesCondition = filters.usedCondition == null || product.condition == ProductCondition.SECOND_HAND
             val matchesCategory = filters.category == null || categories.any { it == filters.category }
             val matchesBrand = filters.brand == null || brands.any { b ->
                 b == filters.brand && product.partner.contains(b, ignoreCase = true)

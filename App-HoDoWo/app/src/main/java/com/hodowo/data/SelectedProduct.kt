@@ -90,6 +90,20 @@ fun CartLine.toMarketplaceProduct(): MarketplaceProduct = MarketplaceProduct(
     isPart = productType == "part"
 )
 
+/** A bought item of the purchase history (#144), so it opens its Product Detail page. */
+fun OrderItem.toMarketplaceProduct(sellerName: String): MarketplaceProduct = MarketplaceProduct(
+    id = productId,
+    title = title,
+    description = "",
+    type = productType,
+    condition = if (productType == "used") "used-good" else "new",
+    price = unitPriceCents / CENTS.toDouble(),
+    sellerName = sellerName,
+    partnerName = sellerName.takeIf { productType != "used" },
+    imageUrl = imageUrl,
+    isPart = productType == "part"
+)
+
 /** A seller's own listing as buyers see it (#111): always a second-hand product. */
 fun Listing.toMarketplaceProduct(): MarketplaceProduct = MarketplaceProduct(
     id = id,

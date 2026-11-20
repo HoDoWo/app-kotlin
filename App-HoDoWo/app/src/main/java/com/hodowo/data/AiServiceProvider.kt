@@ -19,6 +19,7 @@ import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.ProductViewModel
 import com.hodowo.viewmodel.MessagesViewModel
 import com.hodowo.viewmodel.NotificationsViewModel
+import com.hodowo.viewmodel.OrdersViewModel
 import com.hodowo.viewmodel.ProductForumViewModel
 import com.hodowo.viewmodel.ProductReviewsViewModel
 import com.hodowo.viewmodel.greetingName
@@ -278,6 +279,14 @@ object AiServiceProvider {
                     cart = cartStore,
                     publishableKey = BuildConfig.STRIPE_PUBLISHABLE_KEY
                 )
+            }
+        }
+
+    /** Order confirmation and purchase history (#144). */
+    fun ordersViewModelFactory(): ViewModelProvider.Factory =
+        viewModelFactory {
+            initializer {
+                OrdersViewModel(RemoteOrdersService(BuildConfig.BACKEND_URL, FirebaseTokenProvider()::token))
             }
         }
 
