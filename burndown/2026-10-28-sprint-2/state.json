@@ -1,4 +1,16 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzhDW4dE": {
+  "c": 0.0,
+  "done": true,
+  "issue": 139,
+  "title": "Product search page with new / second-hand / parts filters"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhDW4gU": {
+  "c": 0.0,
+  "done": true,
+  "issue": 144,
+  "title": "Order confirmation and purchase history screens"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-7rNk": {
   "c": 4.0,
   "done": false,
@@ -7,7 +19,7 @@
  },
  "PVTI_lADOFCkyKM4Bl88jzhCeYWk": {
   "c": 0.0,
-  "done": false,
+  "done": true,
   "issue": 111,
   "title": "Marketplace app screens"
  },
@@ -197,23 +209,11 @@
   "issue": 140,
   "title": "Product detail page (new, second-hand and part variants)"
  },
- "PVTI_lADOFCkyKM4Bl88jzhDW4dE": {
-  "c": 9.0,
-  "done": false,
-  "issue": 139,
-  "title": "Product search page with new / second-hand / parts filters"
- },
  "PVTI_lADOFCkyKM4Bl88jzhDW4eY": {
   "c": 0.0,
   "done": true,
   "issue": 141,
   "title": "Ads / sponsored partners page"
- },
- "PVTI_lADOFCkyKM4Bl88jzhDW4gU": {
-  "c": 4.0,
-  "done": false,
-  "issue": 144,
-  "title": "Order confirmation and purchase history screens"
  },
  "PVTI_lADOFCkyKM4Bl88jzhDW4ik": {
   "c": 0.0,
