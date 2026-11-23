@@ -102,6 +102,7 @@ import com.hodowo.ui.theme.SurfaceContainerLowest
 import com.hodowo.ui.theme.TertiaryContainer
 import com.hodowo.ui.theme.TertiaryFixed
 import com.hodowo.viewmodel.MarketplaceViewModel
+import kotlin.math.roundToInt
 
 @Composable
 fun MarketplaceHomeScreen(
@@ -333,14 +334,12 @@ fun MarketplaceHomeScreen(
                         }
                     }
 
-                    // Featured Partner Sponsored Banner
-                    item {
-                        FeaturedPartnerBanner(
-                            onViewPartDetails = {
-                                // Opens a real part when the catalogue has one; otherwise the search.
-                                partnerDeals.firstOrNull { it.isPart }?.let(onOpenProduct) ?: onOpenSearch()
-                            }
-                        )
+                    // Featured partner banner: a real sponsored product of the catalogue, or none.
+                    val featured = partnerDeals.firstOrNull { it.sponsored } ?: partnerDeals.firstOrNull()
+                    if (featured != null) {
+                        item(key = "featured-${featured.id}") {
+                            FeaturedPartnerBanner(product = featured, onOpen = { onOpenProduct(featured) })
+                        }
                     }
 
                     // Community Sell Prompt CTA Banner
@@ -476,13 +475,18 @@ fun MarketplaceHomeScreen(
 }
 
 /**
- * Featured Partner Sponsored Banner
+ * Featured partner banner: one real product of the catalogue (sponsored first). The whole card
+ * opens it; the old price and the discount appear only when the catalogue has them.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FeaturedPartnerBanner(
-    onViewPartDetails: () -> Unit
+    product: MarketplaceProduct,
+    onOpen: () -> Unit
 ) {
+    val seller = product.partnerName ?: product.sellerName
     Card(
+        onClick = onOpen,
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
@@ -496,13 +500,14 @@ private fun FeaturedPartnerBanner(
                 .padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header
+            // Header: the partner, what it is and the "Ad" label for a sponsored product.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
+                    modifier = Modifier.weight(1f),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -514,24 +519,29 @@ private fun FeaturedPartnerBanner(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "B",
+                            text = seller.take(1).uppercase(),
                             color = Primary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                     Text(
-                        text = "Bosch Official Store",
+                        text = seller,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = OnSurface
+                        color = OnSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Verified",
-                        tint = Primary,
-                        modifier = Modifier.size(14.dp)
-                    )
+                    if (product.partnerName != null) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Verified partner",
+                            tint = Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -541,23 +551,25 @@ private fun FeaturedPartnerBanner(
                             .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "Part • Brand New",
+                            text = if (product.isPart) "Part • Brand New" else "Appliance • Brand New",
                             color = Primary,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
-                    Box(
-                        modifier = Modifier
-                            .background(SurfaceContainer, CircleShape)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "Ad",
-                            color = OnSurfaceVariant,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                    if (product.sponsored) {
+                        Box(
+                            modifier = Modifier
+                                .background(SurfaceContainer, CircleShape)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Ad",
+                                color = OnSurfaceVariant,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
@@ -569,12 +581,14 @@ private fun FeaturedPartnerBanner(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Bosch WAN Serie 4 Drain Motor & Eco Accessories",
+                    text = product.title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = OnSurface,
                     modifier = Modifier.weight(1f),
-                    lineHeight = 20.sp
+                    lineHeight = 20.sp,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 Box(
@@ -583,54 +597,64 @@ private fun FeaturedPartnerBanner(
                         .clip(RoundedCornerShape(10.dp))
                         .background(SurfaceContainerHigh)
                 ) {
-                    AsyncImage(
-                        model = "https://lh3.googleusercontent.com/aida-public/AB6AXuAAHMYQKJYNSiL8AxhO2_mFYZSeqhDG7lDk7OGCipDHhG55lIV10-bn9x8vABIGofZ6rYZQhheAko7ccMawBqnH-_m0YMqYjzTX74xbRgN8PZ86PS7J8m-I3us3jcCc26VNJQi1xw_TzLhvE8AByiQiP5BNu0Q2UXXOt51lIqguWDAP_dBfmFUIbbbEEgokrRgd0dXDB1pwoq4buRNmbihWNWaaTj1C5tCoRDL-LUM",
-                        contentDescription = "Bosch WAN Serie 4",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
+                    if (product.imageUrl != null) {
+                        AsyncImage(
+                            model = product.imageUrl,
+                            contentDescription = product.title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
             }
 
-            // Action row
+            // Price and action
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(
-                        text = "$89.00 MSRP",
-                        fontSize = 11.sp,
-                        color = Outline,
-                        textDecoration = TextDecoration.LineThrough
-                    )
+                    // Only a real old price: no invented MSRP or discount.
+                    val original = product.originalPrice?.takeIf { it > product.price }
+                    if (original != null) {
+                        Text(
+                            text = formatEuro(original),
+                            fontSize = 11.sp,
+                            color = Outline,
+                            textDecoration = TextDecoration.LineThrough
+                        )
+                    }
                     Row(
                         verticalAlignment = Alignment.Bottom,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "$64.50",
+                            text = formatEuro(product.price),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = Primary
                         )
-                        Text(
-                            text = "(-27%)",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TertiaryContainer
-                        )
+                        val discount = product.discountPercent?.takeIf { it > 0 }
+                            ?: original?.let { ((1 - product.price / it) * 100).roundToInt() }?.takeIf { it > 0 }
+                        if (discount != null) {
+                            Text(
+                                text = "(-$discount%)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TertiaryContainer
+                            )
+                        }
                     }
                 }
 
                 Button(
-                    onClick = onViewPartDetails,
+                    onClick = onOpen,
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
                 ) {
-                    Text("View Part Details", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(if (product.isPart) "View Part Details" else "View Details", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -642,6 +666,9 @@ private fun FeaturedPartnerBanner(
         }
     }
 }
+
+private fun formatEuro(value: Double): String =
+    if (value % 1.0 == 0.0) "€${value.toLong()}" else "€" + String.format(java.util.Locale.ROOT, "%.2f", value)
 
 /**
  * Community Sell Prompt CTA Banner
