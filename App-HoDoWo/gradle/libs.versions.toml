@@ -17,6 +17,7 @@ firebaseBom = "34.17.0"
 coil = "2.6.0"
 constraintlayout = "2.2.2"
 stripe = "23.8.0"
+arcore = "1.57.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -43,6 +44,7 @@ firebase-storage = { group = "com.google.firebase", name = "firebase-storage" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 stripe-android = { group = "com.stripe", name = "stripe-android", version.ref = "stripe" }
 androidx-constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+arcore = { group = "com.google.ar", name = "core", version.ref = "arcore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
