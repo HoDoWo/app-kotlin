@@ -56,6 +56,7 @@ import com.hodowo.viewmodel.ArCameraPermission
 import com.hodowo.viewmodel.ArGuidePhase
 import com.hodowo.viewmodel.ArGuideUiState
 import com.hodowo.viewmodel.ManualStep
+import com.hodowo.viewmodel.ScanStatus
 import kotlinx.coroutines.delay
 import java.util.Locale
 
@@ -74,7 +75,8 @@ internal class ArPanelActions(
     val onOpenGuides: () -> Unit,
     val onPrevious: () -> Unit,
     val onNext: () -> Unit,
-    val onFindAutomatically: () -> Unit = {}
+    val onFindAutomatically: () -> Unit = {},
+    val onScan: () -> Unit = {}
 )
 
 @Composable
@@ -133,11 +135,43 @@ internal fun ArBottomPanel(state: ArGuideUiState, maxHeight: Dp, modifier: Modif
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
             )
+            if (state.scanMode && state.scanDevice != null) ScanCard(state)
             state.currentStep?.let { step ->
                 StepCard(step = step, position = state.stepIndex + 1, total = state.steps.size)
                 StepNavigation(state, actions)
             }
             PhaseActions(state, actions)
+        }
+    }
+}
+
+/** The device the AR tab scan named and its main controls, also readable by TalkBack. */
+@Composable
+private fun ScanCard(state: ArGuideUiState) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                text = state.scanDevice.orEmpty(),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.semantics { heading() }
+            )
+            state.scanLabels.forEach { control ->
+                Text(
+                    text = buildString {
+                        append(control.label)
+                        if (control.description.isNotBlank()) append(" — ").append(control.description)
+                        if (!control.placed) append(" (not on screen)")
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -203,6 +237,25 @@ private fun StepNavigation(state: ArGuideUiState, actions: ArPanelActions) {
 
 @Composable
 private fun PhaseActions(state: ArGuideUiState, actions: ArPanelActions) {
+    val scanPhases = setOf(ArGuidePhase.SCANNING, ArGuidePhase.READY_TO_PLACE, ArGuidePhase.PLACED)
+    if (state.scanMode && state.phase in scanPhases) {
+        // AR tab: the scan comes first; the free arrow stays available below it.
+        PrimaryAction(
+            label = when (state.scanStatus) {
+                ScanStatus.SEARCHING -> "Scanning…"
+                ScanStatus.IDLE -> "Scan"
+                else -> "Scan again"
+            },
+            enabled = state.canScan,
+            onClick = actions.onScan
+        )
+        if (state.phase == ArGuidePhase.PLACED) {
+            SecondaryAction(state.recenterLabel, onClick = actions.onMoveArrow)
+        } else {
+            SecondaryAction(state.placeLabel, enabled = state.canPlace, onClick = actions.onPlace)
+        }
+        return
+    }
     when (state.phase) {
         ArGuidePhase.ASKING_PERMISSION -> Unit
         ArGuidePhase.PERMISSION_DENIED -> {

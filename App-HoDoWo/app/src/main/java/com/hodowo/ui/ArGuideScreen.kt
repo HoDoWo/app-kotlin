@@ -44,6 +44,7 @@ import com.hodowo.viewmodel.ArGuideUiState
 import com.hodowo.viewmodel.ArGuideViewModel
 import com.hodowo.viewmodel.ManualStep
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 /** The bottom panel never covers more than this share of the screen, also at large font sizes. */
 private const val PANEL_MAX_SCREEN_SHARE = 0.55f
@@ -81,12 +82,20 @@ fun ArGuideScreen(
     val scope = rememberCoroutineScope()
     // Null without a backend URL: then only manual aiming is offered.
     val locateService = remember { AiServiceProvider.guideLocateService }
+    val scanService = remember { AiServiceProvider.arScanService }
 
     BackHandler(onBack = onClose)
     KeepScreenOn()
 
     // Fresh on every visit: an anchor of the previous visit no longer exists.
-    LaunchedEffect(Unit) { viewModel.start(steps, initialStepIndex, autoAlignAvailable = locateService != null) }
+    LaunchedEffect(Unit) {
+        viewModel.start(
+            steps,
+            initialStepIndex,
+            autoAlignAvailable = locateService != null,
+            scanAvailable = scanService != null
+        )
+    }
     PhotoAspect(photoUrl, viewModel::onPhotoAspect)
     val stepChange by rememberUpdatedState(onStepChange)
     LaunchedEffect(state.stepIndex, state.guided) {
@@ -97,9 +106,31 @@ fun ArGuideScreen(
 
     // One placement per session: rebuilt (and its anchor detached) on every reset.
     val placement = remember(state.sessionKey) { ArPlacement() }
-    DisposableEffect(placement) { onDispose { placement.clear() } }
+    DisposableEffect(placement) {
+        onDispose {
+            placement.clear()
+            placement.clearScan()
+        }
+    }
 
     val place: (HitResult?) -> Unit = { hit -> placeOrAlign(placement, hit, viewModel.state.value, viewModel) }
+    // AR tab: name what the camera sees and label its main controls; the first scan starts by itself.
+    val scan: () -> Unit = {
+        if (scanService != null && viewModel.state.value.canScan) {
+            viewModel.onScanStarted()
+            placement.captureRequest = { captured ->
+                scope.launch {
+                    try {
+                        val outcome = runArScan(captured, placement, scanService)
+                        viewModel.onScanFinished(outcome.device, outcome.labels)
+                    } catch (e: IOException) {
+                        viewModel.onScanError()
+                    }
+                }
+            }
+        }
+    }
+    LaunchedEffect(state.shouldAutoScan) { if (state.shouldAutoScan) scan() }
     val findAutomatically: () -> Unit = {
         if (locateService != null && viewModel.state.value.canAutoAlign) {
             viewModel.onAutoAlignStarted()
@@ -158,7 +189,8 @@ fun ArGuideScreen(
                 onOpenGuides = onOpenGuides,
                 onPrevious = viewModel::previousStep,
                 onNext = viewModel::nextStep,
-                onFindAutomatically = findAutomatically
+                onFindAutomatically = findAutomatically,
+                onScan = scan
             )
         )
     }

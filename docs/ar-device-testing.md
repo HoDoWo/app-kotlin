@@ -23,6 +23,14 @@ if none, both. The manual **Place point** is always next to it.
 All pins are children of the first anchor: they move with it and do not drift apart.
 If all pins are on one control, one point is enough; a guide without pins shows a free arrow.
 
+## AR tab: scan without chat or guide
+
+**AR tab → Start AR**, point at an appliance, a keyboard, a remote… As soon as ARCore finds a surface the
+app sends one frame to `POST /api/ar/scan`: the AI names the device and up to 8 main controls, and the app
+anchors a small dot and the control's name on each one (same ray-to-plane method as auto-alignment).
+The panel lists the device and every control with what it does (readable with TalkBack). **Scan again**
+repeats it; there is no continuous scanning (each scan is one AI call).
+
 ## How to measure performance
 
 Debug builds show a line in the top-right corner of the AR view:
@@ -82,6 +90,13 @@ Auto-alignment
 - [ ] Airplane mode: "Automatic search didn't work (check the connection)", manual aiming works.
 - [ ] Moving the phone while it searches: the pins still land on the right controls.
 - [ ] Time from the tap to the pins: ______ s (write it in the device matrix notes).
+
+AR tab scan
+- [ ] Start AR on a keyboard: within a few seconds the device name and labels (Enter, Space, Esc…) appear on the keys.
+- [ ] Same on an appliance panel (Start, programme dial, temperature…).
+- [ ] Pointing at a wall: "No appliance or keyboard found", **Scan again** works.
+- [ ] Airplane mode: "The scan didn't work (check the connection)".
+- [ ] **Reset AR** removes the labels and scans again by itself.
 
 Navigation
 - [ ] **Previous / Next** reach every step; disabled at the first / last step.
