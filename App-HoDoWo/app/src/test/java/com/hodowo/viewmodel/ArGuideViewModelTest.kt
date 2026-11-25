@@ -313,4 +313,98 @@ class ArGuideViewModelTest {
         viewModel.onPhotoAspect(0f)
         assertEquals(DEFAULT_PHOTO_ASPECT, viewModel.state.value.photoAspect, 0f)
     }
+
+    // AR auto-alignment (#18)
+
+    private fun autoGuided() = ArGuideViewModel().apply {
+        onPermissionResult(granted = true)
+        start(guide, 0, autoAlignAvailable = true)
+        onCameraTracking(true)
+    }
+
+    @Test
+    fun findAutomaticallyNeedsTheBackendTwoControlsAndTracking() {
+        assertTrue(autoGuided().state.value.canAutoAlign)
+        assertFalse(guided().state.value.canAutoAlign) // no backend
+        val oneControl = ArGuideViewModel().apply {
+            onPermissionResult(granted = true)
+            start(listOf(ManualStep(1, "Turn", "", StepPin(0.5f, 0.5f))), 0, autoAlignAvailable = true)
+            onCameraTracking(true)
+        }
+        assertFalse(oneControl.state.value.canAutoAlign)
+        val notTracking = autoGuided().apply { onCameraTracking(false) }
+        assertFalse(notTracking.state.value.canAutoAlign)
+    }
+
+    @Test
+    fun whileSearchingNothingElseCanBePlaced() {
+        val viewModel = autoGuided()
+        viewModel.onSurfaceUnderReticle(true)
+        viewModel.onAutoAlignStarted()
+
+        val state = viewModel.state.value
+        assertTrue(state.searching)
+        assertFalse(state.canAutoAlign)
+        assertFalse(state.canPlace)
+        assertTrue(state.message.contains("Looking for steps 1 and 3"))
+    }
+
+    @Test
+    fun bothControlsFoundPutThePinsOnTheAppliance() {
+        val viewModel = autoGuided()
+        viewModel.onAutoAlignStarted()
+        viewModel.onAutoAlignFinished(AutoAlignResult.BOTH)
+
+        val state = viewModel.state.value
+        assertFalse(state.searching)
+        assertTrue(state.aligned)
+        assertEquals(ArGuidePhase.PLACED, state.phase)
+    }
+
+    @Test
+    fun onlyTheFirstFoundAsksForTheSecond() {
+        val viewModel = autoGuided()
+        viewModel.onSurfaceUnderReticle(true)
+        viewModel.onAutoAlignStarted()
+        viewModel.onAutoAlignFinished(AutoAlignResult.FIRST_ONLY)
+
+        val state = viewModel.state.value
+        assertTrue(state.needsSecondPoint)
+        assertTrue(state.message.startsWith("Step 1 found."))
+        assertTrue(state.message.contains("step 3"))
+
+        viewModel.onArrowPlaced()
+        assertEquals(ArGuidePhase.PLACED, viewModel.state.value.phase)
+    }
+
+    @Test
+    fun nothingFoundOrAnErrorFallsBackToAiming() {
+        val viewModel = autoGuided()
+        viewModel.onSurfaceUnderReticle(true)
+        viewModel.onAutoAlignStarted()
+        viewModel.onAutoAlignFinished(AutoAlignResult.NONE)
+        assertFalse(viewModel.state.value.placed)
+        assertTrue(viewModel.state.value.message.startsWith("The AI couldn't find the controls."))
+        assertTrue(viewModel.state.value.canAutoAlign)
+
+        viewModel.onAutoAlignStarted()
+        viewModel.onAutoAlignFinished(AutoAlignResult.ERROR)
+        assertTrue(viewModel.state.value.message.startsWith("Automatic search didn't work"))
+
+        viewModel.onArrowPlaced()
+        assertFalse(viewModel.state.value.message.contains("didn't work"))
+    }
+
+    @Test
+    fun aLateAnswerAfterResetIsIgnored() {
+        val viewModel = autoGuided()
+        viewModel.onAutoAlignStarted()
+        viewModel.resetSession()
+        viewModel.onAutoAlignFinished(AutoAlignResult.BOTH)
+
+        val state = viewModel.state.value
+        assertFalse(state.placed)
+        assertFalse(state.searching)
+        assertTrue(state.autoAlignAvailable)
+    }
 }

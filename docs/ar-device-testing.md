@@ -13,6 +13,13 @@ cannot do yet. Fill the tables on the devices you test and paste them in the PR.
 4. **Previous / Next** walk through all steps in AR; **Re-align** places the two points again;
    **Open 2D guide** goes back to the photo on the same step.
 
+**Find automatically** (when the backend is configured) does steps 2–3 for the user: the app sends
+one camera frame, the guide steps and the guide photo to `POST /api/guide/locate`; the AI says where
+the two controls are in that frame. Because the answer takes a few seconds and the phone moves, the app
+does not hit-test the screen: it casts a ray from the camera *as it was* when the frame was taken and
+meets the planes ARCore tracks now. If only the first control is found, the user aims at the second;
+if none, both. The manual **Place point** is always next to it.
+
 All pins are children of the first anchor: they move with it and do not drift apart.
 If all pins are on one control, one point is enough; a guide without pins shows a free arrow.
 
@@ -69,6 +76,13 @@ Alignment and overlay
 - [ ] Walking around the appliance, pins stay on their controls (no visible drift).
 - [ ] **Re-align** removes the pins and asks for the two points again.
 
+Auto-alignment
+- [ ] **Find automatically** shows "Looking for steps X and Y…" and then the pins, without aiming.
+- [ ] With the appliance out of view: "The AI couldn't find the controls", manual aiming works.
+- [ ] Airplane mode: "Automatic search didn't work (check the connection)", manual aiming works.
+- [ ] Moving the phone while it searches: the pins still land on the right controls.
+- [ ] Time from the tap to the pins: ______ s (write it in the device matrix notes).
+
 Navigation
 - [ ] **Previous / Next** reach every step; disabled at the first / last step.
 
@@ -92,3 +106,5 @@ Tracking loss
 - **The two aimed controls must be visible in the photo** and far enough apart (at least ~12 % of the photo width).
 - AR does not work in the Android emulator on Apple Silicon (arm64): use a real phone.
 - Frame time and thermal values are shown only in debug builds.
+- **Find automatically** needs the network, takes a few seconds and costs one AI call per try. It
+  sees ARCore's camera image (usually 640 × 480), so very small labels may not be read.

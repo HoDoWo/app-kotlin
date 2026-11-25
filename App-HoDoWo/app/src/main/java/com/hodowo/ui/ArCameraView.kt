@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
@@ -19,6 +20,7 @@ import com.google.ar.core.Frame
 import com.google.ar.core.HitResult
 import com.google.ar.core.Plane
 import com.google.ar.core.Pose
+import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.TrackingState
 import com.google.android.filament.MaterialInstance
@@ -92,6 +94,12 @@ internal class ArPlacement {
     /** Latest camera pose, for the side of the surface the user is on. */
     var cameraPose: Pose? = null
 
+    /** The running session, for the planes it tracks (auto-alignment). */
+    var session: Session? = null
+
+    /** Set to receive the next camera frame (auto-alignment); cleared once delivered. */
+    var captureRequest: ((CapturedFrame?) -> Unit)? = null
+
     /** Frame time of the AR view (#241 performance check). */
     val meter = FrameTimeMeter()
 
@@ -110,6 +118,14 @@ internal class ArPlacement {
         return true
     }
 
+    /** Anchors the first point on a plane point found by the AI. */
+    fun anchorAt(point: SurfacePoint): Boolean {
+        val created = runCatching { point.plane.createAnchor(point.pose) }.getOrNull() ?: return false
+        clear()
+        anchor = created
+        return true
+    }
+
     /** All pins are on one control: it is the anchor itself. */
     fun alignSingle(origin: StepPin) {
         mapper = PinMapper.single(origin, cameraLocal() ?: Vec3(0f, 1f, 0f))
@@ -117,10 +133,15 @@ internal class ArPlacement {
 
     /** Fits the photo to the surface with the second point; false when it does not fit. */
     fun alignSecond(hit: HitResult?, first: StepPin, second: StepPin, aspect: Float): Boolean {
-        val origin = anchor ?: return false
         val point = hit ?: return false
+        return alignSecondAt(point.hitPose.translation, first, second, aspect)
+    }
+
+    /** Same as [alignSecond], for a world point (auto-alignment). */
+    fun alignSecondAt(worldPoint: FloatArray, first: StepPin, second: StepPin, aspect: Float): Boolean {
+        val origin = anchor ?: return false
         val camera = cameraLocal() ?: return false
-        val local = origin.pose.inverse().transformPoint(point.hitPose.translation).toVec3()
+        val local = origin.pose.inverse().transformPoint(worldPoint).toVec3()
         mapper = PinMapper.align(first, second, local, camera, aspect)
         return mapper != null
     }
@@ -133,6 +154,7 @@ internal class ArPlacement {
 
     /** Detaches the anchor, so ARCore stops tracking it and frees its resources. */
     fun clear() {
+        captureRequest = null
         anchor?.let { runCatching { it.detach() } }
         anchor = null
         mapper = null
@@ -157,6 +179,7 @@ internal fun ArCameraView(
     // The gesture listener is remembered: read the latest callbacks through these.
     val currentEvents by rememberUpdatedState(events)
     val currentPlaneOnly by rememberUpdatedState(planeOnly)
+    val context = LocalContext.current
     val engine = rememberEngine()
     val cameraNode = rememberARCameraNode(engine)
     val placing = !state.placed || state.needsSecondPoint
@@ -172,10 +195,15 @@ internal fun ArCameraView(
         planeRenderer = placing,
         onSessionFailure = { failure -> currentEvents.onSessionFailed(failure.toProblem()) },
         onTrackingFailureChanged = { reason -> currentEvents.onTrackingIssue(reason.toIssue()) },
-        onSessionUpdated = { _, frame ->
+        onSessionUpdated = { session, frame ->
             placement.meter.onFrame(System.nanoTime())
             latestFrame = frame
+            placement.session = session
             placement.cameraPose = frame.camera.pose
+            placement.captureRequest?.let { deliver ->
+                placement.captureRequest = null
+                deliver(captureFrame(frame, context.cameraUprightRotation(session)))
+            }
             val tracking = frame.camera.trackingState == TrackingState.TRACKING
             currentEvents.onCameraTracking(tracking)
             val hit = if (tracking && viewport != IntSize.Zero) {

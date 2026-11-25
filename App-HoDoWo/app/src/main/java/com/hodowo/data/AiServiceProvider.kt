@@ -36,6 +36,15 @@ object AiServiceProvider {
      * The real cart (Backend#42), shared by the badge, the marketplace screens and the
      * cart screen. Without a backend URL the cart stays empty and refuses changes.
      */
+    /**
+     * AR auto-alignment (`POST /api/guide/locate`); null without a backend URL,
+     * and then the AR guide only offers manual aiming.
+     */
+    val guideLocateService: GuideLocateService? by lazy {
+        val backendUrl = BuildConfig.BACKEND_URL
+        if (backendUrl.isBlank()) null else RemoteGuideLocateService(backendUrl, FirebaseTokenProvider()::token)
+    }
+
     val cartStore by lazy {
         val backendUrl = BuildConfig.BACKEND_URL
         CartStore(

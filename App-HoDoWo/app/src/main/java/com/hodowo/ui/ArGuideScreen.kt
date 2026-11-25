@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,11 +37,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.imageLoader
 import coil.request.ImageRequest
 import com.google.ar.core.HitResult
+import com.hodowo.data.AiServiceProvider
 import com.hodowo.viewmodel.AlignPlan
 import com.hodowo.viewmodel.ArCameraPermission
 import com.hodowo.viewmodel.ArGuideUiState
 import com.hodowo.viewmodel.ArGuideViewModel
 import com.hodowo.viewmodel.ManualStep
+import kotlinx.coroutines.launch
 
 /** The bottom panel never covers more than this share of the screen, also at large font sizes. */
 private const val PANEL_MAX_SCREEN_SHARE = 0.55f
@@ -69,17 +72,21 @@ fun ArGuideScreen(
     steps: List<ManualStep> = emptyList(),
     initialStepIndex: Int = 0,
     photoUrl: String? = null,
+    applianceName: String? = null,
     onStepChange: (Int) -> Unit = {},
     viewModel: ArGuideViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    // Null without a backend URL: then only manual aiming is offered.
+    val locateService = remember { AiServiceProvider.guideLocateService }
 
     BackHandler(onBack = onClose)
     KeepScreenOn()
 
     // Fresh on every visit: an anchor of the previous visit no longer exists.
-    LaunchedEffect(Unit) { viewModel.start(steps, initialStepIndex) }
+    LaunchedEffect(Unit) { viewModel.start(steps, initialStepIndex, autoAlignAvailable = locateService != null) }
     PhotoAspect(photoUrl, viewModel::onPhotoAspect)
     val stepChange by rememberUpdatedState(onStepChange)
     LaunchedEffect(state.stepIndex, state.guided) {
@@ -93,6 +100,20 @@ fun ArGuideScreen(
     DisposableEffect(placement) { onDispose { placement.clear() } }
 
     val place: (HitResult?) -> Unit = { hit -> placeOrAlign(placement, hit, viewModel.state.value, viewModel) }
+    val findAutomatically: () -> Unit = {
+        if (locateService != null && viewModel.state.value.canAutoAlign) {
+            viewModel.onAutoAlignStarted()
+            placement.captureRequest = { captured ->
+                scope.launch {
+                    val reference = photoUrl?.let { loadReferenceJpeg(context, it) }
+                    val result = runAutoAlign(
+                        captured, placement, viewModel.state.value, locateService, reference, applianceName
+                    )
+                    viewModel.onAutoAlignFinished(result)
+                }
+            }
+        }
+    }
     val needsPlane = state.plan != AlignPlan.Free
 
     BoxWithConstraints(
@@ -136,7 +157,8 @@ fun ArGuideScreen(
                 onReset = viewModel::resetSession,
                 onOpenGuides = onOpenGuides,
                 onPrevious = viewModel::previousStep,
-                onNext = viewModel::nextStep
+                onNext = viewModel::nextStep,
+                onFindAutomatically = findAutomatically
             )
         )
     }
@@ -147,8 +169,8 @@ fun ArGuideScreen(
  * point; tells the ViewModel what happened.
  */
 private fun placeOrAlign(placement: ArPlacement, hit: HitResult?, state: ArGuideUiState, viewModel: ArGuideViewModel) {
-    // Placed and done (or tracking lost): Move arrow / Re-align first.
-    if (state.placed && !state.needsSecondPoint) return
+    // Placed and done (or tracking lost): Move arrow / Re-align first. Not while the AI searches.
+    if (state.searching || (state.placed && !state.needsSecondPoint)) return
     val plan = state.plan
     if (state.needsSecondPoint && plan is AlignPlan.TwoPoints) {
         val first = state.steps[plan.first].pin
