@@ -65,10 +65,11 @@ fun rememberArSupport(): State<ArSupport> {
 /**
  * The AR tab (#239). It never opens a dead screen: it says whether this phone
  * can do AR and always offers the 2D guide, which works on every phone.
- * The AR session itself arrives with #240.
+ * On phones that support AR, Start AR opens the AR session (#240).
  */
 @Composable
 fun ArCoreScreen(
+    onStartAr: () -> Unit,
     onOpenGuides: () -> Unit,
     onDiagnose: () -> Unit
 ) {
@@ -107,6 +108,16 @@ fun ArCoreScreen(
             StatusText(title = content.title, body = content.body)
             Spacer(modifier = Modifier.height(24.dp))
 
+            if (support.offersAr) {
+                // On "needs install" the AR screen asks to install Google Play Services for AR.
+                Button(
+                    onClick = onStartAr,
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Start AR") }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
             if (support == ArSupport.UNKNOWN) {
                 Button(
                     onClick = retry,
@@ -117,12 +128,20 @@ fun ArCoreScreen(
                 Spacer(modifier = Modifier.height(8.dp))
             }
             // The 2D guide is the fallback on every phone, and one tap away.
-            Button(
-                onClick = onOpenGuides,
-                colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) { Text("Open my guides") }
+            if (support.offersAr) {
+                OutlinedButton(
+                    onClick = onOpenGuides,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Open my guides") }
+            } else {
+                Button(
+                    onClick = onOpenGuides,
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Open my guides") }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(
                 onClick = onDiagnose,
@@ -139,14 +158,14 @@ private fun arContent(support: ArSupport): ArContent = when (support) {
     ArSupport.READY, ArSupport.CHECKING -> ArContent(
         icon = Icons.Filled.ViewInAr,
         title = "Your phone supports AR",
-        body = "AR shows each repair step on your appliance through the camera. " +
-            "Open a repair guide to follow it step by step."
+        body = "AR places an arrow on your appliance through the camera, right on the part to use. " +
+            "Tap Start AR and point the phone at the appliance."
     )
     ArSupport.NEEDS_INSTALL -> ArContent(
         icon = Icons.Filled.ViewInAr,
         title = "Your phone supports AR",
-        body = "Google Play Services for AR will be installed or updated the first time you use it. " +
-            "Open a repair guide to follow it step by step."
+        body = "Google Play Services for AR will be installed or updated when you tap Start AR. " +
+            "Then point the phone at the appliance."
     )
     ArSupport.UNSUPPORTED -> ArContent(
         icon = Icons.Outlined.PhonelinkErase,

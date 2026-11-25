@@ -65,7 +65,6 @@ import com.hodowo.viewmodel.Feedback
 import com.hodowo.viewmodel.ManualGuide
 import com.hodowo.viewmodel.ManualStep
 import com.hodowo.viewmodel.SuggestedPart
-import java.util.Locale
 
 /**
  * AI Diagnostic Response Box matching the HTML mock with enlarged typography.
@@ -121,7 +120,7 @@ fun ManualGuideCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = guide.applianceName.uppercase(Locale.getDefault()),
+                        text = guide.applianceName.uppercase(currentLocale()),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontWeight = FontWeight.Bold,

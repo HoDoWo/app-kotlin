@@ -126,8 +126,9 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // Java 21: SceneView ships Java 21 bytecode with public inline functions (#240).
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
     buildFeatures {
         compose = true
@@ -184,5 +185,11 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.extended)
     // Google ARCore, optional: only phones that support it get the AR guide (#239).
     implementation(libs.arcore)
+    // SceneView: ARCore session + 3D rendering (Filament) in Compose, for the AR screen (#240).
+    // Its Fuel dependency still pulls the old kotlin-android-extensions runtime, whose
+    // kotlinx.android.parcel classes duplicate kotlin-parcelize-runtime: keep only the latter.
+    implementation(libs.arsceneview) {
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-android-extensions-runtime")
+    }
     testImplementation(kotlin("test"))
 }

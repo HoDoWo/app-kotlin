@@ -1,0 +1,195 @@
+package com.hodowo.viewmodel
+
+import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+
+/** Camera permission, as far as the AR screen knows it (#240). */
+enum class ArCameraPermission {
+    /** Not asked yet in this screen. */
+    UNKNOWN,
+    GRANTED,
+
+    /** Denied once: the system dialog can be shown again. */
+    DENIED,
+
+    /** Denied with "Don't ask again": only the app settings can grant it. */
+    PERMANENTLY_DENIED
+}
+
+/** Why the AR session could not start or stopped (#240). */
+enum class ArSessionProblem {
+    /** The user declined to install or update Google Play Services for AR. */
+    INSTALL_DECLINED,
+
+    /** The phone, or this version of Android or of the app, cannot run ARCore. */
+    NOT_COMPATIBLE,
+
+    /** Another app is using the camera, or the camera failed. */
+    CAMERA_UNAVAILABLE,
+
+    /** Any other ARCore error. */
+    OTHER
+}
+
+/** Why ARCore lost tracking, mirroring `TrackingFailureReason` (#240). */
+enum class ArTrackingIssue {
+    NONE,
+    INSUFFICIENT_LIGHT,
+    EXCESSIVE_MOTION,
+    INSUFFICIENT_FEATURES,
+    CAMERA_UNAVAILABLE,
+    BAD_STATE
+}
+
+/** What the AR screen is doing now; it decides the message and the actions shown. */
+enum class ArGuidePhase {
+    /** Waiting for the system camera dialog. */
+    ASKING_PERMISSION,
+
+    /** Camera denied: explain why it is needed and how to grant it. */
+    PERMISSION_DENIED,
+
+    /** The session failed: explain and offer a retry or the 2D guide. */
+    SESSION_ERROR,
+
+    /** Camera running, no surface under the reticle yet. */
+    SCANNING,
+
+    /** A surface is under the reticle: the user can place the arrow. */
+    READY_TO_PLACE,
+
+    /** The arrow is placed and tracked. */
+    PLACED,
+
+    /** Tracking lost (camera or arrow): explain how to recover. */
+    TRACKING_LOST
+}
+
+data class ArGuideUiState(
+    val permission: ArCameraPermission = ArCameraPermission.UNKNOWN,
+    val sessionProblem: ArSessionProblem? = null,
+    val cameraTracking: Boolean = false,
+    val trackingIssue: ArTrackingIssue = ArTrackingIssue.NONE,
+    val surfaceUnderReticle: Boolean = false,
+    val placed: Boolean = false,
+    val anchorTracking: Boolean = true,
+    /** Changes on every session reset, so the AR view is rebuilt from scratch. */
+    val sessionKey: Int = 0
+) {
+    val phase: ArGuidePhase
+        get() = when {
+            permission == ArCameraPermission.DENIED ||
+                permission == ArCameraPermission.PERMANENTLY_DENIED -> ArGuidePhase.PERMISSION_DENIED
+            permission != ArCameraPermission.GRANTED -> ArGuidePhase.ASKING_PERMISSION
+            sessionProblem != null -> ArGuidePhase.SESSION_ERROR
+            trackingIssue != ArTrackingIssue.NONE -> ArGuidePhase.TRACKING_LOST
+            placed && !anchorTracking -> ArGuidePhase.TRACKING_LOST
+            placed -> ArGuidePhase.PLACED
+            cameraTracking && surfaceUnderReticle -> ArGuidePhase.READY_TO_PLACE
+            else -> ArGuidePhase.SCANNING
+        }
+
+    /** The AR camera view is shown only while it can run. */
+    val showsCamera: Boolean
+        get() = permission == ArCameraPermission.GRANTED && sessionProblem == null
+
+    /** "Place arrow here" works only with a tracked surface under the reticle. */
+    val canPlace: Boolean get() = phase == ArGuidePhase.READY_TO_PLACE
+
+    /** One sentence for the status bar; also announced by TalkBack when it changes. */
+    val message: String
+        get() = when (phase) {
+            ArGuidePhase.ASKING_PERMISSION -> "AR needs the camera to show the guide on your appliance."
+            ArGuidePhase.PERMISSION_DENIED -> if (permission == ArCameraPermission.PERMANENTLY_DENIED) {
+                "Camera access is off. Turn it on in Settings to use AR."
+            } else {
+                "AR needs the camera to show the guide on your appliance."
+            }
+            ArGuidePhase.SESSION_ERROR -> sessionProblemMessage(sessionProblem)
+            ArGuidePhase.TRACKING_LOST -> trackingIssueMessage(trackingIssue)
+            ArGuidePhase.SCANNING -> "Point the camera at the appliance and move the phone slowly."
+            ArGuidePhase.READY_TO_PLACE -> "Surface found. Aim at the control and tap Place arrow."
+            ArGuidePhase.PLACED -> "Arrow placed. It stays on the appliance while you move."
+        }
+}
+
+private fun sessionProblemMessage(problem: ArSessionProblem?): String = when (problem) {
+    ArSessionProblem.INSTALL_DECLINED ->
+        "AR needs Google Play Services for AR. Install it to continue, or use the 2D guide."
+    ArSessionProblem.NOT_COMPATIBLE -> "AR can't run on this phone. The 2D guide works everywhere."
+    ArSessionProblem.CAMERA_UNAVAILABLE -> "The camera is busy or unavailable. Close other camera apps and try again."
+    ArSessionProblem.OTHER, null -> "AR stopped unexpectedly. Try again, or use the 2D guide."
+}
+
+private fun trackingIssueMessage(issue: ArTrackingIssue): String = when (issue) {
+    ArTrackingIssue.INSUFFICIENT_LIGHT -> "Too dark to track. Turn on a light."
+    ArTrackingIssue.EXCESSIVE_MOTION -> "Moving too fast. Move the phone slowly."
+    ArTrackingIssue.INSUFFICIENT_FEATURES ->
+        "Can't see enough detail. Include the edges or controls of the appliance in view."
+    ArTrackingIssue.CAMERA_UNAVAILABLE -> "The camera is busy. Close other camera apps."
+    ArTrackingIssue.BAD_STATE -> "Tracking stopped. Tap Reset to start again."
+    ArTrackingIssue.NONE -> "The arrow lost its place. Point at the appliance again, or tap Move arrow."
+}
+
+/**
+ * State of the AR screen (#240): camera permission, session errors, tracking and
+ * the placed arrow. The AR view reports what ARCore says; this class decides what
+ * the user sees, so it can be tested without a phone.
+ */
+class ArGuideViewModel : ViewModel() {
+
+    private val _state = MutableStateFlow(ArGuideUiState())
+    val state: StateFlow<ArGuideUiState> = _state.asStateFlow()
+
+    /** [permanentlyDenied]: the system will not show the dialog again. */
+    fun onPermissionResult(granted: Boolean, permanentlyDenied: Boolean = false) {
+        _state.update {
+            it.copy(
+                permission = when {
+                    granted -> ArCameraPermission.GRANTED
+                    permanentlyDenied -> ArCameraPermission.PERMANENTLY_DENIED
+                    else -> ArCameraPermission.DENIED
+                }
+            )
+        }
+    }
+
+    fun onSessionFailed(problem: ArSessionProblem) {
+        _state.update { it.copy(sessionProblem = problem, placed = false, surfaceUnderReticle = false) }
+    }
+
+    fun onCameraTracking(tracking: Boolean) {
+        _state.update { it.copy(cameraTracking = tracking) }
+    }
+
+    fun onTrackingIssue(issue: ArTrackingIssue) {
+        _state.update { it.copy(trackingIssue = issue) }
+    }
+
+    fun onSurfaceUnderReticle(found: Boolean) {
+        _state.update { it.copy(surfaceUnderReticle = found) }
+    }
+
+    fun onArrowPlaced() {
+        _state.update { it.copy(placed = true, anchorTracking = true) }
+    }
+
+    fun onAnchorTracking(tracking: Boolean) {
+        _state.update { it.copy(anchorTracking = tracking) }
+    }
+
+    /** Recenter: remove the arrow and keep the session, so the user aims again. */
+    fun moveArrow() {
+        _state.update { it.copy(placed = false, anchorTracking = true) }
+    }
+
+    /** Reset: rebuild the session from scratch (also the retry after an error). */
+    fun resetSession() {
+        _state.update {
+            ArGuideUiState(permission = it.permission, sessionKey = it.sessionKey + 1)
+        }
+    }
+}

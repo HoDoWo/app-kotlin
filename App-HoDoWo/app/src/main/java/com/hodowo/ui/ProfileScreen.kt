@@ -42,7 +42,6 @@ import com.hodowo.viewmodel.ListingStatus
 import com.hodowo.ui.imageData
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +96,7 @@ fun ProfileScreen(
     val memberSince = when {
         !isSignedIn -> "Guest Account"
         profile?.memberSince != null ->
-            "Member since " + SimpleDateFormat("yyyy", Locale.getDefault()).format(Date(profile.memberSince))
+            "Member since " + SimpleDateFormat("yyyy", currentLocale()).format(Date(profile.memberSince))
         else -> ""
     }
 
@@ -698,7 +697,7 @@ internal fun ManualGuideDialog(
         title = { Text(guide.issueTitle) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(guide.applianceName.uppercase(Locale.getDefault()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(guide.applianceName.uppercase(currentLocale()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 Text(guide.overview, style = MaterialTheme.typography.bodyMedium)
                 if (guide.steps.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
@@ -740,7 +739,7 @@ internal fun BookmarkedGuideCard(guide: ManualGuide, onClick: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(guide.applianceName.uppercase(Locale.getDefault()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(guide.applianceName.uppercase(currentLocale()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                     Text(guide.issueTitle, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(2.dp))
                     Text(guide.overview, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 3, overflow = TextOverflow.Ellipsis)
@@ -755,7 +754,7 @@ internal fun BookmarkedGuideCard(guide: ManualGuide, onClick: () -> Unit) {
         } else {
             // Portrait: text stacked, image below
             Column(modifier = Modifier.padding(14.dp)) {
-                Text(guide.applianceName.uppercase(Locale.getDefault()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(guide.applianceName.uppercase(currentLocale()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(2.dp))
                 Text(guide.issueTitle, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(4.dp))
