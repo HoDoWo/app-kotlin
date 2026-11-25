@@ -1,30 +1,29 @@
 # Earned Value – HoDoWo
 
-Status on **2026-11-24** (generated 2026-11-24 15:55 UTC).
+Status on **2026-11-25** (generated 2026-11-25 15:38 UTC).
 
-| KPI | Name | Formula | Sprint 2 | Cumulative | Hours (cumulative) |
+| KPI | Name | Formula | Sprint 3 | Cumulative | Hours (cumulative) |
 |---|---|---|---:|---:|---:|
-| **PV** | Planned Value | % planned × BAC | 3,550 € | 6,424 € | 286.1 h |
-| **EV** | Earned Value | % completed × BAC | 4,266 € | 7,364 € | 328.0 h |
-| **AC** | Actual Cost | hours spent × rate + services | 3,930 € | 6,707 € | 329.7 h |
-| **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 4,311 € | 9,879 € | 440.0 h |
-| **EAC** | Estimate at Completion | BAC / CPI | 3,971 € | 8,997 € | 400.7 h |
-| **ETC** | Estimate to Complete | EAC − AC | 41 € | 2,290 € | 71.0 h |
-| **VAC** | Variance at Completion | BAC − EAC | 340 € | 882 € | 39.3 h |
-| **CPI** | Cost Performance Index | EV / AC | 1.09 | 1.10 | – |
-| **SPI** | Schedule Performance Index | EV / PV | 1.20 | 1.15 | – |
+| **PV** | Planned Value | % planned × BAC | 0 € | 6,551 € | 291.8 h |
+| **EV** | Earned Value | % completed × BAC | 0 € | 7,364 € | 328.0 h |
+| **AC** | Actual Cost | hours spent × rate + services | 0 € | 6,707 € | 329.7 h |
+| **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 2,694 € | 9,879 € | 440.0 h |
+| **EAC** | Estimate at Completion | BAC / CPI | – | 8,997 € | 400.7 h |
+| **ETC** | Estimate to Complete | EAC − AC | – | 2,290 € | 71.0 h |
+| **VAC** | Variance at Completion | BAC − EAC | – | 882 € | 39.3 h |
+| **CPI** | Cost Performance Index | EV / AC | – | 1.10 | – |
+| **SPI** | Schedule Performance Index | EV / PV | – | 1.12 | – |
 
 ## Reading
 
 - CPI 1.10: under budget (the completed work cost less than planned)
-- SPI 1.15: ahead of or on schedule
+- SPI 1.12: ahead of or on schedule
 - VAC 882 €: saving money
-- Sprint 2: budget 4,311 € (its share of the BAC), EAC 3,971 € with the current CPI, so VAC 340 € (saving money).
 
 ## Inputs
 
 - BAC: 9,879 € (total cost estimated in Sprint 0), 440 h planned for the whole project.
-- % planned: 286.1 h of the Sprint 0 baseline by 2026-11-24 → 65.0%.
+- % planned: 291.8 h of the Sprint 0 baseline by 2026-11-25 → 66.3%.
 - % completed: 328.0 h estimated on the items in Done → 74.5%.
 - AC: 329.7 h spent × 20 €/h + 113 € of services.
 - Hypothetical costs: the team uses free tiers and pays nothing. Each service counts with the price planned in Sprint 0 from the date it is used.
@@ -45,8 +44,57 @@ Status on **2026-11-24** (generated 2026-11-24 15:55 UTC).
   - #69 Error code extraction from display photos – no Sprint (6 h estimated, 0 h spent)
   - #70 Error resolution card UI – no Sprint (4 h estimated, 0 h spent)
 
-## Sprint 2 (2026-10-28 → 2026-11-24)
+## Sprint 3 (2026-11-25 → 2026-12-22)
 
-- Items: 39, estimated 190.0 h, completed 190.0 h, spent 195.0 h.
+- Items: 48, estimated 143.0 h, completed 0.0 h, spent 0.0 h.
+- Open items:
+  - #1 Landing page: app announcement, feature tour and download CTA – Todo (5 h estimated, 0 h spent)
+  - #2 Landing page design system: responsive, dark mode and WCAG AA – Todo (5 h estimated, 0 h spent)
+  - #3 Landing page i18n (EN/ES/CA), SEO and social previews – Todo (3 h estimated, 0 h spent)
+  - #4 Partner portal authentication, roles and protected routes – Todo (5 h estimated, 0 h spent)
+  - #5 Partner dashboard: company profile, sponsored products and performance – Todo (6 h estimated, 0 h spent)
+  - #6 Web CI/CD: Vercel deployment, preview environments and domain – Todo (4 h estimated, 0 h spent)
+  - #7 Bootstrap Web repository: initial commit, write access and Sprint 3 milestone – Todo (2 h estimated, 0 h spent)
+  - #14 Create Project Documentation - Sprint 3 – Todo (0 h estimated, 0 h spent)
+  - #16 Off-peak electricity tips – Todo (3 h estimated, 0 h spent)
+  - #18 ARcore implementation – Todo (0 h estimated, 0 h spent)
+  - #19 Speech To Text – Todo (0 h estimated, 0 h spent)
+  - #20 Support us / donations – Todo (0 h estimated, 0 h spent)
+  - #22 Model efficiency and consumption – Todo (0 h estimated, 0 h spent)
+  - #168 Dark mode (follow system + manual toggle) – Todo (6 h estimated, 0 h spent)
+  - #169 Multi-language support (i18n) – Todo (10 h estimated, 0 h spent)
+  - #170 User-adjustable font size setting – Todo (4 h estimated, 0 h spent)
+  - #210 Settings hub: appearance, accessibility and language in one place – Todo (3 h estimated, 0 h spent)
+  - #211 Persist appearance and accessibility preferences with DataStore – Todo (2 h estimated, 0 h spent)
+  - #212 Apply theme, font scale and colour filter at the app root – Todo (2 h estimated, 0 h spent)
+  - #213 High-contrast appearance option for light and dark themes – Todo (3 h estimated, 0 h spent)
+  - #214 Complete the dark palette and replace hard-coded colours across the app – Todo (3 h estimated, 0 h spent)
+  - #215 Dark mode visual QA across every screen, dialog and empty state – Todo (3 h estimated, 0 h spent)
+  - #216 Font size control: slider, presets, live preview and reset – Todo (2 h estimated, 0 h spent)
+  - #217 Font scaling audit and fixes: Home, Chat, Camera and Guides – Todo (3 h estimated, 0 h spent)
+  - #218 Font scaling audit and fixes: Market, Cart, Checkout, Profile, Forum and Messages – Todo (3 h estimated, 0 h spent)
+  - #219 Colour-vision filter engine applied across the app – Todo (4 h estimated, 0 h spent)
+  - #220 Protanopia (red/green) colour filter – Todo (1.5 h estimated, 0 h spent)
+  - #221 Deuteranopia (green/red) colour filter – Todo (1.5 h estimated, 0 h spent)
+  - #222 Tritanopia (blue/yellow) colour filter – Todo (1.5 h estimated, 0 h spent)
+  - #223 Grayscale mode – Todo (1 h estimated, 0 h spent)
+  - #224 Colour tint mode with selectable tint and intensity – Todo (2 h estimated, 0 h spent)
+  - #225 Colour-vision preview screen and accessibility statement – Todo (2.5 h estimated, 0 h spent)
+  - #226 TalkBack audit: meaningful content descriptions and semantics – Todo (4 h estimated, 0 h spent)
+  - #227 Touch targets, focus order and keyboard navigation – Todo (2.5 h estimated, 0 h spent)
+  - #228 WCAG AA contrast audit across light, dark, high-contrast and colour filters – Todo (3 h estimated, 0 h spent)
+  - #229 Never rely on colour alone for status, errors and labels – Todo (2 h estimated, 0 h spent)
+  - #230 Extract strings: Auth, Profile, Settings and onboarding – Todo (3 h estimated, 0 h spent)
+  - #231 Extract strings: Home, Chat, Camera, Manuals and Guides – Todo (4 h estimated, 0 h spent)
+  - #232 Extract strings: Market, Product, Cart, Checkout, Listings, Forum and Messages – Todo (4 h estimated, 0 h spent)
+  - #233 Spanish translation (values-es) – Todo (4 h estimated, 0 h spent)
+  - #234 Catalan translation (values-ca) – Todo (3 h estimated, 0 h spent)
+  - #235 In-app language selector with per-app locale and persistence – Todo (3 h estimated, 0 h spent)
+  - #236 Locale-aware formatting for prices, dates, numbers and plurals – Todo (2 h estimated, 0 h spent)
+  - #237 Propagate the selected language to the AI and backend – Todo (3 h estimated, 0 h spent)
+  - #238 Pseudolocale and RTL validation for text expansion – Todo (2.5 h estimated, 0 h spent)
+  - #239 ARCore SDK, capability check and non-AR fallback – Todo (3 h estimated, 0 h spent)
+  - #240 AR session lifecycle, camera permission and plane anchoring – Todo (4 h estimated, 0 h spent)
+  - #241 AR guide overlay, step navigation and supported-device test matrix – Todo (5 h estimated, 0 h spent)
 
 ![PV, EV and AC over time](ev.svg)
