@@ -4,10 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.lifecycleScope
 import coil.Coil
 import coil.ImageLoader
+import com.hodowo.data.ArSupportProvider
 import com.hodowo.ui.HoDoWoApp
 import com.hodowo.ui.theme.HoDoWoTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -20,6 +23,9 @@ class MainActivity : ComponentActivity() {
                 .respectCacheHeaders(false)
                 .build()
         )
+        // Ask ARCore early (#239): its first answer can take a moment, and the
+        // AR tab should already know whether this phone supports AR.
+        lifecycleScope.launch { ArSupportProvider.get(applicationContext).refresh() }
         setContent {
             HoDoWoTheme {
                 // Chat + camera flow (#38, #64).

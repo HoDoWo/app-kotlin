@@ -7,44 +7,29 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -63,7 +48,6 @@ import com.hodowo.viewmodel.AuthViewModel
 import com.hodowo.viewmodel.Listing
 import com.hodowo.viewmodel.MyListingsViewModel
 import com.hodowo.viewmodel.OrdersViewModel
-import com.hodowo.viewmodel.ProductDetailViewModel
 import com.hodowo.viewmodel.MessagesViewModel
 import com.hodowo.viewmodel.NotificationsViewModel
 import com.hodowo.data.AppNotification
@@ -80,8 +64,6 @@ import com.hodowo.ui.components.NotificationBell
 import com.hodowo.ui.components.NotificationIconButton
 import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.ui.components.NewChatButton
-import com.hodowo.ui.theme.Primary
-import com.hodowo.ui.theme.SecondaryContainer
 import com.hodowo.viewmodel.CartViewModel
 import com.hodowo.viewmodel.ChatViewModel
 import com.hodowo.viewmodel.CheckoutViewModel
@@ -565,10 +547,13 @@ fun HoDoWoApp(
                                         }
                                     }
                                     AppNavTab.AR_CORE -> {
-                                        NotImplementedScreen(
-                                            tabName = currentTab.label,
-                                            icon = currentTab.icon,
-                                            onBackToChat = { currentTab = AppNavTab.AI_CHAT }
+                                        // Says whether this phone can do AR and keeps the 2D guide one tap away (#239).
+                                        ArCoreScreen(
+                                            onOpenGuides = {
+                                                showApplianceManuals = true
+                                                currentTab = AppNavTab.PROFILE
+                                            },
+                                            onDiagnose = ::openCamera
                                         )
                                     }
                                 }
@@ -637,64 +622,5 @@ fun HoDoWoApp(
 /**
  * Clean placeholder screen for tabs not implemented yet.
  */
-@Composable
-private fun NotImplementedScreen(
-    tabName: String,
-    icon: ImageVector,
-    onBackToChat: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Surface(
-            shape = CircleShape,
-            color = SecondaryContainer,
-            modifier = Modifier.size(80.dp)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = Primary,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            text = "$tabName Module",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "This screen is currently not implemented yet. Please use the AI Chat to diagnose appliances and troubleshoot issues.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onBackToChat,
-            colors = ButtonDefaults.buttonColors(containerColor = Primary),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Text("Go to AI Chat")
-        }
-    }
-}
-
 /** How often the bell asks the backend for new notifications while the app is open. */
 private const val NOTIFICATIONS_REFRESH_MS = 15_000L

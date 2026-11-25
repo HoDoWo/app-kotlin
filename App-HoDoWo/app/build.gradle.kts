@@ -78,6 +78,8 @@ android {
             "**/*HoDoWoApp*.class",
             "**/*ImageCompressor*.class",
             "**/*BitmapPanelCropper*.class",
+            "**/*ArCoreAvailabilityChecker*.class",
+            "**/*ArSupportProvider*.class",
             "**/*AiServiceProvider*.class",
             "**/*FirebaseTokenProvider*.class",
             // Android / Firebase bound, so they cannot be unit tested (#54).
@@ -180,5 +182,7 @@ dependencies {
     // Stripe PaymentSheet: card data is entered in Stripe's own UI, never in ours (#143).
     implementation(libs.stripe.android)
     implementation(libs.androidx.compose.material.icons.extended)
+    // Google ARCore, optional: only phones that support it get the AR guide (#239).
+    implementation(libs.arcore)
     testImplementation(kotlin("test"))
 }

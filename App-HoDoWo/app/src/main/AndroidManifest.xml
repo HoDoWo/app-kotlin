@@ -12,6 +12,11 @@
     <uses-feature
         android:name="android.hardware.camera"
         android:required="true" />
+    <!-- AR is optional (#239): the app installs and works on phones without ARCore,
+         where the AR entry points explain it and the 2D guide is used instead. -->
+    <uses-feature
+        android:name="android.hardware.camera.ar"
+        android:required="false" />
 
     <application
         android:allowBackup="false"
@@ -28,6 +33,12 @@
         <meta-data
             android:name="com.google.android.gms.wallet.api.enabled"
             android:value="true" />
+
+        <!-- "AR Optional": the Play Store does not install Google Play Services for AR
+             with the app; the AR screen asks for it when the user chooses AR (#239, #240). -->
+        <meta-data
+            android:name="com.google.ar.core"
+            android:value="optional" />
 
         <!-- Lets the sell form hand the camera app a writable file for the label photo. -->
         <provider
