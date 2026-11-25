@@ -20,8 +20,7 @@ class ArCoreAvailabilityChecker(context: Context) : ArAvailabilityChecker {
             ArCoreApk.Availability.SUPPORTED_APK_TOO_OLD -> ArCheck.APK_TOO_OLD
             ArCoreApk.Availability.SUPPORTED_INSTALLED -> ArCheck.INSTALLED
             ArCoreApk.Availability.UNKNOWN_ERROR,
-            ArCoreApk.Availability.UNKNOWN_TIMED_OUT,
-            null -> ArCheck.UNKNOWN
+            ArCoreApk.Availability.UNKNOWN_TIMED_OUT -> ArCheck.UNKNOWN
         }
 }
 

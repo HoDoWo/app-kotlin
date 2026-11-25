@@ -70,7 +70,6 @@ import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.PrimaryFixed
 import com.hodowo.viewmodel.ManualGuide
 import com.hodowo.viewmodel.ManualStep
-import java.util.Locale
 
 private const val VIEWER_MAX_ZOOM = 5f
 private const val VIEWER_DOUBLE_TAP_ZOOM = 2.5f
@@ -358,7 +357,7 @@ private fun StepsPane(guide: ManualGuide, selected: Int?, onSelect: (Int) -> Uni
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = guide.applianceName.uppercase(Locale.getDefault()),
+                        text = guide.applianceName.uppercase(currentLocale()),
                         style = MaterialTheme.typography.labelMedium,
                         color = Primary,
                         fontWeight = FontWeight.Bold

@@ -129,6 +129,8 @@ fun HoDoWoApp(
     val chatState by chatViewModel.uiState.collectAsState()
     var showAuthDialog by rememberSaveable { mutableStateOf(false) }
     var showApplianceManuals by rememberSaveable { mutableStateOf(false) }
+    // The AR session inside the AR tab (#240).
+    var showArSession by rememberSaveable { mutableStateOf(false) }
     var showPostProduct by rememberSaveable { mutableStateOf(false) }
     var showMarketplaceSearch by rememberSaveable { mutableStateOf(false) }
     var showMyListings by rememberSaveable { mutableStateOf(false) }
@@ -547,14 +549,27 @@ fun HoDoWoApp(
                                         }
                                     }
                                     AppNavTab.AR_CORE -> {
-                                        // Says whether this phone can do AR and keeps the 2D guide one tap away (#239).
-                                        ArCoreScreen(
-                                            onOpenGuides = {
-                                                showApplianceManuals = true
-                                                currentTab = AppNavTab.PROFILE
-                                            },
-                                            onDiagnose = ::openCamera
-                                        )
+                                        // Says whether this phone can do AR and keeps the 2D guide one tap away (#239);
+                                        // Start AR opens the AR session (#240).
+                                        if (showArSession) {
+                                            ArGuideScreen(
+                                                onClose = { showArSession = false },
+                                                onOpenGuides = {
+                                                    showArSession = false
+                                                    showApplianceManuals = true
+                                                    currentTab = AppNavTab.PROFILE
+                                                }
+                                            )
+                                        } else {
+                                            ArCoreScreen(
+                                                onStartAr = { showArSession = true },
+                                                onOpenGuides = {
+                                                    showApplianceManuals = true
+                                                    currentTab = AppNavTab.PROFILE
+                                                },
+                                                onDiagnose = ::openCamera
+                                            )
+                                        }
                                     }
                                 }
 
