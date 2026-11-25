@@ -122,6 +122,7 @@ fun GuideViewerDialog(guide: ManualGuide, initialStep: Int? = null, onDismiss: (
                 steps = steps,
                 initialStepIndex = selected ?: 0,
                 photoUrl = url,
+                applianceName = guide.applianceName,
                 onStepChange = { selected = it },
                 viewModel = viewModel(key = AR_VIEWER_KEY)
             )

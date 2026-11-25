@@ -87,7 +87,13 @@ data class ArGuideUiState(
     /** Both alignment points are placed: every pin is on the appliance. */
     val aligned: Boolean = false,
     /** The last second point did not match the photo. */
-    val alignFailed: Boolean = false
+    val alignFailed: Boolean = false,
+    /** The backend can find the controls in a camera frame (AR auto-alignment). */
+    val autoAlignAvailable: Boolean = false,
+    /** The AI is looking for the two controls. */
+    val searching: Boolean = false,
+    /** How the last AI search ended; cleared when the user places a point. */
+    val autoResult: AutoAlignResult? = null
 ) {
     val guided: Boolean get() = steps.isNotEmpty()
 
@@ -113,6 +119,12 @@ data class ArGuideUiState(
             AlignPlan.Free -> null
         }
 
+    /** "Find automatically": the AI looks for both alignment controls in the camera frame. */
+    val canAutoAlign: Boolean
+        get() = autoAlignAvailable && plan is AlignPlan.TwoPoints && !placed && !searching &&
+            cameraTracking && trackingIssue == ArTrackingIssue.NONE &&
+            permission == ArCameraPermission.GRANTED && sessionProblem == null
+
     /** "Place point" while aligning guide pins, "Place arrow" otherwise. */
     val placeLabel: String get() = if (plan == AlignPlan.Free) "Place arrow" else "Place point"
 
@@ -137,11 +149,11 @@ data class ArGuideUiState(
         get() = permission == ArCameraPermission.GRANTED && sessionProblem == null
 
     /** "Place arrow here" works only with a tracked surface under the reticle. */
-    val canPlace: Boolean get() = phase == ArGuidePhase.READY_TO_PLACE
+    val canPlace: Boolean get() = phase == ArGuidePhase.READY_TO_PLACE && !searching
 
     /** One sentence for the status bar; also announced by TalkBack when it changes. */
     val message: String
-        get() = when (phase) {
+        get() = if (searching && showsCamera) searchingMessage() else when (phase) {
             ArGuidePhase.ASKING_PERMISSION -> "AR needs the camera to show the guide on your appliance."
             ArGuidePhase.PERMISSION_DENIED -> if (permission == ArCameraPermission.PERMANENTLY_DENIED) {
                 "Camera access is off. Turn it on in Settings to use AR."
@@ -155,10 +167,24 @@ data class ArGuideUiState(
             ArGuidePhase.PLACED -> placedMessage()
         }
 
+    private fun searchingMessage(): String {
+        val plan = plan as? AlignPlan.TwoPoints ?: return "Looking for the controls on the appliance…"
+        val first = steps.getOrNull(plan.first)?.number
+        val second = steps.getOrNull(plan.second)?.number
+        return "Looking for steps $first and $second on the appliance… Keep it in view."
+    }
+
+    private fun autoResultPrefix(): String = when (autoResult) {
+        AutoAlignResult.NONE -> "The AI couldn't find the controls. "
+        AutoAlignResult.ERROR -> "Automatic search didn't work (check the connection). "
+        AutoAlignResult.FIRST_ONLY -> "Step ${steps.getOrNull((plan as? AlignPlan.TwoPoints)?.first ?: -1)?.number} found. "
+        AutoAlignResult.BOTH, null -> ""
+    }
+
     private fun aimMessage(): String {
         val step = aimStep ?: return "Surface found. Aim at the control and tap Place arrow."
         val target = "the control for step ${step.number} (${step.title})"
-        return when {
+        return autoResultPrefix() + when {
             alignFailed -> "Those two points don't match the photo. Aim exactly at $target and try again."
             needsSecondPoint -> "Now aim the dot at $target and tap Place point (2 of 2)."
             plan is AlignPlan.TwoPoints -> "Aim the dot at $target and tap Place point (1 of 2)."
@@ -237,14 +263,41 @@ class ArGuideViewModel : ViewModel() {
      * Opens the screen fresh, with [steps] of a guide (#241) or none (#240).
      * Keeps only the permission: an anchor of a previous visit no longer exists.
      */
-    fun start(steps: List<ManualStep> = emptyList(), initialStepIndex: Int = 0) {
+    fun start(steps: List<ManualStep> = emptyList(), initialStepIndex: Int = 0, autoAlignAvailable: Boolean = false) {
         _state.update {
             ArGuideUiState(
                 permission = it.permission,
                 sessionKey = it.sessionKey + 1,
                 steps = steps,
-                stepIndex = initialStepIndex.coerceIn(0, (steps.size - 1).coerceAtLeast(0))
+                stepIndex = initialStepIndex.coerceIn(0, (steps.size - 1).coerceAtLeast(0)),
+                autoAlignAvailable = autoAlignAvailable
             )
+        }
+    }
+
+    /** "Find automatically" was tapped: the frame goes to the AI. */
+    fun onAutoAlignStarted() {
+        _state.update { it.copy(searching = true, autoResult = null) }
+    }
+
+    /**
+     * The AI search ended; with [AutoAlignResult.BOTH] the pins are already on the appliance.
+     * A late answer after Reset or Close (no search running) is ignored.
+     */
+    fun onAutoAlignFinished(result: AutoAlignResult) {
+        _state.update {
+            if (!it.searching) return@update it
+            when (result) {
+                AutoAlignResult.BOTH -> it.copy(
+                    searching = false, autoResult = result, placed = true, aligned = true,
+                    anchorTracking = true, alignFailed = false
+                )
+                AutoAlignResult.FIRST_ONLY -> it.copy(
+                    searching = false, autoResult = result, placed = true, aligned = false,
+                    anchorTracking = true, alignFailed = false
+                )
+                AutoAlignResult.NONE, AutoAlignResult.ERROR -> it.copy(searching = false, autoResult = result)
+            }
         }
     }
 
@@ -256,9 +309,9 @@ class ArGuideViewModel : ViewModel() {
     fun onArrowPlaced() {
         _state.update {
             if (it.needsSecondPoint) {
-                it.copy(aligned = true, alignFailed = false)
+                it.copy(aligned = true, alignFailed = false, autoResult = null)
             } else {
-                it.copy(placed = true, anchorTracking = true, aligned = false, alignFailed = false)
+                it.copy(placed = true, anchorTracking = true, aligned = false, alignFailed = false, autoResult = null)
             }
         }
     }
@@ -282,7 +335,9 @@ class ArGuideViewModel : ViewModel() {
 
     /** Recenter: remove the arrow (or the aligned pins) and keep the session, so the user aims again. */
     fun moveArrow() {
-        _state.update { it.copy(placed = false, anchorTracking = true, aligned = false, alignFailed = false) }
+        _state.update {
+            it.copy(placed = false, anchorTracking = true, aligned = false, alignFailed = false, autoResult = null)
+        }
     }
 
     /** Reset: rebuild the session from scratch (also the retry after an error). */
@@ -293,7 +348,8 @@ class ArGuideViewModel : ViewModel() {
                 sessionKey = it.sessionKey + 1,
                 steps = it.steps,
                 stepIndex = it.stepIndex,
-                photoAspect = it.photoAspect
+                photoAspect = it.photoAspect,
+                autoAlignAvailable = it.autoAlignAvailable
             )
         }
     }

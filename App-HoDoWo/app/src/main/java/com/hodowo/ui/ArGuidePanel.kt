@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.hodowo.BuildConfig
 import com.hodowo.ui.theme.Primary
+import com.hodowo.viewmodel.AlignPlan
 import com.hodowo.viewmodel.ArCameraPermission
 import com.hodowo.viewmodel.ArGuidePhase
 import com.hodowo.viewmodel.ArGuideUiState
@@ -72,7 +73,8 @@ internal class ArPanelActions(
     val onReset: () -> Unit,
     val onOpenGuides: () -> Unit,
     val onPrevious: () -> Unit,
-    val onNext: () -> Unit
+    val onNext: () -> Unit,
+    val onFindAutomatically: () -> Unit = {}
 )
 
 @Composable
@@ -218,7 +220,17 @@ private fun PhaseActions(state: ArGuideUiState, actions: ArPanelActions) {
             return
         }
         ArGuidePhase.SCANNING, ArGuidePhase.READY_TO_PLACE -> {
-            PrimaryAction(state.placeLabel, enabled = state.canPlace, onClick = actions.onPlace)
+            if (state.autoAlignAvailable && state.plan is AlignPlan.TwoPoints && !state.placed) {
+                // The AI finds both controls; aiming yourself stays one tap away.
+                PrimaryAction(
+                    if (state.searching) "Searching…" else "Find automatically",
+                    enabled = state.canAutoAlign,
+                    onClick = actions.onFindAutomatically
+                )
+                SecondaryAction(state.placeLabel, enabled = state.canPlace, onClick = actions.onPlace)
+            } else {
+                PrimaryAction(state.placeLabel, enabled = state.canPlace, onClick = actions.onPlace)
+            }
         }
         ArGuidePhase.PLACED -> {
             PrimaryAction(state.recenterLabel, onClick = actions.onMoveArrow)
@@ -245,9 +257,10 @@ private fun PrimaryAction(label: String, enabled: Boolean = true, onClick: () ->
 }
 
 @Composable
-private fun SecondaryAction(label: String, onClick: () -> Unit) {
+private fun SecondaryAction(label: String, enabled: Boolean = true, onClick: () -> Unit) {
     OutlinedButton(
         onClick = onClick,
+        enabled = enabled,
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) { Text(label) }
