@@ -1,0 +1,44 @@
+timestamp,issue,title,type,delta_hours
+2026-11-25T00:00:00+00:00,16,Off-peak electricity tips,initial,3.0
+2026-11-25T00:00:00+00:00,168,Dark mode (follow system + manual toggle),initial,6.0
+2026-11-25T00:00:00+00:00,169,Multi-language support (i18n),initial,10.0
+2026-11-25T00:00:00+00:00,170,User-adjustable font size setting,initial,4.0
+2026-11-25T00:00:00+00:00,210,"Settings hub: appearance, accessibility and language in one place",initial,3.0
+2026-11-25T00:00:00+00:00,211,Persist appearance and accessibility preferences with DataStore,initial,2.0
+2026-11-25T00:00:00+00:00,212,"Apply theme, font scale and colour filter at the app root",initial,2.0
+2026-11-25T00:00:00+00:00,213,High-contrast appearance option for light and dark themes,initial,3.0
+2026-11-25T00:00:00+00:00,214,Complete the dark palette and replace hard-coded colours across the app,initial,3.0
+2026-11-25T00:00:00+00:00,215,"Dark mode visual QA across every screen, dialog and empty state",initial,3.0
+2026-11-25T00:00:00+00:00,216,"Font size control: slider, presets, live preview and reset",initial,2.0
+2026-11-25T00:00:00+00:00,217,"Font scaling audit and fixes: Home, Chat, Camera and Guides",initial,3.0
+2026-11-25T00:00:00+00:00,218,"Font scaling audit and fixes: Market, Cart, Checkout, Profile, Forum and Messages",initial,3.0
+2026-11-25T00:00:00+00:00,219,Colour-vision filter engine applied across the app,initial,4.0
+2026-11-25T00:00:00+00:00,220,Protanopia (red/green) colour filter,initial,1.5
+2026-11-25T00:00:00+00:00,221,Deuteranopia (green/red) colour filter,initial,1.5
+2026-11-25T00:00:00+00:00,222,Tritanopia (blue/yellow) colour filter,initial,1.5
+2026-11-25T00:00:00+00:00,223,Grayscale mode,initial,1.0
+2026-11-25T00:00:00+00:00,224,Colour tint mode with selectable tint and intensity,initial,2.0
+2026-11-25T00:00:00+00:00,225,Colour-vision preview screen and accessibility statement,initial,2.5
+2026-11-25T00:00:00+00:00,226,TalkBack audit: meaningful content descriptions and semantics,initial,4.0
+2026-11-25T00:00:00+00:00,227,"Touch targets, focus order and keyboard navigation",initial,2.5
+2026-11-25T00:00:00+00:00,228,"WCAG AA contrast audit across light, dark, high-contrast and colour filters",initial,3.0
+2026-11-25T00:00:00+00:00,229,"Never rely on colour alone for status, errors and labels",initial,2.0
+2026-11-25T00:00:00+00:00,230,"Extract strings: Auth, Profile, Settings and onboarding",initial,3.0
+2026-11-25T00:00:00+00:00,231,"Extract strings: Home, Chat, Camera, Manuals and Guides",initial,4.0
+2026-11-25T00:00:00+00:00,232,"Extract strings: Market, Product, Cart, Checkout, Listings, Forum and Messages",initial,4.0
+2026-11-25T00:00:00+00:00,233,Spanish translation (values-es),initial,4.0
+2026-11-25T00:00:00+00:00,234,Catalan translation (values-ca),initial,3.0
+2026-11-25T00:00:00+00:00,235,In-app language selector with per-app locale and persistence,initial,3.0
+2026-11-25T00:00:00+00:00,236,"Locale-aware formatting for prices, dates, numbers and plurals",initial,2.0
+2026-11-25T00:00:00+00:00,237,Propagate the selected language to the AI and backend,initial,3.0
+2026-11-25T00:00:00+00:00,238,Pseudolocale and RTL validation for text expansion,initial,2.5
+2026-11-25T00:00:00+00:00,239,"ARCore SDK, capability check and non-AR fallback",initial,3.0
+2026-11-25T00:00:00+00:00,240,"AR session lifecycle, camera permission and plane anchoring",initial,4.0
+2026-11-25T00:00:00+00:00,241,"AR guide overlay, step navigation and supported-device test matrix",initial,5.0
+2026-11-25T00:00:00+00:00,1,"Landing page: app announcement, feature tour and download CTA",initial,5.0
+2026-11-25T00:00:00+00:00,2,"Landing page design system: responsive, dark mode and WCAG AA",initial,5.0
+2026-11-25T00:00:00+00:00,3,"Landing page i18n (EN/ES/CA), SEO and social previews",initial,3.0
+2026-11-25T00:00:00+00:00,4,"Partner portal authentication, roles and protected routes",initial,5.0
+2026-11-25T00:00:00+00:00,5,"Partner dashboard: company profile, sponsored products and performance",initial,6.0
+2026-11-25T00:00:00+00:00,6,"Web CI/CD: Vercel deployment, preview environments and domain",initial,4.0
+2026-11-25T00:00:00+00:00,7,"Bootstrap Web repository: initial commit, write access and Sprint 3 milestone",initial,2.0

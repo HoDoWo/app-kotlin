@@ -1,0 +1,290 @@
+{
+ "PVTI_lADOFCkyKM4Bl88jzg-7q9o": {
+  "c": 0.0,
+  "done": false,
+  "issue": 14,
+  "title": "Create Project Documentation - Sprint 3"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7q-E": {
+  "c": 3.0,
+  "done": false,
+  "issue": 16,
+  "title": "Off-peak electricity tips"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7q-k": {
+  "c": 0.0,
+  "done": false,
+  "issue": 18,
+  "title": "ARcore implementation"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7q-0": {
+  "c": 0.0,
+  "done": false,
+  "issue": 19,
+  "title": "Speech To Text"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7q_Q": {
+  "c": 0.0,
+  "done": false,
+  "issue": 20,
+  "title": "Support us / donations"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzg-7q_4": {
+  "c": 0.0,
+  "done": false,
+  "issue": 22,
+  "title": "Model efficiency and consumption"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhGCk0M": {
+  "c": 6.0,
+  "done": false,
+  "issue": 168,
+  "title": "Dark mode (follow system + manual toggle)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhGCk4I": {
+  "c": 10.0,
+  "done": false,
+  "issue": 169,
+  "title": "Multi-language support (i18n)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhGCk8E": {
+  "c": 4.0,
+  "done": false,
+  "issue": 170,
+  "title": "User-adjustable font size setting"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4gQI": {
+  "c": 3.0,
+  "done": false,
+  "issue": 210,
+  "title": "Settings hub: appearance, accessibility and language in one place"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4gZ0": {
+  "c": 2.0,
+  "done": false,
+  "issue": 211,
+  "title": "Persist appearance and accessibility preferences with DataStore"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4gjA": {
+  "c": 2.0,
+  "done": false,
+  "issue": 212,
+  "title": "Apply theme, font scale and colour filter at the app root"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4gsk": {
+  "c": 3.0,
+  "done": false,
+  "issue": 213,
+  "title": "High-contrast appearance option for light and dark themes"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4g2c": {
+  "c": 3.0,
+  "done": false,
+  "issue": 214,
+  "title": "Complete the dark palette and replace hard-coded colours across the app"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4hBk": {
+  "c": 3.0,
+  "done": false,
+  "issue": 215,
+  "title": "Dark mode visual QA across every screen, dialog and empty state"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4hNw": {
+  "c": 2.0,
+  "done": false,
+  "issue": 216,
+  "title": "Font size control: slider, presets, live preview and reset"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4hXs": {
+  "c": 3.0,
+  "done": false,
+  "issue": 217,
+  "title": "Font scaling audit and fixes: Home, Chat, Camera and Guides"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4hjI": {
+  "c": 3.0,
+  "done": false,
+  "issue": 218,
+  "title": "Font scaling audit and fixes: Market, Cart, Checkout, Profile, Forum and Messages"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4huA": {
+  "c": 4.0,
+  "done": false,
+  "issue": 219,
+  "title": "Colour-vision filter engine applied across the app"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4h2o": {
+  "c": 1.5,
+  "done": false,
+  "issue": 220,
+  "title": "Protanopia (red/green) colour filter"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4h-s": {
+  "c": 1.5,
+  "done": false,
+  "issue": 221,
+  "title": "Deuteranopia (green/red) colour filter"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4iJQ": {
+  "c": 1.5,
+  "done": false,
+  "issue": 222,
+  "title": "Tritanopia (blue/yellow) colour filter"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4iTU": {
+  "c": 1.0,
+  "done": false,
+  "issue": 223,
+  "title": "Grayscale mode"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4ieA": {
+  "c": 2.0,
+  "done": false,
+  "issue": 224,
+  "title": "Colour tint mode with selectable tint and intensity"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4imM": {
+  "c": 2.5,
+  "done": false,
+  "issue": 225,
+  "title": "Colour-vision preview screen and accessibility statement"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4ivM": {
+  "c": 4.0,
+  "done": false,
+  "issue": 226,
+  "title": "TalkBack audit: meaningful content descriptions and semantics"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4i4Y": {
+  "c": 2.5,
+  "done": false,
+  "issue": 227,
+  "title": "Touch targets, focus order and keyboard navigation"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4jA8": {
+  "c": 3.0,
+  "done": false,
+  "issue": 228,
+  "title": "WCAG AA contrast audit across light, dark, high-contrast and colour filters"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4jJc": {
+  "c": 2.0,
+  "done": false,
+  "issue": 229,
+  "title": "Never rely on colour alone for status, errors and labels"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4jXg": {
+  "c": 3.0,
+  "done": false,
+  "issue": 230,
+  "title": "Extract strings: Auth, Profile, Settings and onboarding"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4jiI": {
+  "c": 4.0,
+  "done": false,
+  "issue": 231,
+  "title": "Extract strings: Home, Chat, Camera, Manuals and Guides"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4jvk": {
+  "c": 4.0,
+  "done": false,
+  "issue": 232,
+  "title": "Extract strings: Market, Product, Cart, Checkout, Listings, Forum and Messages"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4j_c": {
+  "c": 4.0,
+  "done": false,
+  "issue": 233,
+  "title": "Spanish translation (values-es)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4kK0": {
+  "c": 3.0,
+  "done": false,
+  "issue": 234,
+  "title": "Catalan translation (values-ca)"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4kXM": {
+  "c": 3.0,
+  "done": false,
+  "issue": 235,
+  "title": "In-app language selector with per-app locale and persistence"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4kiE": {
+  "c": 2.0,
+  "done": false,
+  "issue": 236,
+  "title": "Locale-aware formatting for prices, dates, numbers and plurals"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4kso": {
+  "c": 3.0,
+  "done": false,
+  "issue": 237,
+  "title": "Propagate the selected language to the AI and backend"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4kzs": {
+  "c": 2.5,
+  "done": false,
+  "issue": 238,
+  "title": "Pseudolocale and RTL validation for text expansion"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4lCg": {
+  "c": 3.0,
+  "done": false,
+  "issue": 239,
+  "title": "ARCore SDK, capability check and non-AR fallback"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4lTE": {
+  "c": 4.0,
+  "done": false,
+  "issue": 240,
+  "title": "AR session lifecycle, camera permission and plane anchoring"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4lio": {
+  "c": 5.0,
+  "done": false,
+  "issue": 241,
+  "title": "AR guide overlay, step navigation and supported-device test matrix"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4lvY": {
+  "c": 5.0,
+  "done": false,
+  "issue": 1,
+  "title": "Landing page: app announcement, feature tour and download CTA"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4l64": {
+  "c": 5.0,
+  "done": false,
+  "issue": 2,
+  "title": "Landing page design system: responsive, dark mode and WCAG AA"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4mEA": {
+  "c": 3.0,
+  "done": false,
+  "issue": 3,
+  "title": "Landing page i18n (EN/ES/CA), SEO and social previews"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4mOs": {
+  "c": 5.0,
+  "done": false,
+  "issue": 4,
+  "title": "Partner portal authentication, roles and protected routes"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4mZc": {
+  "c": 6.0,
+  "done": false,
+  "issue": 5,
+  "title": "Partner dashboard: company profile, sponsored products and performance"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4mk0": {
+  "c": 4.0,
+  "done": false,
+  "issue": 6,
+  "title": "Web CI/CD: Vercel deployment, preview environments and domain"
+ },
+ "PVTI_lADOFCkyKM4Bl88jzhJ4ozY": {
+  "c": 2.0,
+  "done": false,
+  "issue": 7,
+  "title": "Bootstrap Web repository: initial commit, write access and Sprint 3 milestone"
+ }
+}
