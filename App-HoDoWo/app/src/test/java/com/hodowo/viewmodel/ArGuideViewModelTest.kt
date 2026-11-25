@@ -163,4 +163,154 @@ class ArGuideViewModelTest {
         }
         states.forEach { assertTrue(it.message.isNotBlank()) }
     }
+
+    // Guide in AR (#241)
+
+    private val guide = listOf(
+        ManualStep(1, "Open the door", "", StepPin(0.2f, 0.3f)),
+        ManualStep(2, "Wait", "", null),
+        ManualStep(3, "Press Start", "", StepPin(0.8f, 0.9f))
+    )
+
+    private fun guided(steps: List<ManualStep> = guide, initial: Int = 0) = ArGuideViewModel().apply {
+        onPermissionResult(granted = true)
+        start(steps, initial)
+        onCameraTracking(true)
+        onSurfaceUnderReticle(true)
+    }
+
+    @Test
+    fun startOpensTheGuideOnTheChosenStepAndForgetsThePreviousAnchor() {
+        val viewModel = trackingWithSurface()
+        viewModel.onArrowPlaced()
+
+        viewModel.start(guide, initialStepIndex = 2)
+
+        val state = viewModel.state.value
+        assertTrue(state.guided)
+        assertEquals(2, state.stepIndex)
+        assertFalse(state.placed)
+        assertEquals(ArCameraPermission.GRANTED, state.permission)
+        assertEquals(AlignPlan.TwoPoints(0, 2), state.plan)
+    }
+
+    @Test
+    fun startClampsAnOutOfRangeStep() {
+        val viewModel = ArGuideViewModel()
+        viewModel.start(guide, initialStepIndex = 9)
+        assertEquals(2, viewModel.state.value.stepIndex)
+    }
+
+    @Test
+    fun twoPointAlignmentAsksForEachControlInTurn() {
+        val viewModel = guided()
+        assertEquals("Place point", viewModel.state.value.placeLabel)
+        assertTrue(viewModel.state.value.message.contains("step 1 (Open the door)"))
+        assertTrue(viewModel.state.value.message.contains("1 of 2"))
+
+        viewModel.onArrowPlaced()
+        val second = viewModel.state.value
+        assertTrue(second.needsSecondPoint)
+        assertEquals(ArGuidePhase.READY_TO_PLACE, second.phase)
+        assertTrue(second.message.contains("step 3 (Press Start)"))
+        assertTrue(second.message.contains("2 of 2"))
+
+        viewModel.onArrowPlaced()
+        val aligned = viewModel.state.value
+        assertTrue(aligned.aligned)
+        assertEquals(ArGuidePhase.PLACED, aligned.phase)
+        assertTrue(aligned.message.contains("marked on the appliance"))
+        assertEquals("Re-align", aligned.recenterLabel)
+    }
+
+    @Test
+    fun aSecondPointThatDoesNotFitAsksAgain() {
+        val viewModel = guided()
+        viewModel.onArrowPlaced()
+        viewModel.onAlignmentFailed()
+
+        val state = viewModel.state.value
+        assertTrue(state.needsSecondPoint)
+        assertTrue(state.message.contains("don't match the photo"))
+
+        viewModel.onArrowPlaced()
+        assertFalse(viewModel.state.value.alignFailed)
+        assertEquals(ArGuidePhase.PLACED, viewModel.state.value.phase)
+    }
+
+    @Test
+    fun everyStepCanBeReachedWithoutLeavingAr() {
+        val viewModel = guided()
+        assertFalse(viewModel.state.value.canGoBack)
+        viewModel.previousStep()
+        assertEquals(0, viewModel.state.value.stepIndex)
+
+        viewModel.nextStep()
+        viewModel.nextStep()
+        assertEquals(2, viewModel.state.value.stepIndex)
+        assertFalse(viewModel.state.value.canGoForward)
+        viewModel.nextStep()
+        assertEquals(2, viewModel.state.value.stepIndex)
+
+        viewModel.selectStep(1)
+        assertEquals(1, viewModel.state.value.stepIndex)
+        viewModel.selectStep(7)
+        assertEquals(1, viewModel.state.value.stepIndex)
+    }
+
+    @Test
+    fun aStepWithoutPinSaysSo() {
+        val viewModel = guided(initial = 1)
+        viewModel.onArrowPlaced()
+        viewModel.onArrowPlaced()
+        assertTrue(viewModel.state.value.message.contains("no point on the appliance"))
+    }
+
+    @Test
+    fun realignAndResetKeepTheGuideAndTheStep() {
+        val viewModel = guided(initial = 2)
+        viewModel.onArrowPlaced()
+        viewModel.onArrowPlaced()
+
+        viewModel.moveArrow()
+        assertFalse(viewModel.state.value.placed)
+        assertFalse(viewModel.state.value.aligned)
+        assertEquals(2, viewModel.state.value.stepIndex)
+
+        viewModel.onPhotoAspect(1.5f)
+        viewModel.resetSession()
+        val state = viewModel.state.value
+        assertEquals(guide, state.steps)
+        assertEquals(2, state.stepIndex)
+        assertEquals(1.5f, state.photoAspect, 0f)
+    }
+
+    @Test
+    fun oneControlNeedsOnePoint() {
+        val steps = listOf(ManualStep(1, "Turn the dial", "", StepPin(0.5f, 0.5f)), ManualStep(2, "Wait", "", null))
+        val viewModel = guided(steps)
+        assertEquals(AlignPlan.OnePoint(0), viewModel.state.value.plan)
+        assertFalse(viewModel.state.value.message.contains("1 of 2"))
+
+        viewModel.onArrowPlaced()
+        assertEquals(ArGuidePhase.PLACED, viewModel.state.value.phase)
+    }
+
+    @Test
+    fun aGuideWithoutPinsUsesTheFreeArrow() {
+        val steps = listOf(ManualStep(1, "Unplug", "", null))
+        val viewModel = guided(steps)
+        assertEquals(AlignPlan.Free, viewModel.state.value.plan)
+        assertEquals("Place arrow", viewModel.state.value.placeLabel)
+
+        viewModel.onArrowPlaced()
+        assertTrue(viewModel.state.value.message.contains("Previous and Next"))
+    }
+
+    @Test
+    fun badPhotoAspectIsIgnored() {
+        val viewModel = ArGuideViewModel()
+        viewModel.onPhotoAspect(0f)
+        assertEquals(DEFAULT_PHOTO_ASPECT, viewModel.state.value.photoAspect, 0f)
+    }
 }

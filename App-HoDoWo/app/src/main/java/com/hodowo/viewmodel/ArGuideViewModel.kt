@@ -77,8 +77,48 @@ data class ArGuideUiState(
     val placed: Boolean = false,
     val anchorTracking: Boolean = true,
     /** Changes on every session reset, so the AR view is rebuilt from scratch. */
-    val sessionKey: Int = 0
+    val sessionKey: Int = 0,
+    /** The repair guide shown in AR (#241); empty when AR is opened without a guide. */
+    val steps: List<ManualStep> = emptyList(),
+    /** The step shown, as a position in [steps] (numbers can repeat). */
+    val stepIndex: Int = 0,
+    /** Height over width of the guide photo, for the pin positions. */
+    val photoAspect: Float = DEFAULT_PHOTO_ASPECT,
+    /** Both alignment points are placed: every pin is on the appliance. */
+    val aligned: Boolean = false,
+    /** The last second point did not match the photo. */
+    val alignFailed: Boolean = false
 ) {
+    val guided: Boolean get() = steps.isNotEmpty()
+
+    /** How the pins go on the appliance; [AlignPlan.Free] without a guide or without pins. */
+    val plan: AlignPlan get() = if (guided) AlignPlan.of(steps, photoAspect) else AlignPlan.Free
+
+    /** The first point is placed and a second one is needed to align the pins. */
+    val needsSecondPoint: Boolean get() = placed && !aligned && plan is AlignPlan.TwoPoints
+
+    val currentStep: ManualStep? get() = steps.getOrNull(stepIndex)
+    val canGoBack: Boolean get() = stepIndex > 0
+    val canGoForward: Boolean get() = stepIndex < steps.lastIndex
+
+    /** The step whose control the user must aim at now, while aligning. */
+    val aimStep: ManualStep?
+        get() = when (val plan = plan) {
+            is AlignPlan.TwoPoints -> when {
+                !placed -> steps.getOrNull(plan.first)
+                needsSecondPoint -> steps.getOrNull(plan.second)
+                else -> null
+            }
+            is AlignPlan.OnePoint -> if (!placed) steps.getOrNull(plan.first) else null
+            AlignPlan.Free -> null
+        }
+
+    /** "Place point" while aligning guide pins, "Place arrow" otherwise. */
+    val placeLabel: String get() = if (plan == AlignPlan.Free) "Place arrow" else "Place point"
+
+    /** "Re-align" for guide pins, "Move arrow" for the free arrow. */
+    val recenterLabel: String get() = if (plan == AlignPlan.Free) "Move arrow" else "Re-align"
+
     val phase: ArGuidePhase
         get() = when {
             permission == ArCameraPermission.DENIED ||
@@ -87,7 +127,7 @@ data class ArGuideUiState(
             sessionProblem != null -> ArGuidePhase.SESSION_ERROR
             trackingIssue != ArTrackingIssue.NONE -> ArGuidePhase.TRACKING_LOST
             placed && !anchorTracking -> ArGuidePhase.TRACKING_LOST
-            placed -> ArGuidePhase.PLACED
+            placed && !needsSecondPoint -> ArGuidePhase.PLACED
             cameraTracking && surfaceUnderReticle -> ArGuidePhase.READY_TO_PLACE
             else -> ArGuidePhase.SCANNING
         }
@@ -111,9 +151,29 @@ data class ArGuideUiState(
             ArGuidePhase.SESSION_ERROR -> sessionProblemMessage(sessionProblem)
             ArGuidePhase.TRACKING_LOST -> trackingIssueMessage(trackingIssue)
             ArGuidePhase.SCANNING -> "Point the camera at the appliance and move the phone slowly."
-            ArGuidePhase.READY_TO_PLACE -> "Surface found. Aim at the control and tap Place arrow."
-            ArGuidePhase.PLACED -> "Arrow placed. It stays on the appliance while you move."
+            ArGuidePhase.READY_TO_PLACE -> aimMessage()
+            ArGuidePhase.PLACED -> placedMessage()
         }
+
+    private fun aimMessage(): String {
+        val step = aimStep ?: return "Surface found. Aim at the control and tap Place arrow."
+        val target = "the control for step ${step.number} (${step.title})"
+        return when {
+            alignFailed -> "Those two points don't match the photo. Aim exactly at $target and try again."
+            needsSecondPoint -> "Now aim the dot at $target and tap Place point (2 of 2)."
+            plan is AlignPlan.TwoPoints -> "Aim the dot at $target and tap Place point (1 of 2)."
+            else -> "Aim the dot at $target and tap Place point."
+        }
+    }
+
+    private fun placedMessage(): String {
+        val step = currentStep ?: return "Arrow placed. It stays on the appliance while you move."
+        return when {
+            plan == AlignPlan.Free -> "Arrow placed. Use Previous and Next to follow the steps."
+            step.pin != null -> "Step ${step.number} of ${steps.size} is marked on the appliance."
+            else -> "Step ${step.number} has no point on the appliance: follow the text below."
+        }
+    }
 }
 
 private fun sessionProblemMessage(problem: ArSessionProblem?): String = when (problem) {
@@ -173,23 +233,68 @@ class ArGuideViewModel : ViewModel() {
         _state.update { it.copy(surfaceUnderReticle = found) }
     }
 
+    /**
+     * Opens the screen fresh, with [steps] of a guide (#241) or none (#240).
+     * Keeps only the permission: an anchor of a previous visit no longer exists.
+     */
+    fun start(steps: List<ManualStep> = emptyList(), initialStepIndex: Int = 0) {
+        _state.update {
+            ArGuideUiState(
+                permission = it.permission,
+                sessionKey = it.sessionKey + 1,
+                steps = steps,
+                stepIndex = initialStepIndex.coerceIn(0, (steps.size - 1).coerceAtLeast(0))
+            )
+        }
+    }
+
+    fun onPhotoAspect(aspect: Float) {
+        if (aspect > 0f) _state.update { it.copy(photoAspect = aspect) }
+    }
+
+    /** The first point (the anchor) or, when aligning, the second point was placed. */
     fun onArrowPlaced() {
-        _state.update { it.copy(placed = true, anchorTracking = true) }
+        _state.update {
+            if (it.needsSecondPoint) {
+                it.copy(aligned = true, alignFailed = false)
+            } else {
+                it.copy(placed = true, anchorTracking = true, aligned = false, alignFailed = false)
+            }
+        }
+    }
+
+    /** The second point does not fit the photo: keep the first, ask for the second again. */
+    fun onAlignmentFailed() {
+        _state.update { it.copy(alignFailed = true) }
+    }
+
+    fun nextStep() = selectStep(_state.value.stepIndex + 1)
+
+    fun previousStep() = selectStep(_state.value.stepIndex - 1)
+
+    fun selectStep(index: Int) {
+        _state.update { if (index in it.steps.indices) it.copy(stepIndex = index) else it }
     }
 
     fun onAnchorTracking(tracking: Boolean) {
         _state.update { it.copy(anchorTracking = tracking) }
     }
 
-    /** Recenter: remove the arrow and keep the session, so the user aims again. */
+    /** Recenter: remove the arrow (or the aligned pins) and keep the session, so the user aims again. */
     fun moveArrow() {
-        _state.update { it.copy(placed = false, anchorTracking = true) }
+        _state.update { it.copy(placed = false, anchorTracking = true, aligned = false, alignFailed = false) }
     }
 
     /** Reset: rebuild the session from scratch (also the retry after an error). */
     fun resetSession() {
         _state.update {
-            ArGuideUiState(permission = it.permission, sessionKey = it.sessionKey + 1)
+            ArGuideUiState(
+                permission = it.permission,
+                sessionKey = it.sessionKey + 1,
+                steps = it.steps,
+                stepIndex = it.stepIndex,
+                photoAspect = it.photoAspect
+            )
         }
     }
 }

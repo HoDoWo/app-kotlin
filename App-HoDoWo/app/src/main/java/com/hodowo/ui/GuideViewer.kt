@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -44,6 +45,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -63,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.hodowo.data.StepPinLayout
@@ -73,6 +76,9 @@ import com.hodowo.viewmodel.ManualStep
 
 private const val VIEWER_MAX_ZOOM = 5f
 private const val VIEWER_DOUBLE_TAP_ZOOM = 2.5f
+
+/** Its own AR state, apart from the AR tab's, so one never resumes the other's anchor. */
+private const val AR_VIEWER_KEY = "ar-guide-viewer"
 
 /**
  * Full-screen guide (review 10-11): the image is pinned and only the steps
@@ -86,6 +92,7 @@ private const val VIEWER_DOUBLE_TAP_ZOOM = 2.5f
  *
  * The image can be zoomed (pinch or double-tap) and downloaded in both modes.
  * A guide without an image has nothing to pin and shows nothing here.
+ * On phones that support AR, "View in AR" shows the same steps on the appliance (#241).
  */
 @Composable
 fun GuideViewerDialog(guide: ManualGuide, initialStep: Int? = null, onDismiss: () -> Unit) {
@@ -98,9 +105,27 @@ fun GuideViewerDialog(guide: ManualGuide, initialStep: Int? = null, onDismiss: (
     var stepsShown by remember { mutableStateOf(true) }
     val listShown = stepsShown && steps.isNotEmpty()
     val select: (Int) -> Unit = { index -> selected = if (selected == index && listShown) null else index }
+    // AR follows the same guide on the appliance (#241); the selected step is shared both ways.
+    var arOpen by rememberSaveable { mutableStateOf(false) }
+    val arSupport by rememberArSupport()
+    val openAr: (() -> Unit)? = if (arSupport.offersAr && steps.isNotEmpty()) {
+        { arOpen = true }
+    } else {
+        null
+    }
 
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        BoxWithConstraints(
+        if (arOpen) {
+            ArGuideScreen(
+                onClose = { arOpen = false },
+                onOpenGuides = { arOpen = false },
+                steps = steps,
+                initialStepIndex = selected ?: 0,
+                photoUrl = url,
+                onStepChange = { selected = it },
+                viewModel = viewModel(key = AR_VIEWER_KEY)
+            )
+        } else BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black)
@@ -114,7 +139,8 @@ fun GuideViewerDialog(guide: ManualGuide, initialStep: Int? = null, onDismiss: (
                     url = url,
                     toggleLabel = if (steps.isEmpty()) null else if (listShown) "Image only" else "Show steps",
                     onToggle = { stepsShown = !stepsShown },
-                    onDismiss = onDismiss
+                    onDismiss = onDismiss,
+                    onOpenAr = openAr
                 )
                 if (sideBySide) {
                     Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
@@ -156,7 +182,8 @@ private fun ViewerTopBar(
     url: String,
     toggleLabel: String?,
     onToggle: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onOpenAr: (() -> Unit)?
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
@@ -177,6 +204,11 @@ private fun ViewerTopBar(
         if (toggleLabel != null) {
             TextButton(onClick = onToggle) {
                 Text(toggleLabel, color = Color.White, fontWeight = FontWeight.SemiBold)
+            }
+        }
+        if (onOpenAr != null) {
+            IconButton(onClick = onOpenAr) {
+                Icon(Icons.Filled.ViewInAr, contentDescription = "View in AR", tint = Color.White)
             }
         }
         ImageDownloadButton(url = url)
