@@ -1,5 +1,6 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OnPrimaryContainer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,7 +59,7 @@ fun AiMessageItem(
                 Icon(
                     imageVector = Icons.Default.Psychology,
                     contentDescription = "AI",
-                    tint = Color.White,
+                    tint = OnPrimaryContainer,
                     modifier = Modifier.size(18.dp)
                 )
             }

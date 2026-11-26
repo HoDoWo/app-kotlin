@@ -1,5 +1,8 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OnPrimary
+import com.hodowo.ui.theme.Rating
+import com.hodowo.ui.theme.Success
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -77,7 +80,6 @@ import com.hodowo.viewmodel.ProductForumViewModel
 import com.hodowo.viewmodel.ProductReviewsViewModel
 
 /** Green used only for the "Fits" compatibility badge: not part of the theme palette. */
-private val CompatibilityFitsGreen = Color(0xFF1B8A3A)
 
 /**
  * Product Detail screen (issue #140): one screen for the three marketplace
@@ -341,7 +343,7 @@ private fun ImageGallery(images: List<String>, badgeText: String?) {
 @Composable
 private fun RatingRow(rating: Double, reviewCount: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFEF9900), modifier = Modifier.size(16.dp))
+        Icon(Icons.Default.Star, contentDescription = null, tint = Rating, modifier = Modifier.size(16.dp))
         Text(
             text = rating.toString(),
             style = MaterialTheme.typography.bodySmall,
@@ -390,7 +392,7 @@ private fun CompatibleApplianceCard(matchedAppliance: String) {
                 modifier = Modifier.size(40.dp).clip(CircleShape).background(Primary),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Verified, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Verified, contentDescription = null, tint = OnPrimary, modifier = Modifier.size(20.dp))
             }
             Column {
                 Text(
@@ -484,7 +486,7 @@ private fun StarRow(rating: Int) {
             Icon(
                 Icons.Default.Star,
                 contentDescription = null,
-                tint = if (index < rating) Color(0xFFEF9900) else OutlineVariant,
+                tint = if (index < rating) Rating else OutlineVariant,
                 modifier = Modifier.size(14.dp)
             )
         }
@@ -594,7 +596,7 @@ private fun PartSection(product: ProductDetail.Part) {
 @Composable
 internal fun CompatibilityBadge(compatibility: PartCompatibility, evidence: String? = null) {
     val (color, label) = when (compatibility) {
-        PartCompatibility.FITS -> CompatibilityFitsGreen to "Fits your appliance"
+        PartCompatibility.FITS -> Success to "Fits your appliance"
         PartCompatibility.DOES_NOT_FIT -> Error to "Does not fit your appliance"
         PartCompatibility.UNKNOWN -> OutlineVariant to "Compatibility unknown"
     }

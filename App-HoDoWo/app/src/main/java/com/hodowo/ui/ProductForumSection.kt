@@ -1,5 +1,6 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OnPrimary
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -250,7 +251,7 @@ private fun AuthorRow(name: String, badge: String?, createdAt: Long?) {
                 text = name.firstOrNull()?.uppercase() ?: "?",
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = OnPrimary
             )
         }
         Text(text = name, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold,
@@ -345,7 +346,7 @@ private fun AskQuestionSheet(ask: AskQuestionState, viewModel: ProductForumViewM
                     modifier = Modifier.weight(1f)
                 ) {
                     if (ask.isSending) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = OnPrimary)
                     } else {
                         Text("Post", fontWeight = FontWeight.Bold)
                     }

@@ -1,5 +1,8 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OnOverlay
+import com.hodowo.ui.theme.OverlayBrand
+import com.hodowo.ui.theme.OnPrimary
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -287,7 +290,7 @@ private fun StepsSection(guide: ManualGuide, selectedStep: Int?, onSelectStep: (
                         Text(
                             text = "${step.number}",
                             style = MaterialTheme.typography.labelMedium,
-                            color = Color.White,
+                            color = OnPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp
                         )
@@ -367,7 +370,7 @@ private fun GuideImage(
                 Surface(
                     shape = CircleShape,
                     color = pinColor(selected, pin.placed),
-                    border = BorderStroke(2.dp, Color.White),
+                    border = BorderStroke(2.dp, OnOverlay),
                     shadowElevation = 3.dp,
                     modifier = Modifier
                         .offset(x = maxWidth * pin.x - size / 2, y = maxHeight * pin.y - size / 2)
@@ -376,7 +379,7 @@ private fun GuideImage(
                         .semantics { contentDescription = "Step ${step.number}: ${step.title}" }
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("${step.number}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("${step.number}", color = OnOverlay, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
             }
@@ -445,9 +448,9 @@ private fun SuggestedPartBlock(part: SuggestedPart, onBuy: () -> Unit) {
  * not on the photo (shown in the row at the bottom of the image).
  */
 internal fun pinColor(selected: Boolean, placed: Boolean): Color = when {
-    selected -> Primary
-    placed -> Primary.copy(alpha = 0.85f)
-    else -> Primary.copy(alpha = 0.55f)
+    selected -> OverlayBrand
+    placed -> OverlayBrand.copy(alpha = 0.85f)
+    else -> OverlayBrand.copy(alpha = 0.55f)
 }
 
 /**
@@ -463,10 +466,10 @@ internal fun PinLines(pins: List<PinMarker>, selectedIndex: Int?, modifier: Modi
             val anchorY = pin.anchorY ?: return@forEach
             val anchor = Offset(size.width * anchorX, size.height * anchorY)
             val number = Offset(size.width * pin.x, size.height * pin.y)
-            val color = if (pin.index == selectedIndex) Primary else Primary.copy(alpha = 0.85f)
-            drawLine(Color.White, number, anchor, strokeWidth = 4.dp.toPx() / zoom, cap = StrokeCap.Round)
+            val color = if (pin.index == selectedIndex) OverlayBrand else OverlayBrand.copy(alpha = 0.85f)
+            drawLine(OnOverlay, number, anchor, strokeWidth = 4.dp.toPx() / zoom, cap = StrokeCap.Round)
             drawLine(color, number, anchor, strokeWidth = 2.dp.toPx() / zoom, cap = StrokeCap.Round)
-            drawCircle(Color.White, radius = 5.dp.toPx() / zoom, center = anchor)
+            drawCircle(OnOverlay, radius = 5.dp.toPx() / zoom, center = anchor)
             drawCircle(color, radius = 3.5f.dp.toPx() / zoom, center = anchor)
         }
     }

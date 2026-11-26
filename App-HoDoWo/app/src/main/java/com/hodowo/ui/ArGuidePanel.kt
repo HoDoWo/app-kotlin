@@ -1,5 +1,7 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OnOverlay
+import com.hodowo.ui.theme.OverlayScrim
 import android.content.Context
 import android.os.Build
 import android.os.PowerManager
@@ -117,18 +119,18 @@ internal fun ArTopBar(onClose: () -> Unit) {
     ) {
         IconButton(
             onClick = onClose,
-            colors = IconButtonDefaults.iconButtonColors(containerColor = Color.Black.copy(alpha = 0.6f))
+            colors = IconButtonDefaults.iconButtonColors(containerColor = OverlayScrim)
         ) {
-            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.ar_close), tint = Color.White)
+            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.ar_close), tint = OnOverlay)
         }
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = stringResource(R.string.ar_title),
-            color = Color.White,
+            color = OnOverlay,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
-                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                .background(OverlayScrim, RoundedCornerShape(8.dp))
                 .padding(horizontal = 8.dp, vertical = 2.dp)
                 .semantics { heading() }
         )
@@ -353,7 +355,7 @@ private fun NumberBadge(number: Int, filled: Boolean, dimmed: Boolean) {
             text = number.toString(),
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Bold,
-            color = if (filled) Color.White else colour
+            color = if (filled) MaterialTheme.colorScheme.onPrimary else colour
         )
     }
 }
@@ -473,12 +475,12 @@ internal fun ArPerformanceOverlay(placement: ArPlacement, modifier: Modifier) {
     if (text.isNotEmpty()) {
         Text(
             text = text,
-            color = Color.White,
+            color = OnOverlay,
             style = MaterialTheme.typography.labelSmall,
             modifier = modifier
                 .statusBarsPadding()
                 .padding(top = 56.dp, end = 8.dp)
-                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                .background(OverlayScrim, RoundedCornerShape(6.dp))
                 .padding(horizontal = 6.dp, vertical = 2.dp)
         )
     }

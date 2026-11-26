@@ -24,12 +24,15 @@
     <string name="settings_text_size_custom">%1$d%%</string>
     <string name="settings_text_size_preview">Gira la manopola del timer fino a 30 minuti.</string>
 
+    <string name="settings_high_contrast">Contrasto elevato</string>
+    <string name="settings_high_contrast_summary">Colori più marcati per testi e bordi</string>
+
     <string name="settings_app_language">Lingua dell\'app</string>
     <string name="settings_language_system">Predefinita di sistema</string>
 
     <string name="settings_reset">Ripristina predefiniti</string>
     <string name="settings_reset_title">Ripristinare le impostazioni?</string>
-    <string name="settings_reset_body">Tema, dimensione testo e lingua tornano a quelli di sistema.</string>
+    <string name="settings_reset_body">Tema, dimensione testo, contrasto e lingua tornano ai valori predefiniti.</string>
     <string name="settings_reset_confirm">Ripristina</string>
     <string name="settings_cancel">Annulla</string>
     <string name="settings_on">Attivo</string>

@@ -1,5 +1,7 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OnOverlay
+import com.hodowo.ui.theme.OverlayBrand
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -93,8 +95,8 @@ private fun ScanLabelChip(marker: ScanMarker, selected: Boolean, modifier: Modif
     ) {
         Surface(
             shape = CircleShape,
-            color = Primary,
-            border = BorderStroke(2.dp, Color.White),
+            color = OverlayBrand,
+            border = BorderStroke(2.dp, OnOverlay),
             shadowElevation = 6.dp
         ) {
             if (selected) {
@@ -102,15 +104,15 @@ private fun ScanLabelChip(marker: ScanMarker, selected: Boolean, modifier: Modif
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(start = 3.dp, end = 14.dp, top = 3.dp, bottom = 3.dp)
                 ) {
-                    Surface(shape = CircleShape, color = Color.White, modifier = Modifier.size(INNER_BADGE_SIZE)) {
+                    Surface(shape = CircleShape, color = OnOverlay, modifier = Modifier.size(INNER_BADGE_SIZE)) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(number, color = Primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(number, color = OverlayBrand, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = marker.label,
-                        color = Color.White,
+                        color = OnOverlay,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         maxLines = 1,
@@ -120,7 +122,7 @@ private fun ScanLabelChip(marker: ScanMarker, selected: Boolean, modifier: Modif
                 }
             } else {
                 Box(contentAlignment = Alignment.Center, modifier = Modifier.size(BADGE_SIZE)) {
-                    Text(number, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(number, color = OnOverlay, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
@@ -132,7 +134,7 @@ private fun ScanLabelChip(marker: ScanMarker, selected: Boolean, modifier: Modif
                 lineTo(size.width / 2f, size.height)
                 close()
             }
-            drawPath(path, Primary)
+            drawPath(path, OverlayBrand)
         }
     }
 }

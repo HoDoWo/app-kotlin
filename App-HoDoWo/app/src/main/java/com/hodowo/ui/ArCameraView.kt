@@ -1,5 +1,7 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OnOverlay
+import com.hodowo.ui.theme.OverlayBrand
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -26,7 +28,6 @@ import com.google.ar.core.TrackingFailureReason
 import com.google.ar.core.TrackingState
 import com.google.android.filament.MaterialInstance
 import com.hodowo.data.FrameTimeMeter
-import com.hodowo.ui.theme.Primary
 import com.hodowo.viewmodel.AlignPlan
 import com.hodowo.viewmodel.ArGuideUiState
 import com.hodowo.viewmodel.ArSessionProblem
@@ -300,10 +301,10 @@ internal fun ArCameraView(
                 }
             )
         ) {
-            val arrowMaterial = remember(materialLoader) { materialLoader.createColorInstance(Primary) }
-            val pinMaterial = remember(materialLoader) { materialLoader.createColorInstance(Color.White) }
+            val arrowMaterial = remember(materialLoader) { materialLoader.createColorInstance(OverlayBrand) }
+            val pinMaterial = remember(materialLoader) { materialLoader.createColorInstance(OnOverlay) }
             val reticleMaterial = remember(materialLoader) {
-                materialLoader.createUnlitColorInstance(Color.White.copy(alpha = 0.7f))
+                materialLoader.createUnlitColorInstance(OnOverlay.copy(alpha = 0.7f))
             }
             val cameraPosition: () -> Position = { cameraNode.worldPosition }
 
@@ -400,7 +401,7 @@ private fun SceneScope.PinLabel(text: String, current: Boolean, position: Positi
         text = text,
         fontSize = LABEL_FONT_PX,
         textColor = android.graphics.Color.WHITE,
-        backgroundColor = if (current) Primary.toArgb() else LABEL_BACKGROUND,
+        backgroundColor = if (current) OverlayBrand.toArgb() else LABEL_BACKGROUND,
         widthMeters = maxOf(LABEL_MIN_WIDTH, LABEL_WIDTH_PER_CHAR * text.length),
         heightMeters = LABEL_HEIGHT,
         position = position,

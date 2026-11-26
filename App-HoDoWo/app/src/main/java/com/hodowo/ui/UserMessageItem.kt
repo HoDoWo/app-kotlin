@@ -1,5 +1,6 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OnPrimary
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -58,7 +59,7 @@ fun UserMessageItem(
                         text = it,
                         style = MaterialTheme.typography.bodyLarge,
                         fontSize = 16.sp,
-                        color = Color.White,
+                        color = OnPrimary,
                         lineHeight = 23.sp
                     )
                 }

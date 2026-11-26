@@ -1,5 +1,8 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OnOverlay
+import com.hodowo.ui.theme.MediaBackground
+import com.hodowo.ui.theme.OnPrimary
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -131,7 +134,7 @@ fun GuideViewerDialog(guide: ManualGuide, initialStep: Int? = null, onDismiss: (
         } else BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(MediaBackground)
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
@@ -193,11 +196,11 @@ private fun ViewerTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onDismiss) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = OnOverlay)
         }
         Text(
             text = title,
-            color = Color.White,
+            color = OnOverlay,
             fontWeight = FontWeight.SemiBold,
             fontSize = 16.sp,
             maxLines = 1,
@@ -206,12 +209,12 @@ private fun ViewerTopBar(
         )
         if (toggleLabel != null) {
             TextButton(onClick = onToggle) {
-                Text(toggleLabel, color = Color.White, fontWeight = FontWeight.SemiBold)
+                Text(toggleLabel, color = OnOverlay, fontWeight = FontWeight.SemiBold)
             }
         }
         if (onOpenAr != null) {
             IconButton(onClick = onOpenAr) {
-                Icon(Icons.Filled.ViewInAr, contentDescription = stringResource(R.string.ar_view_in_ar), tint = Color.White)
+                Icon(Icons.Filled.ViewInAr, contentDescription = stringResource(R.string.ar_view_in_ar), tint = OnOverlay)
             }
         }
         ImageDownloadButton(url = url)
@@ -251,7 +254,7 @@ private fun ImagePane(
             } else {
                 Text(
                     text = if (steps.any { it.pin != null }) "Tap a number to read its step" else "Pinch or double-tap to zoom",
-                    color = Color.White.copy(alpha = 0.75f),
+                    color = OnOverlay.copy(alpha = 0.75f),
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp)
                 )
@@ -347,7 +350,7 @@ private fun ZoomableGuideImage(
                     Surface(
                         shape = CircleShape,
                         color = pinColor(isSelected, pin.placed),
-                        border = BorderStroke(2.dp, Color.White),
+                        border = BorderStroke(2.dp, OnOverlay),
                         shadowElevation = 3.dp,
                         modifier = Modifier
                             .offset(x = imageWidth * pin.x - pinSize / 2, y = imageHeight * pin.y - pinSize / 2)
@@ -361,7 +364,7 @@ private fun ZoomableGuideImage(
                             .semantics { contentDescription = "Step ${step.number}: ${step.title}" }
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text("${step.number}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("${step.number}", color = OnOverlay, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
                 }
@@ -458,7 +461,7 @@ private fun StepRow(step: ManualStep, isSelected: Boolean, onClick: () -> Unit) 
 private fun StepNumber(number: Int) {
     Surface(shape = CircleShape, color = Primary, modifier = Modifier.size(28.dp)) {
         Box(contentAlignment = Alignment.Center) {
-            Text(text = "$number", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(text = "$number", color = OnPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
     }
 }
