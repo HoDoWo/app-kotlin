@@ -217,6 +217,9 @@ internal fun ArCameraView(
         engine = engine,
         cameraNode = cameraNode,
         planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL,
+        // Depth (where the phone supports it) places scan labels on fronts with no plane:
+        // glossy steel, plain white panels. SceneView turns it off on phones without depth.
+        depthMode = Config.DepthMode.AUTOMATIC,
         instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP,
         planeRenderer = placing,
         onSessionFailure = { failure -> currentEvents.onSessionFailed(failure.toProblem()) },

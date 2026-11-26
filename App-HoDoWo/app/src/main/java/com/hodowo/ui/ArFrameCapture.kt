@@ -26,15 +26,18 @@ import com.google.ar.core.TrackingState
 import com.google.ar.core.exceptions.DeadlineExceededException
 import com.google.ar.core.exceptions.NotYetAvailableException
 import com.google.ar.core.exceptions.ResourceExhaustedException
+import com.hodowo.viewmodel.DepthMap
 import com.hodowo.viewmodel.FrameGeometry
 import com.hodowo.viewmodel.Vec3
 import com.hodowo.viewmodel.cameraRay
+import com.hodowo.viewmodel.depthPoint
 import com.hodowo.viewmodel.minus
 import com.hodowo.viewmodel.plus
 import com.hodowo.viewmodel.rayPlaneDistance
 import com.hodowo.viewmodel.times
 import com.hodowo.viewmodel.uprightRotation
 import java.io.ByteArrayOutputStream
+import java.nio.ByteOrder
 import java.util.Locale
 import kotlin.math.max
 import kotlin.math.sqrt
@@ -47,12 +50,6 @@ private const val DEGREES_PER_ROTATION_STEP = 90
 /** A plane point outside the tracked polygon still counts when this close to it (meters). */
 private const val PLANE_EDGE_MARGIN_M = 0.25f
 
-/**
- * Last resort: the nearest tracked plane, extended past its polygon, when it is
- * this close along the ray (a keyboard on a desk whose polygon is still small).
- */
-private const val MAX_EXTENDED_PLANE_M = 2f
-
 /** No plane at all: the label goes this far along the ray, so it still shows near the control. */
 private const val NO_PLANE_DEPTH_M = 0.5f
 
@@ -62,7 +59,13 @@ private const val TAG = "ArScan"
  * One camera frame kept for AR auto-alignment: the image (NV21, as the sensor
  * reads it), its geometry, and where the camera was when it was taken.
  */
-internal class CapturedFrame(val nv21: ByteArray, val geometry: FrameGeometry, val cameraPose: Pose)
+internal class CapturedFrame(
+    val nv21: ByteArray,
+    val geometry: FrameGeometry,
+    val cameraPose: Pose,
+    /** Null when depth is off, not supported or not ready yet. */
+    val depth: DepthMap? = null
+)
 
 /** A point on a tracked plane, ready to anchor. */
 internal class SurfacePoint(val plane: Plane, val pose: Pose)
@@ -95,7 +98,32 @@ internal fun captureFrame(frame: Frame, rotation: Int): CapturedFrame? {
             principalY = principal[1] * scaleY,
             rotation = rotation
         )
-        return CapturedFrame(image.toNv21(), geometry, frame.camera.pose)
+        return CapturedFrame(image.toNv21(), geometry, frame.camera.pose, captureDepth(frame))
+    } finally {
+        image.close()
+    }
+}
+
+/** The frame's depth map (millimeters), or null when ARCore has none. */
+private fun captureDepth(frame: Frame): DepthMap? {
+    val image = try {
+        frame.acquireDepthImage16Bits()
+    } catch (e: NotYetAvailableException) {
+        return null
+    } catch (e: IllegalStateException) {
+        // Depth is off or not supported on this phone.
+        return null
+    }
+    try {
+        val plane = image.planes[0]
+        val buffer = plane.buffer.order(ByteOrder.nativeOrder())
+        val millimeters = ShortArray(image.width * image.height)
+        for (row in 0 until image.height) {
+            for (col in 0 until image.width) {
+                millimeters[row * image.width + col] = buffer.getShort(row * plane.rowStride + col * plane.pixelStride)
+            }
+        }
+        return DepthMap(image.width, image.height, millimeters)
     } finally {
         image.close()
     }
@@ -162,7 +190,7 @@ internal fun Context.cameraUprightRotation(session: Session): Int {
  * from the camera as it was when the frame was taken, to the nearest plane it meets
  * inside (or just outside) the tracked area.
  */
-internal fun Session.surfacePointFor(frame: CapturedFrame, x: Float, y: Float): SurfacePoint? {
+internal fun Session.surfacePointFor(frame: CapturedFrame, x: Float, y: Float, insideOnly: Boolean = false): SurfacePoint? {
     val local = cameraRay(x, y, frame.geometry)
     val origin = frame.cameraPose.translation.toVec3()
     val direction = frame.cameraPose.rotateVector(floatArrayOf(local.x, local.y, local.z)).toVec3()
@@ -171,8 +199,7 @@ internal fun Session.surfacePointFor(frame: CapturedFrame, x: Float, y: Float): 
     val hits = planes.mapNotNull { plane -> planeHit(plane, origin, direction) }
     val rayLength = length(direction)
     val best = hits.filter { it.inside }.minByOrNull { it.distance }
-        ?: hits.filter { it.nearEdge }.minByOrNull { it.distance }
-        ?: hits.filter { it.distance * rayLength <= MAX_EXTENDED_PLANE_M }.minByOrNull { it.distance }
+        ?: hits.filter { it.nearEdge && !insideOnly }.minByOrNull { it.distance }
     Log.d(
         TAG,
         "point (%.2f, %.2f) rot=%d planes=%d hits=%d inside=%d near=%d -> %s".format(
@@ -185,22 +212,41 @@ internal fun Session.surfacePointFor(frame: CapturedFrame, x: Float, y: Float): 
 }
 
 /**
- * An anchor for the point the AI found: on a tracked plane when the ray meets one,
- * otherwise [NO_PLANE_DEPTH_M] along the ray, so the label still shows near the control.
+ * An anchor for the point the AI found, from the best source available:
+ * 1. a tracked plane the ray meets inside its area (exact, e.g. a hob or a desk);
+ * 2. ARCore depth at that point (vertical, glossy or plain fronts with no plane);
+ * 3. a plane met just outside its area;
+ * 4. [NO_PLANE_DEPTH_M] along the ray, so the label still shows near the control.
  */
 internal fun Session.anchorFor(frame: CapturedFrame, x: Float, y: Float): Anchor? {
-    surfacePointFor(frame, x, y)?.let { point ->
-        runCatching { point.plane.createAnchor(point.pose) }.getOrNull()?.let { return it }
+    planeAnchor(frame, x, y, insideOnly = true)?.let { return it.also { log(x, y, "plane") } }
+    frame.depth?.let { depth ->
+        depthPoint(x, y, frame.geometry, depth)?.let { local ->
+            val world = frame.cameraPose.transformPoint(floatArrayOf(local.x, local.y, local.z))
+            uprightAnchor(world.toVec3())?.let { return it.also { log(x, y, "depth") } }
+        }
     }
+    planeAnchor(frame, x, y, insideOnly = false)?.let { return it.also { log(x, y, "plane edge") } }
     val local = cameraRay(x, y, frame.geometry)
     val origin = frame.cameraPose.translation.toVec3()
     val direction = frame.cameraPose.rotateVector(floatArrayOf(local.x, local.y, local.z)).toVec3()
-    val point = origin + direction * (NO_PLANE_DEPTH_M / length(direction))
-    // Upright (world +Y up), so the label above the dot points up.
-    val pose = Pose(floatArrayOf(point.x, point.y, point.z), floatArrayOf(0f, 0f, 0f, 1f))
-    return runCatching { createAnchor(pose) }
-        .onFailure { Log.w(TAG, "no anchor for (%.2f, %.2f)".format(Locale.US, x, y), it) }
+    return uprightAnchor(origin + direction * (NO_PLANE_DEPTH_M / length(direction)))
+        .also { log(x, y, if (it != null) "fixed distance" else "none") }
+}
+
+private fun Session.planeAnchor(frame: CapturedFrame, x: Float, y: Float, insideOnly: Boolean): Anchor? =
+    surfacePointFor(frame, x, y, insideOnly)?.let { point ->
+        runCatching { point.plane.createAnchor(point.pose) }.getOrNull()
+    }
+
+/** Upright (world +Y up), so the label above the dot points up. */
+private fun Session.uprightAnchor(point: Vec3): Anchor? =
+    runCatching { createAnchor(Pose(floatArrayOf(point.x, point.y, point.z), floatArrayOf(0f, 0f, 0f, 1f))) }
+        .onFailure { Log.w(TAG, "no anchor at $point", it) }
         .getOrNull()
+
+private fun log(x: Float, y: Float, source: String) {
+    Log.d(TAG, "label (%.2f, %.2f) placed by %s".format(Locale.US, x, y, source))
 }
 
 private fun length(vector: Vec3) = sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z)

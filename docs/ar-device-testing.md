@@ -28,6 +28,10 @@ If all pins are on one control, one point is enough; a guide without pins shows 
 **AR tab → Start AR**, point at an appliance, a keyboard, a remote… As soon as ARCore finds a surface the
 app sends one frame to `POST /api/ar/scan`: the AI names the device and up to 8 main controls, and the app
 anchors a small dot and the control's name on each one (same ray-to-plane method as auto-alignment).
+Each label is placed from the best source available: a tracked plane the ray meets (hobs,
+desks), else **ARCore depth** at that point (vertical, glossy or plain fronts where ARCore finds no
+plane: ovens, microwaves, washing machines; on phones that support depth), else a plane just outside
+its area, else 50 cm along the ray. Logcat tag `ArScan` says which source placed each label.
 The panel lists the device and every control with what it does (readable with TalkBack). **Scan again**
 repeats it; there is no continuous scanning (each scan is one AI call).
 
