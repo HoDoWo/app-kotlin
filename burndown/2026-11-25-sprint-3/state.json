@@ -1,4 +1,10 @@
 {
+ "PVTI_lADOFCkyKM4Bl88jzg-7q-k": {
+  "c": 0.0,
+  "done": false,
+  "issue": 18,
+  "title": "ARcore implementation"
+ },
  "PVTI_lADOFCkyKM4Bl88jzg-7q9o": {
   "c": 0.0,
   "done": false,
@@ -10,12 +16,6 @@
   "done": false,
   "issue": 16,
   "title": "Off-peak electricity tips"
- },
- "PVTI_lADOFCkyKM4Bl88jzg-7q-k": {
-  "c": 0.0,
-  "done": false,
-  "issue": 18,
-  "title": "ARcore implementation"
  },
  "PVTI_lADOFCkyKM4Bl88jzg-7q-0": {
   "c": 0.0,
