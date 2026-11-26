@@ -32,6 +32,7 @@ import coil.compose.AsyncImage
 import com.hodowo.data.AuthManager
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.components.NotificationIconButton
+import com.hodowo.ui.components.SettingsIconButton
 import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.viewmodel.isSameAs
 import com.hodowo.viewmodel.ChatViewModel
@@ -60,6 +61,8 @@ fun ProfileScreen(
     /** Purchase history (#144). */
     onOpenOrders: () -> Unit = {},
     onPostProduct: () -> Unit = {},
+    /** Settings: appearance, accessibility and language (#210). */
+    onOpenSettings: () -> Unit = {},
     /** The login screen owns the session, so signing out here must show it again. */
     onSignedOut: () -> Unit = {}
 ) {
@@ -172,6 +175,7 @@ fun ProfileScreen(
             AppTopBar(
                 subtitle = "PROFILE",
                 actions = {
+                    SettingsIconButton(onClick = onOpenSettings)
                     NotificationIconButton()
                     ProfileAvatar(
                         name = defaultName,

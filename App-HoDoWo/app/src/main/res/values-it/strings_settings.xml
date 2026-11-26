@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Impostazioni (#210). -->
+<resources>
+    <string name="settings_title">Impostazioni</string>
+    <string name="settings_open">Apri le impostazioni</string>
+    <string name="settings_back">Indietro</string>
+
+    <string name="settings_section_appearance">Aspetto</string>
+    <string name="settings_section_accessibility">Accessibilità</string>
+    <string name="settings_section_language">Lingua</string>
+
+    <string name="settings_theme">Tema</string>
+    <string name="settings_theme_system">Predefinito di sistema</string>
+    <string name="settings_theme_light">Chiaro</string>
+    <string name="settings_theme_dark">Scuro</string>
+    <string name="settings_dynamic_colour">Colori dinamici</string>
+    <string name="settings_dynamic_colour_summary">Usa i colori dello sfondo</string>
+
+    <string name="settings_text_size">Dimensione testo</string>
+    <string name="settings_text_size_small">Piccolo</string>
+    <string name="settings_text_size_default">Predefinito</string>
+    <string name="settings_text_size_large">Grande</string>
+    <string name="settings_text_size_extra_large">Molto grande</string>
+    <string name="settings_text_size_custom">%1$d%%</string>
+    <string name="settings_text_size_preview">Gira la manopola del timer fino a 30 minuti.</string>
+
+    <string name="settings_app_language">Lingua dell\'app</string>
+    <string name="settings_language_system">Predefinita di sistema</string>
+
+    <string name="settings_reset">Ripristina predefiniti</string>
+    <string name="settings_reset_title">Ripristinare le impostazioni?</string>
+    <string name="settings_reset_body">Tema, dimensione testo e lingua tornano a quelli di sistema.</string>
+    <string name="settings_reset_confirm">Ripristina</string>
+    <string name="settings_cancel">Annulla</string>
+    <string name="settings_on">Attivo</string>
+    <string name="settings_off">Disattivo</string>
+</resources>

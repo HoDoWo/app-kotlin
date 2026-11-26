@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hodowo.viewmodel.AppPreferencesViewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.hodowo.BuildConfig
@@ -118,6 +119,10 @@ fun HoDoWoApp(
         factory = AiServiceProvider.postProductViewModelFactory(context)
     )
     val cartViewModel: CartViewModel = viewModel(factory = AiServiceProvider.cartViewModelFactory())
+    // The same instance MainActivity uses for the theme: both are scoped to the activity.
+    val preferencesViewModel: AppPreferencesViewModel = viewModel(
+        factory = AppPreferencesViewModel.factory(LocalContext.current.applicationContext)
+    )
     val checkoutViewModel: CheckoutViewModel = viewModel(factory = AiServiceProvider.checkoutViewModelFactory())
     val sponsoredPartnersViewModel: SponsoredPartnersViewModel = viewModel(
         factory = AiServiceProvider.sponsoredPartnersViewModelFactory()
@@ -131,6 +136,7 @@ fun HoDoWoApp(
     var showApplianceManuals by rememberSaveable { mutableStateOf(false) }
     // The AR session inside the AR tab (#240).
     var showArSession by rememberSaveable { mutableStateOf(false) }
+    var showSettings by rememberSaveable { mutableStateOf(false) }
     var showPostProduct by rememberSaveable { mutableStateOf(false) }
     var showMarketplaceSearch by rememberSaveable { mutableStateOf(false) }
     var showMyListings by rememberSaveable { mutableStateOf(false) }
@@ -209,6 +215,7 @@ fun HoDoWoApp(
         showOrderConfirmation = false
         showCart = false
         showMessages = false
+        showSettings = false
         selectedMarketProduct = null
         currentTab = AppNavTab.MARKET
         when (target) {
@@ -277,6 +284,7 @@ fun HoDoWoApp(
                                     showOrderConfirmation = false
                                     showCart = false
                                     showMessages = false
+                                    showSettings = false
                                     selectedMarketProduct = null
                                     currentTab = it
                                 },
@@ -335,7 +343,11 @@ fun HoDoWoApp(
                                                 currentTab = AppNavTab.AI_CHAT
                                                 chatViewModel.openChatForGuide(guide)
                                             },
-                                            profilePhotoUrl = chatState.userProfile?.photoUrl
+                                            profilePhotoUrl = chatState.userProfile?.photoUrl,
+                                            onOpenSettings = {
+                                                showSettings = true
+                                                currentTab = AppNavTab.PROFILE
+                                            }
                                         )
                                     }
                                     AppNavTab.AI_CHAT -> {
@@ -353,7 +365,13 @@ fun HoDoWoApp(
                                         )
                                     }
                                     AppNavTab.PROFILE -> {
-                                        if (showOrders) {
+                                        if (showSettings) {
+                                            BackHandler { showSettings = false }
+                                            SettingsScreen(
+                                                viewModel = preferencesViewModel,
+                                                onBack = { showSettings = false }
+                                            )
+                                        } else if (showOrders) {
                                             BackHandler { showOrders = false }
                                             PurchaseHistoryScreen(
                                                 viewModel = ordersViewModel,
@@ -426,6 +444,7 @@ fun HoDoWoApp(
                                                 onOpenApplianceManuals = { showApplianceManuals = true },
                                                 onOpenMyListings = { showMyListings = true },
                                                 onOpenOrders = { showOrders = true },
+                                                onOpenSettings = { showSettings = true },
                                                 onPostProduct = {
                                                     currentTab = AppNavTab.MARKET
                                                     showPostProduct = true
@@ -606,6 +625,7 @@ fun HoDoWoApp(
                                         showOrderConfirmation = false
                                         showCart = false
                                         showMessages = false
+                                        showSettings = false
                                         selectedMarketProduct = null
                                         currentTab = it
                                     }
