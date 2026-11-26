@@ -28,11 +28,16 @@ If all pins are on one control, one point is enough; a guide without pins shows 
 **AR tab → Start AR**, point at an appliance, a keyboard, a remote… As soon as ARCore finds a surface the
 app sends one frame to `POST /api/ar/scan`: the AI names the device and up to 8 main controls, and the app
 anchors a small dot and the control's name on each one (same ray-to-plane method as auto-alignment).
-Each label is placed from the best source available: a tracked plane the ray meets (hobs,
+Each dot is placed from the best source available: a tracked plane the ray meets (hobs,
 desks), else **ARCore depth** at that point (vertical, glossy or plain fronts where ARCore finds no
-plane: ovens, microwaves, washing machines; on phones that support depth), else a plane just outside
-its area, else 50 cm along the ray. Logcat tag `ArScan` says which source placed each label.
-On the device each control shows only its **number**; the panel lists the numbered controls with what
+plane: ovens, microwaves, washing machines; on phones that support depth), else the **feature points**
+ARCore tracks along the ray, else a plane just outside its area, else along the ray at the distance of
+the other controls (50 cm when none was measured). The scan photo waits up to 1.5 s for depth.
+A dot at the wrong distance looks right from where the photo was taken but slides off when the phone
+moves, so check from another angle. Logcat tag `ArScan` says which source placed each dot
+(`captured: depth=… features=…`, then `placed by plane | depth | features | plane edge | ray`).
+The labels are drawn flat on the screen above each dot (sharp, same size at any distance) and
+can be tapped. On the device each control shows only its **number**; the panel lists the numbered controls with what
 they do (readable with TalkBack), and tapping one shows its name on the device (the first one is
 selected). The panel has a handle: tap it or drag it down to lower the panel and see the whole camera
 view, up to raise it again. While the AR camera is open the tab bar and "New chat" are hidden. **Scan again**
@@ -108,6 +113,8 @@ AR tab scan
 - [ ] Pointing at a wall: "No appliance or keyboard found", **Scan again** works.
 - [ ] Airplane mode: "The scan didn't work (check the connection)".
 - [ ] **Reset AR** removes the labels and scans again by itself.
+- [ ] Oven or microwave front: walk half a metre to the side; the dots stay on the knobs/buttons.
+- [ ] Tapping a number on the camera selects it (pill with its name), like tapping its row.
 
 Navigation
 - [ ] **Previous / Next** reach every step; disabled at the first / last step.

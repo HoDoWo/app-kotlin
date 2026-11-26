@@ -31,6 +31,8 @@ import com.hodowo.viewmodel.FrameGeometry
 import com.hodowo.viewmodel.Vec3
 import com.hodowo.viewmodel.cameraRay
 import com.hodowo.viewmodel.depthPoint
+import com.hodowo.viewmodel.featureDistanceAlongRay
+import com.hodowo.viewmodel.fillMissingDistances
 import com.hodowo.viewmodel.minus
 import com.hodowo.viewmodel.plus
 import com.hodowo.viewmodel.rayPlaneDistance
@@ -64,7 +66,9 @@ internal class CapturedFrame(
     val geometry: FrameGeometry,
     val cameraPose: Pose,
     /** Null when depth is off, not supported or not ready yet. */
-    val depth: DepthMap? = null
+    val depth: DepthMap? = null,
+    /** Feature points ARCore tracks (world x, y, z, confidence); empty when it has none. */
+    val features: FloatArray = FloatArray(0)
 )
 
 /** A point on a tracked plane, ready to anchor. */
@@ -98,11 +102,28 @@ internal fun captureFrame(frame: Frame, rotation: Int): CapturedFrame? {
             principalY = principal[1] * scaleY,
             rotation = rotation
         )
-        return CapturedFrame(image.toNv21(), geometry, frame.camera.pose, captureDepth(frame))
+        val depth = captureDepth(frame)
+        val features = captureFeatures(frame)
+        Log.d(TAG, "captured: depth=${depth != null} features=${features.size / 4}")
+        return CapturedFrame(image.toNv21(), geometry, frame.camera.pose, depth, features)
     } finally {
         image.close()
     }
 }
+
+/** The feature points of [frame] in world space (x, y, z, confidence per point). */
+private fun captureFeatures(frame: Frame): FloatArray = runCatching {
+    frame.acquirePointCloud().use { cloud ->
+        val points = cloud.points
+        FloatArray(points.remaining()).also { points.get(it) }
+    }
+}.getOrDefault(FloatArray(0))
+
+/** Whether [frame] has a depth image ready (false when depth is off or not supported). */
+internal fun hasDepth(frame: Frame): Boolean = runCatching {
+    frame.acquireDepthImage16Bits().close()
+    true
+}.getOrDefault(false)
 
 /** The frame's depth map (millimeters), or null when ARCore has none. */
 private fun captureDepth(frame: Frame): DepthMap? {
@@ -212,13 +233,42 @@ internal fun Session.surfacePointFor(frame: CapturedFrame, x: Float, y: Float, i
 }
 
 /**
- * An anchor for the point the AI found, from the best source available:
+ * Anchors for the points the AI found in [frame] (0..1 of the upright image), each from
+ * the best source available:
  * 1. a tracked plane the ray meets inside its area (exact, e.g. a hob or a desk);
  * 2. ARCore depth at that point (vertical, glossy or plain fronts with no plane);
- * 3. a plane met just outside its area;
- * 4. [NO_PLANE_DEPTH_M] along the ray, so the label still shows near the control.
+ * 3. the feature points ARCore tracks along the ray (fronts with print or texture);
+ * 4. a plane met just outside its area;
+ * 5. along the ray at the distance of the other controls (the controls of one device are
+ *    about as far), or [NO_PLANE_DEPTH_M] when none was measured.
+ * A point placed at the wrong distance looks right only from where the photo was taken and
+ * slides off as the phone moves, so every measured distance counts.
  */
-internal fun Session.anchorFor(frame: CapturedFrame, x: Float, y: Float): Anchor? {
+internal fun Session.anchorsFor(frame: CapturedFrame, points: List<Pair<Float, Float>>): List<Anchor?> {
+    val origin = frame.cameraPose.translation.toVec3()
+    val rays = points.map { (x, y) ->
+        val local = cameraRay(x, y, frame.geometry)
+        val direction = frame.cameraPose.rotateVector(floatArrayOf(local.x, local.y, local.z)).toVec3()
+        direction * (1f / length(direction))
+    }
+    val anchors = points.mapIndexed { i, (x, y) -> measuredAnchor(frame, x, y, origin, rays[i]) }
+    val measured = anchors.map { placed -> placed?.let { length(it.pose.translation.toVec3() - origin) } }
+    val distances = fillMissingDistances(measured, NO_PLANE_DEPTH_M)
+    return points.mapIndexed { i, (x, y) ->
+        anchors[i] ?: planeAnchor(frame, x, y, insideOnly = false)?.also { log(x, y, "plane edge") }
+            ?: uprightAnchor(origin + rays[i] * distances[i])
+                .also { log(x, y, "ray at %.2f m".format(Locale.US, distances[i])) }
+    }
+}
+
+/** An anchor on a measured surface (plane, depth or features); null without one. */
+private fun Session.measuredAnchor(
+    frame: CapturedFrame,
+    x: Float,
+    y: Float,
+    origin: Vec3,
+    ray: Vec3
+): Anchor? {
     planeAnchor(frame, x, y, insideOnly = true)?.let { return it.also { log(x, y, "plane") } }
     frame.depth?.let { depth ->
         depthPoint(x, y, frame.geometry, depth)?.let { local ->
@@ -226,12 +276,12 @@ internal fun Session.anchorFor(frame: CapturedFrame, x: Float, y: Float): Anchor
             uprightAnchor(world.toVec3())?.let { return it.also { log(x, y, "depth") } }
         }
     }
-    planeAnchor(frame, x, y, insideOnly = false)?.let { return it.also { log(x, y, "plane edge") } }
-    val local = cameraRay(x, y, frame.geometry)
-    val origin = frame.cameraPose.translation.toVec3()
-    val direction = frame.cameraPose.rotateVector(floatArrayOf(local.x, local.y, local.z)).toVec3()
-    return uprightAnchor(origin + direction * (NO_PLANE_DEPTH_M / length(direction)))
-        .also { log(x, y, if (it != null) "fixed distance" else "none") }
+    featureDistanceAlongRay(origin, ray, frame.features)?.let { distance ->
+        uprightAnchor(origin + ray * distance)?.let {
+            return it.also { log(x, y, "features at %.2f m".format(Locale.US, distance)) }
+        }
+    }
+    return null
 }
 
 private fun Session.planeAnchor(frame: CapturedFrame, x: Float, y: Float, insideOnly: Boolean): Anchor? =

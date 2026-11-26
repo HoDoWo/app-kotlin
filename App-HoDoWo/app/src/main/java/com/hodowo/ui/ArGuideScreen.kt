@@ -166,7 +166,8 @@ fun ArGuideScreen(
                         onSurfaceUnderReticle = viewModel::onSurfaceUnderReticle,
                         onTap = place,
                         onAnchorTracking = viewModel::onAnchorTracking,
-                        onSessionFailed = viewModel::onSessionFailed
+                        onSessionFailed = viewModel::onSessionFailed,
+                        onSelectScan = viewModel::selectScan
                     )
                 )
             }

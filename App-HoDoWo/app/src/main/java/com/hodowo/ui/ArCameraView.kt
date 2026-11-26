@@ -1,5 +1,6 @@
 package com.hodowo.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,7 +33,10 @@ import com.hodowo.viewmodel.ArSessionProblem
 import com.hodowo.viewmodel.ArTrackingIssue
 import com.hodowo.viewmodel.PinMapper
 import com.hodowo.viewmodel.StepPin
+import com.hodowo.viewmodel.ScreenPoint
 import com.hodowo.viewmodel.Vec3
+import com.hodowo.viewmodel.multiplyMatrices
+import com.hodowo.viewmodel.projectToView
 import com.hodowo.viewmodel.label
 import com.hodowo.viewmodel.pinGroups
 import io.github.sceneview.SceneScope
@@ -70,13 +74,8 @@ private const val LABEL_WIDTH_PER_CHAR = 0.016f
 private const val LABEL_MIN_WIDTH = 0.035f
 private const val LABEL_FONT_PX = 72f
 
-/** AR tab scan: a small dot on each control and its name, smaller than guide pins (keys are small). */
+/** AR tab scan: a small dot on each control, smaller than guide pins (keys are small). */
 private const val SCAN_DOT_RADIUS = 0.005f
-private const val SCAN_LABEL_LIFT = 0.025f
-private const val SCAN_LABEL_HEIGHT = 0.02f
-private const val SCAN_LABEL_WIDTH_PER_CHAR = 0.0105f
-private const val SCAN_LABEL_MIN_WIDTH = 0.03f
-private const val SCAN_LABEL_FONT_PX = 56f
 
 /** Near-black behind white digits: readable on a white appliance in daylight. */
 private const val LABEL_BACKGROUND = 0xE6000000.toInt()
@@ -88,7 +87,8 @@ internal class ArCameraEvents(
     val onSurfaceUnderReticle: (Boolean) -> Unit,
     val onTap: (HitResult?) -> Unit,
     val onAnchorTracking: (Boolean) -> Unit,
-    val onSessionFailed: (ArSessionProblem) -> Unit
+    val onSessionFailed: (ArSessionProblem) -> Unit,
+    val onSelectScan: (Int) -> Unit = {}
 )
 
 /** A control of the AR tab scan, anchored on the real device. */
@@ -121,6 +121,12 @@ internal class ArPlacement {
     var scanMarkers by mutableStateOf<List<ScanMarker>>(emptyList())
         private set
 
+    /** Where each scan marker shows on screen in the latest frame (null: not in view). */
+    var scanScreenPoints by mutableStateOf<List<ScreenPoint?>>(emptyList())
+
+    /** When the pending capture was first asked for (it waits briefly for depth). */
+    var captureSince: Long? = null
+
     /** Replaces the scan labels (the old anchors are detached). */
     fun showScan(markers: List<ScanMarker>) {
         clearScan()
@@ -130,6 +136,7 @@ internal class ArPlacement {
     fun clearScan() {
         scanMarkers.forEach { runCatching { it.anchor.detach() } }
         scanMarkers = emptyList()
+        scanScreenPoints = emptyList()
     }
 
     /** Where the guide pins go, once the user has aimed at the alignment points. */
@@ -181,6 +188,7 @@ internal class ArPlacement {
     /** Detaches the anchor, so ARCore stops tracking it and frees its resources. */
     fun clear() {
         captureRequest = null
+        captureSince = null
         anchor?.let { runCatching { it.detach() } }
         anchor = null
         mapper = null
@@ -188,6 +196,33 @@ internal class ArPlacement {
 }
 
 private fun FloatArray.toVec3() = Vec3(this[0], this[1], this[2])
+
+/** Wait at most this long for ARCore depth before taking the scan photo (nanoseconds). */
+private const val DEPTH_WAIT_NS = 1_500_000_000L
+
+private const val PROJECTION_NEAR_M = 0.05f
+private const val PROJECTION_FAR_M = 100f
+
+/** Where each marker shows in a [viewport] of the latest [frame]; null when it is not in view. */
+private fun screenPoints(frame: Frame, markers: List<ScanMarker>, viewport: IntSize): List<ScreenPoint?> {
+    val projection = FloatArray(MATRIX_FLOATS).also {
+        frame.camera.getProjectionMatrix(it, 0, PROJECTION_NEAR_M, PROJECTION_FAR_M)
+    }
+    val view = FloatArray(MATRIX_FLOATS).also { frame.camera.getViewMatrix(it, 0) }
+    val viewProjection = multiplyMatrices(projection, view)
+    return markers.map { marker ->
+        if (marker.anchor.trackingState != TrackingState.TRACKING) return@map null
+        val pose = marker.anchor.pose
+        projectToView(
+            viewProjection,
+            Vec3(pose.tx(), pose.ty(), pose.tz()),
+            viewport.width.toFloat(),
+            viewport.height.toFloat()
+        )
+    }
+}
+
+private const val MATRIX_FLOATS = 16
 
 /**
  * The ARCore camera view. [planeOnly]: guide pins need a real plane (its normal
@@ -210,86 +245,107 @@ internal fun ArCameraView(
     val cameraNode = rememberARCameraNode(engine)
     val placing = !state.placed || state.needsSecondPoint
 
-    ARSceneView(
-        modifier = Modifier
-            .fillMaxSize()
-            .onSizeChanged { viewport = it },
-        engine = engine,
-        cameraNode = cameraNode,
-        planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL,
-        // Depth (where the phone supports it) places scan labels on fronts with no plane:
-        // glossy steel, plain white panels. SceneView turns it off on phones without depth.
-        depthMode = Config.DepthMode.AUTOMATIC,
-        instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP,
-        planeRenderer = placing,
-        onSessionFailure = { failure -> currentEvents.onSessionFailed(failure.toProblem()) },
-        onTrackingFailureChanged = { reason -> currentEvents.onTrackingIssue(reason.toIssue()) },
-        onSessionUpdated = { session, frame ->
-            placement.meter.onFrame(System.nanoTime())
-            latestFrame = frame
-            placement.session = session
-            placement.cameraPose = frame.camera.pose
-            placement.captureRequest?.let { deliver ->
-                placement.captureRequest = null
-                deliver(captureFrame(frame, context.cameraUprightRotation(session)))
+    Box(modifier = Modifier.fillMaxSize()) {
+        ARSceneView(
+            modifier = Modifier
+                .fillMaxSize()
+                .onSizeChanged { viewport = it },
+            engine = engine,
+            cameraNode = cameraNode,
+            planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL,
+            // Depth (where the phone supports it) places scan labels on fronts with no plane:
+            // glossy steel, plain white panels. SceneView turns it off on phones without depth.
+            depthMode = Config.DepthMode.AUTOMATIC,
+            instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP,
+            planeRenderer = placing,
+            onSessionFailure = { failure -> currentEvents.onSessionFailed(failure.toProblem()) },
+            onTrackingFailureChanged = { reason -> currentEvents.onTrackingIssue(reason.toIssue()) },
+            onSessionUpdated = { session, frame ->
+                placement.meter.onFrame(System.nanoTime())
+                latestFrame = frame
+                placement.session = session
+                placement.cameraPose = frame.camera.pose
+                placement.captureRequest?.let { deliver ->
+                    // Depth is what puts a point at the right distance on a front with no plane:
+                    // give ARCore a moment to have it (it needs a little movement first).
+                    val now = System.nanoTime()
+                    val since = placement.captureSince ?: now.also { placement.captureSince = it }
+                    val waitForDepth = session.isDepthModeSupported(Config.DepthMode.AUTOMATIC) &&
+                        now - since < DEPTH_WAIT_NS && !hasDepth(frame)
+                    if (!waitForDepth) {
+                        placement.captureRequest = null
+                        placement.captureSince = null
+                        deliver(captureFrame(frame, context.cameraUprightRotation(session)))
+                    }
+                }
+                if (placement.scanMarkers.isNotEmpty() && viewport != IntSize.Zero) {
+                    placement.scanScreenPoints = screenPoints(frame, placement.scanMarkers, viewport)
+                }
+                val tracking = frame.camera.trackingState == TrackingState.TRACKING
+                currentEvents.onCameraTracking(tracking)
+                val hit = if (tracking && viewport != IntSize.Zero) {
+                    surfaceHit(frame, viewport.width / 2f, viewport.height / 2f, currentPlaneOnly)
+                } else {
+                    null
+                }
+                placement.centerHit = hit
+                currentEvents.onSurfaceUnderReticle(hit != null)
+            },
+            onGestureListener = rememberOnGestureListener(
+                onSingleTapConfirmed = { event, node ->
+                    // Tapping the camera view places the point there, like the Place button.
+                    if (node != null) return@rememberOnGestureListener
+                    val frame = latestFrame ?: return@rememberOnGestureListener
+                    currentEvents.onTap(surfaceHit(frame, event.x, event.y, currentPlaneOnly))
+                }
+            )
+        ) {
+            val arrowMaterial = remember(materialLoader) { materialLoader.createColorInstance(Primary) }
+            val pinMaterial = remember(materialLoader) { materialLoader.createColorInstance(Color.White) }
+            val reticleMaterial = remember(materialLoader) {
+                materialLoader.createUnlitColorInstance(Color.White.copy(alpha = 0.7f))
             }
-            val tracking = frame.camera.trackingState == TrackingState.TRACKING
-            currentEvents.onCameraTracking(tracking)
-            val hit = if (tracking && viewport != IntSize.Zero) {
-                surfaceHit(frame, viewport.width / 2f, viewport.height / 2f, currentPlaneOnly)
-            } else {
-                null
-            }
-            placement.centerHit = hit
-            currentEvents.onSurfaceUnderReticle(hit != null)
-        },
-        onGestureListener = rememberOnGestureListener(
-            onSingleTapConfirmed = { event, node ->
-                // Tapping the camera view places the point there, like the Place button.
-                if (node != null) return@rememberOnGestureListener
-                val frame = latestFrame ?: return@rememberOnGestureListener
-                currentEvents.onTap(surfaceHit(frame, event.x, event.y, currentPlaneOnly))
-            }
-        )
-    ) {
-        val arrowMaterial = remember(materialLoader) { materialLoader.createColorInstance(Primary) }
-        val pinMaterial = remember(materialLoader) { materialLoader.createColorInstance(Color.White) }
-        val reticleMaterial = remember(materialLoader) {
-            materialLoader.createUnlitColorInstance(Color.White.copy(alpha = 0.7f))
-        }
-        val cameraPosition: () -> Position = { cameraNode.worldPosition }
+            val cameraPosition: () -> Position = { cameraNode.worldPosition }
 
-        if (placing) {
-            // Reticle: shows where Place will put the point.
-            HitResultNode(hitTest = { placement.centerHit }) {
-                CylinderNode(radius = RETICLE_RADIUS, height = RETICLE_HEIGHT, materialInstance = reticleMaterial)
+            if (placing) {
+                // Reticle: shows where Place will put the point.
+                HitResultNode(hitTest = { placement.centerHit }) {
+                    CylinderNode(radius = RETICLE_RADIUS, height = RETICLE_HEIGHT, materialInstance = reticleMaterial)
+                }
             }
-        }
 
-        placement.scanMarkers.forEach { marker ->
-            // Keyed on the marker only: disposing an AnchorNode detaches its anchor, so a
-            // selection change only rebuilds the label (see ArTextNode).
-            key(marker) {
-                AnchorNode(anchor = marker.anchor, apply = { isPositionEditable = false }) {
-                    SphereNode(radius = SCAN_DOT_RADIUS, materialInstance = arrowMaterial)
-                    ScanMarkerLabel(marker, selected = state.selectedScan == marker.index, cameraPosition)
+            placement.scanMarkers.forEach { marker ->
+                // The dot is 3D, anchored on the control; its label is drawn flat on screen
+                // above it (ScanLabelsOverlay): always sharp, the same size, never adrift.
+                key(marker) {
+                    AnchorNode(anchor = marker.anchor, apply = { isPositionEditable = false }) {
+                        SphereNode(radius = SCAN_DOT_RADIUS, materialInstance = arrowMaterial)
+                    }
+                }
+            }
+
+            placement.anchor?.let { anchor ->
+                AnchorNode(
+                    anchor = anchor,
+                    onTrackingStateChanged = { currentEvents.onAnchorTracking(it == TrackingState.TRACKING) }
+                ) {
+                    val mapper = placement.mapper
+                    val materials = PinMaterials(arrowMaterial, pinMaterial, cameraPosition)
+                    when {
+                        state.plan == AlignPlan.Free -> Arrow(arrowMaterial, origin = Vec3(0f, 0f, 0f), side = 1f)
+                        mapper != null -> GuidePins(state, mapper, materials)
+                        else -> FirstPointMarker(state, materials)
+                    }
                 }
             }
         }
-
-        placement.anchor?.let { anchor ->
-            AnchorNode(
-                anchor = anchor,
-                onTrackingStateChanged = { currentEvents.onAnchorTracking(it == TrackingState.TRACKING) }
-            ) {
-                val mapper = placement.mapper
-                val materials = PinMaterials(arrowMaterial, pinMaterial, cameraPosition)
-                when {
-                    state.plan == AlignPlan.Free -> Arrow(arrowMaterial, origin = Vec3(0f, 0f, 0f), side = 1f)
-                    mapper != null -> GuidePins(state, mapper, materials)
-                    else -> FirstPointMarker(state, materials)
-                }
-            }
+        if (state.scanMode) {
+            ScanLabelsOverlay(
+                markers = placement.scanMarkers,
+                points = placement.scanScreenPoints,
+                selected = state.selectedScan,
+                onSelect = { currentEvents.onSelectScan(it) }
+            )
         }
     }
 }
@@ -334,22 +390,6 @@ private fun SceneScope.FirstPointMarker(state: ArGuideUiState, materials: PinMat
         current = true,
         position = Position(y = LABEL_LIFT),
         cameraPosition = materials.cameraPosition
-    )
-}
-
-/** The number of a scanned control; when selected also its name, on brand blue. */
-@Composable
-private fun SceneScope.ScanMarkerLabel(marker: ScanMarker, selected: Boolean, cameraPosition: () -> Position) {
-    val text = if (selected) "${marker.index + 1} · ${marker.label}" else "${marker.index + 1}"
-    ArTextNode(
-        text = text,
-        fontSize = SCAN_LABEL_FONT_PX,
-        textColor = android.graphics.Color.WHITE,
-        backgroundColor = if (selected) Primary.toArgb() else LABEL_BACKGROUND,
-        widthMeters = maxOf(SCAN_LABEL_MIN_WIDTH, SCAN_LABEL_WIDTH_PER_CHAR * text.length),
-        heightMeters = SCAN_LABEL_HEIGHT,
-        position = Position(y = SCAN_LABEL_LIFT),
-        cameraPosition = cameraPosition
     )
 }
 
