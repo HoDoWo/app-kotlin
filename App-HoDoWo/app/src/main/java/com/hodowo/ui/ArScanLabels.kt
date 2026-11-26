@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.layout
@@ -40,6 +41,9 @@ private val BADGE_SIZE = 28.dp
 private val INNER_BADGE_SIZE = 22.dp
 private val POINTER_WIDTH = 12.dp
 private val POINTER_HEIGHT = 7.dp
+private val STEM_HEIGHT = 36.dp
+private val STEM_WIDTH = 2.dp
+private val STEM_OUTLINE = 4.dp
 private val LABEL_MAX_WIDTH = 220.dp
 
 /** A label drawn flat on the camera view above a 3D dot: [badge] always, [text] when [highlighted]. */
@@ -154,11 +158,29 @@ private fun LabelChip(label: OverlayLabel, modifier: Modifier) {
                 }
             }
         }
-        // A small pointer down to the dot.
-        Canvas(modifier = Modifier.size(POINTER_WIDTH, POINTER_HEIGHT)) {
+        // A pointer down to the dot. The highlighted pill is wide: it stands higher on a
+        // thin stem, so it does not cover the control and its neighbours.
+        val height = if (label.highlighted) POINTER_HEIGHT + STEM_HEIGHT else POINTER_HEIGHT
+        Canvas(modifier = Modifier.size(POINTER_WIDTH, height)) {
+            val tip = POINTER_HEIGHT.toPx()
+            val stemTop = size.height - tip
+            if (stemTop > 0f) {
+                drawLine(
+                    color = Color.White,
+                    start = Offset(size.width / 2f, 0f),
+                    end = Offset(size.width / 2f, stemTop),
+                    strokeWidth = STEM_OUTLINE.toPx()
+                )
+                drawLine(
+                    color = Primary,
+                    start = Offset(size.width / 2f, 0f),
+                    end = Offset(size.width / 2f, stemTop),
+                    strokeWidth = STEM_WIDTH.toPx()
+                )
+            }
             val path = Path().apply {
-                moveTo(0f, 0f)
-                lineTo(size.width, 0f)
+                moveTo(0f, stemTop)
+                lineTo(size.width, stemTop)
                 lineTo(size.width / 2f, size.height)
                 close()
             }
