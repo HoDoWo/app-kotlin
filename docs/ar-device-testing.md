@@ -125,6 +125,8 @@ camera (flat when looking down at it). Logcat `ArScan`: `guide depth`, `guide fe
 
 - [ ] Open a guide → **View in AR** on an oven front: move the phone a little, **Place point** turns on.
 - [ ] **Find automatically** on the same front places the pins on the knobs.
+- [ ] No arrow: each control has a small dot and, flat on the screen above it, its step numbers;
+      the current step's label shows what to do. Tapping a label opens its step.
 
 Navigation
 - [ ] **Previous / Next** reach every step; disabled at the first / last step.
