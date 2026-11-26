@@ -28,9 +28,11 @@ internal suspend fun runArScan(
         "ArScan",
         "device=${result.deviceName} controls=${result.controls.size} session=${session != null}"
     )
+    val anchors = session?.anchorsFor(captured, result.controls.map { it.x to it.y })
+        ?: List(result.controls.size) { null }
     val markers = mutableListOf<ScanMarker>()
     val labels = result.controls.mapIndexed { index, control ->
-        val anchor = session?.anchorFor(captured, control.x, control.y)
+        val anchor = anchors[index]
         anchor?.let { markers += ScanMarker(it, index, control.label) }
         ScanLabel(control.label, control.description, placed = anchor != null)
     }
