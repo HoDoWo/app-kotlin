@@ -267,23 +267,26 @@ internal fun ArCameraView(
         }
 
         placement.scanMarkers.forEach { marker ->
-            // Each control shows its number, like the list; the selected one also its name,
-            // so long names never pile up on top of each other.
-            val selected = state.selectedScan == marker.index
-            key(marker, selected) {
-                AnchorNode(anchor = marker.anchor) {
+            // Keyed on the marker only: disposing an AnchorNode detaches its anchor, so the
+            // node must outlive selection changes. Only the label is rebuilt (its width is fixed
+            // at creation); the selected one also shows its name, so names never pile up.
+            key(marker) {
+                AnchorNode(anchor = marker.anchor, apply = { isPositionEditable = false }) {
                     SphereNode(radius = SCAN_DOT_RADIUS, materialInstance = arrowMaterial)
-                    val text = if (selected) "${marker.index + 1} · ${marker.label}" else "${marker.index + 1}"
-                    TextNode(
-                        text = text,
-                        fontSize = SCAN_LABEL_FONT_PX,
-                        textColor = android.graphics.Color.WHITE,
-                        backgroundColor = if (selected) Primary.toArgb() else LABEL_BACKGROUND,
-                        widthMeters = maxOf(SCAN_LABEL_MIN_WIDTH, SCAN_LABEL_WIDTH_PER_CHAR * text.length),
-                        heightMeters = SCAN_LABEL_HEIGHT,
-                        position = Position(y = SCAN_LABEL_LIFT),
-                        cameraPositionProvider = cameraPosition
-                    )
+                    val selected = state.selectedScan == marker.index
+                    key(selected) {
+                        val text = if (selected) "${marker.index + 1} · ${marker.label}" else "${marker.index + 1}"
+                        TextNode(
+                            text = text,
+                            fontSize = SCAN_LABEL_FONT_PX,
+                            textColor = android.graphics.Color.WHITE,
+                            backgroundColor = if (selected) Primary.toArgb() else LABEL_BACKGROUND,
+                            widthMeters = maxOf(SCAN_LABEL_MIN_WIDTH, SCAN_LABEL_WIDTH_PER_CHAR * text.length),
+                            heightMeters = SCAN_LABEL_HEIGHT,
+                            position = Position(y = SCAN_LABEL_LIFT),
+                            cameraPositionProvider = cameraPosition
+                        )
+                    }
                 }
             }
         }
