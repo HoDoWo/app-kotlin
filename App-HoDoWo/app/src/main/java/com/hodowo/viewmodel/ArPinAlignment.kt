@@ -150,3 +150,10 @@ fun pinGroups(steps: List<ManualStep>, aspect: Float = DEFAULT_PHOTO_ASPECT): Li
 /** The label of a marker: the numbers of its steps, e.g. "2" or "2, 5". */
 fun PinGroup.label(steps: List<ManualStep>): String =
     stepIndices.mapNotNull { steps.getOrNull(it)?.number }.distinct().joinToString(", ")
+
+/** "Step 2", "Passo 2", "2." and the like say nothing about what to do. */
+private val GENERIC_STEP_TITLE = Regex("""(?i)^\s*(step|passo|paso|étape|schritt)?\s*\d*\s*[.:)-]?\s*$""")
+
+/** What the AR label of [this] step says: its title, or its description when the title is just "Step N". */
+fun ManualStep.markerText(): String =
+    if (GENERIC_STEP_TITLE.matches(title)) description.trim() else title.trim()

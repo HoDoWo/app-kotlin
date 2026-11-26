@@ -95,3 +95,38 @@ class ArScanGeometryTest {
         assertEquals(500f, p.y, 1e-3f)
     }
 }
+
+class ArSurfaceNormalTest {
+
+    private fun assertVec(expected: Vec3, actual: Vec3) {
+        assertEquals(expected.x, actual.x, 1e-4f)
+        assertEquals(expected.y, actual.y, 1e-4f)
+        assertEquals(expected.z, actual.z, 1e-4f)
+    }
+
+    /** Rotates [v] by the quaternion [q] (x, y, z, w). */
+    private fun rotate(q: FloatArray, v: Vec3): Vec3 {
+        val (x, y, z, w) = q.toList()
+        val u = Vec3(x, y, z)
+        val t = Vec3(u.y * v.z - u.z * v.y, u.z * v.x - u.x * v.z, u.x * v.y - u.y * v.x) * 2f
+        val c = Vec3(u.y * t.z - u.z * t.y, u.z * t.x - u.x * t.z, u.x * t.y - u.y * t.x)
+        return v + t * w + c
+    }
+
+    @Test
+    fun anUprightFrontFacesTheCamera() {
+        assertVec(Vec3(0f, 0f, 1f), facingNormal(Vec3(0f, -0.2f, -1f)))
+        assertVec(Vec3(-1f, 0f, 0f), facingNormal(Vec3(2f, 0.1f, 0f)))
+    }
+
+    @Test
+    fun lookingDownTheSurfaceIsFlat() {
+        assertVec(Vec3(0f, 1f, 0f), facingNormal(Vec3(0f, -1f, -0.3f)))
+    }
+
+    @Test
+    fun theRotationTurnsUpIntoTheNormal() {
+        listOf(Vec3(0f, 0f, 1f), Vec3(-1f, 0f, 0f), Vec3(0.6f, 0f, -0.8f), Vec3(0f, 1f, 0f), Vec3(0f, -1f, 0f))
+            .forEach { normal -> assertVec(normal, rotate(rotationFromUp(normal), Vec3(0f, 1f, 0f))) }
+    }
+}

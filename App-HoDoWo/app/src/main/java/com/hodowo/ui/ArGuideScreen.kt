@@ -168,7 +168,8 @@ fun ArGuideScreen(
                         onTap = place,
                         onAnchorTracking = viewModel::onAnchorTracking,
                         onSessionFailed = viewModel::onSessionFailed,
-                        onSelectScan = viewModel::selectScan
+                        onSelectScan = viewModel::selectScan,
+                        onSelectStep = viewModel::selectStep
                     )
                 )
             }
