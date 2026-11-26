@@ -267,26 +267,12 @@ internal fun ArCameraView(
         }
 
         placement.scanMarkers.forEach { marker ->
-            // Keyed on the marker only: disposing an AnchorNode detaches its anchor, so the
-            // node must outlive selection changes. Only the label is rebuilt (its width is fixed
-            // at creation); the selected one also shows its name, so names never pile up.
+            // Keyed on the marker only: disposing an AnchorNode detaches its anchor, so a
+            // selection change only redraws the label in place (see ArTextNode).
             key(marker) {
                 AnchorNode(anchor = marker.anchor, apply = { isPositionEditable = false }) {
                     SphereNode(radius = SCAN_DOT_RADIUS, materialInstance = arrowMaterial)
-                    val selected = state.selectedScan == marker.index
-                    key(selected) {
-                        val text = if (selected) "${marker.index + 1} · ${marker.label}" else "${marker.index + 1}"
-                        TextNode(
-                            text = text,
-                            fontSize = SCAN_LABEL_FONT_PX,
-                            textColor = android.graphics.Color.WHITE,
-                            backgroundColor = if (selected) Primary.toArgb() else LABEL_BACKGROUND,
-                            widthMeters = maxOf(SCAN_LABEL_MIN_WIDTH, SCAN_LABEL_WIDTH_PER_CHAR * text.length),
-                            heightMeters = SCAN_LABEL_HEIGHT,
-                            position = Position(y = SCAN_LABEL_LIFT),
-                            cameraPositionProvider = cameraPosition
-                        )
-                    }
+                    ScanMarkerLabel(marker, selected = state.selectedScan == marker.index, cameraPosition)
                 }
             }
         }
@@ -351,10 +337,26 @@ private fun SceneScope.FirstPointMarker(state: ArGuideUiState, materials: PinMat
     )
 }
 
+/** The number of a scanned control; when selected also its name, on brand blue. */
+@Composable
+private fun SceneScope.ScanMarkerLabel(marker: ScanMarker, selected: Boolean, cameraPosition: () -> Position) {
+    val text = if (selected) "${marker.index + 1} · ${marker.label}" else "${marker.index + 1}"
+    ArTextNode(
+        text = text,
+        fontSize = SCAN_LABEL_FONT_PX,
+        textColor = android.graphics.Color.WHITE,
+        backgroundColor = if (selected) Primary.toArgb() else LABEL_BACKGROUND,
+        widthMeters = maxOf(SCAN_LABEL_MIN_WIDTH, SCAN_LABEL_WIDTH_PER_CHAR * text.length),
+        heightMeters = SCAN_LABEL_HEIGHT,
+        position = Position(y = SCAN_LABEL_LIFT),
+        cameraPosition = cameraPosition
+    )
+}
+
 /** Step numbers that always face the camera, white on near-black (on brand blue when current). */
 @Composable
 private fun SceneScope.PinLabel(text: String, current: Boolean, position: Position, cameraPosition: () -> Position) {
-    TextNode(
+    ArTextNode(
         text = text,
         fontSize = LABEL_FONT_PX,
         textColor = android.graphics.Color.WHITE,
@@ -362,7 +364,7 @@ private fun SceneScope.PinLabel(text: String, current: Boolean, position: Positi
         widthMeters = maxOf(LABEL_MIN_WIDTH, LABEL_WIDTH_PER_CHAR * text.length),
         heightMeters = LABEL_HEIGHT,
         position = position,
-        cameraPositionProvider = cameraPosition
+        cameraPosition = cameraPosition
     )
 }
 
