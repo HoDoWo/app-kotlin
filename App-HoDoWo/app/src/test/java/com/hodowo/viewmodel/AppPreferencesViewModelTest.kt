@@ -45,11 +45,14 @@ class AppPreferencesViewModelTest {
         Dispatchers.resetMain()
     }
 
+    /** The languages the view model asked the app to show, in order. */
+    private val applied = mutableListOf<String>()
+
     private fun viewModel(): AppPreferencesViewModel {
         val store = PreferenceDataStoreFactory.create(scope = storeScope) {
             File(folder.root, "prefs_${System.nanoTime()}.preferences_pb")
         }
-        return AppPreferencesViewModel(UserPreferencesRepository(store))
+        return AppPreferencesViewModel(UserPreferencesRepository(store)) { synchronized(applied) { applied += it } }
     }
 
     @Test
@@ -84,5 +87,49 @@ class AppPreferencesViewModelTest {
         viewModel.reset()
 
         assertEquals(UserPreferences(), viewModel.preferences.filterNotNull().first { !it.highContrast })
+    }
+
+    @Test
+    fun aChosenLanguageIsStoredAndApplied() = runTest(dispatcher) {
+        val viewModel = viewModel()
+
+        viewModel.setLanguageTag("it")
+
+        assertEquals("it", viewModel.preferences.filterNotNull().first { it.languageTag == "it" }.languageTag)
+        waitUntil { applied.isNotEmpty() }
+        assertEquals(listOf("it"), applied.toList())
+    }
+
+    @Test
+    fun resetGoesBackToTheSystemLanguage() = runTest(dispatcher) {
+        val viewModel = viewModel()
+        viewModel.setLanguageTag("es")
+        waitUntil { applied.size == 1 }
+
+        viewModel.reset()
+
+        waitUntil { applied.size == 2 }
+        assertEquals(listOf("es", ""), applied.toList())
+    }
+
+    @Test
+    fun theLanguageChosenInTheSystemIsStoredButNotAppliedAgain() = runTest(dispatcher) {
+        val viewModel = viewModel()
+
+        viewModel.syncLanguage("ca")
+
+        assertEquals("ca", viewModel.preferences.filterNotNull().first { it.languageTag == "ca" }.languageTag)
+        assertEquals(emptyList<String>(), applied.toList())
+    }
+
+    /** The store writes off the test thread: wait (real time) for [done]. */
+    private fun waitUntil(done: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + WAIT_MS
+        while (!synchronized(applied) { done() } && System.currentTimeMillis() < deadline) Thread.sleep(POLL_MS)
+    }
+
+    private companion object {
+        const val WAIT_MS = 5_000L
+        const val POLL_MS = 10L
     }
 }

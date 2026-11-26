@@ -158,6 +158,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     // Appearance, accessibility and language preferences (#211).
     implementation(libs.androidx.datastore.preferences)
+    // Per-app language on every Android version, also below 13 (#235).
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     testImplementation(libs.junit)
