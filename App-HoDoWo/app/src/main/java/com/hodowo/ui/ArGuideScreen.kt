@@ -113,6 +113,8 @@ fun ArGuideScreen(
         }
     }
 
+    // Read through LocalConfiguration so the labels follow an in-app language change.
+    val scanLanguage = rememberUpdatedState(currentLocale().language)
     val place: (HitResult?) -> Unit = { hit -> placeOrAlign(placement, hit, viewModel.state.value, viewModel) }
     // AR tab: name what the camera sees and label its main controls; the first scan starts by itself.
     val scan: () -> Unit = {
@@ -121,7 +123,7 @@ fun ArGuideScreen(
             placement.captureRequest = { captured ->
                 scope.launch {
                     try {
-                        val outcome = runArScan(captured, placement, scanService)
+                        val outcome = runArScan(captured, placement, scanService, scanLanguage.value)
                         viewModel.onScanFinished(outcome.device, outcome.labels)
                     } catch (e: IOException) {
                         viewModel.onScanError()
@@ -190,7 +192,8 @@ fun ArGuideScreen(
                 onPrevious = viewModel::previousStep,
                 onNext = viewModel::nextStep,
                 onFindAutomatically = findAutomatically,
-                onScan = scan
+                onScan = scan,
+                onSelectScan = viewModel::selectScan
             )
         )
     }
@@ -202,7 +205,8 @@ fun ArGuideScreen(
  */
 private fun placeOrAlign(placement: ArPlacement, hit: HitResult?, state: ArGuideUiState, viewModel: ArGuideViewModel) {
     // Placed and done (or tracking lost): Move arrow / Re-align first. Not while the AI searches.
-    if (state.searching || (state.placed && !state.needsSecondPoint)) return
+    // In the AR tab scan there is no arrow to place: a tap on the camera does nothing.
+    if (state.scanMode || state.searching || (state.placed && !state.needsSecondPoint)) return
     val plan = state.plan
     if (state.needsSecondPoint && plan is AlignPlan.TwoPoints) {
         val first = state.steps[plan.first].pin

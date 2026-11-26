@@ -61,6 +61,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -69,6 +70,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.hodowo.data.StepPinLayout
+import com.hodowo.R
 import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.PrimaryFixed
 import com.hodowo.viewmodel.ManualGuide
@@ -209,7 +211,7 @@ private fun ViewerTopBar(
         }
         if (onOpenAr != null) {
             IconButton(onClick = onOpenAr) {
-                Icon(Icons.Filled.ViewInAr, contentDescription = "View in AR", tint = Color.White)
+                Icon(Icons.Filled.ViewInAr, contentDescription = stringResource(R.string.ar_view_in_ar), tint = Color.White)
             }
         }
         ImageDownloadButton(url = url)
@@ -237,7 +239,7 @@ private fun ImagePane(
         )
         if (!listShown) {
             val step = selected?.let { steps.getOrNull(it) }
-            if (step != null && selected != null) {
+            if (step != null) {
                 StepCallout(
                     step = step,
                     position = "${selected + 1} / ${steps.size}",

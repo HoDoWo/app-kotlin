@@ -32,7 +32,10 @@ Each label is placed from the best source available: a tracked plane the ray mee
 desks), else **ARCore depth** at that point (vertical, glossy or plain fronts where ARCore finds no
 plane: ovens, microwaves, washing machines; on phones that support depth), else a plane just outside
 its area, else 50 cm along the ray. Logcat tag `ArScan` says which source placed each label.
-The panel lists the device and every control with what it does (readable with TalkBack). **Scan again**
+On the device each control shows only its **number**; the panel lists the numbered controls with what
+they do (readable with TalkBack), and tapping one shows its name on the device (the first one is
+selected). The panel has a handle: tap it or drag it down to lower the panel and see the whole camera
+view, up to raise it again. While the AR camera is open the tab bar and "New chat" are hidden. **Scan again**
 repeats it; there is no continuous scanning (each scan is one AI call).
 
 ## How to measure performance
@@ -96,6 +99,10 @@ Auto-alignment
 - [ ] Time from the tap to the pins: ______ s (write it in the device matrix notes).
 
 AR tab scan
+- [ ] Dots show numbers only; tapping a control in the list shows its name on the device, tapping it again hides it.
+- [ ] Lower and raise the panel with the handle (tap and drag); TalkBack reads "Hide details" / "Show details".
+- [ ] No "New chat" button or tab bar over the AR camera; no arrow is placed by tapping the camera.
+- [ ] Phone in Italian: every AR text is in Italian, and the scan names and descriptions too.
 - [ ] Start AR on a keyboard: within a few seconds the device name and labels (Enter, Space, Esc…) appear on the keys.
 - [ ] Same on an appliance panel (Start, programme dial, temperature…).
 - [ ] Pointing at a wall: "No appliance or keyboard found", **Scan again** works.
@@ -113,6 +120,12 @@ Readability and accessibility
 Tracking loss
 - [ ] Covering the camera / moving fast shows the reason and recovers.
 - [ ] **Reset AR** starts a new session keeping the current step.
+
+## Languages
+
+All AR texts are string resources (`res/values/strings_ar.xml`, Italian in `values-it/`); the ViewModel
+gives keys (`ArText`) that the UI translates. The scan sends the app language at the time of the scan,
+so it follows an in-app language switch. A new language = one more `values-xx/strings_ar.xml`.
 
 ## Known limitations
 

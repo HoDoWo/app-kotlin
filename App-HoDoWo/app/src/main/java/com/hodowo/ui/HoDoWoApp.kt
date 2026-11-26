@@ -256,7 +256,9 @@ fun HoDoWoApp(
             BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
                 val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
                 val layoutInfo = appLayoutInfoFor(width = maxWidth, isLandscape = isLandscape)
-                val useRail = layoutInfo.useNavigationRail && !showPostProduct && editingListing == null
+                // The AR camera is full screen: no tab bar, rail or "New chat" over it.
+                val arCameraOpen = currentTab == AppNavTab.AR_CORE && showArSession
+                val useRail = layoutInfo.useNavigationRail && !showPostProduct && editingListing == null && !arCameraOpen
 
                 CompositionLocalProvider(LocalAppLayout provides layoutInfo) {
                     Row(modifier = Modifier.fillMaxSize()) {
@@ -577,7 +579,7 @@ fun HoDoWoApp(
                                 // form have their own sticky bar at the bottom, which this button would overlap.
                                 if (currentTab != AppNavTab.AI_CHAT && selectedMarketProduct == null && !showCart &&
                                     !showPostProduct && editingListing == null &&
-                                    !(showMessages && currentTab == AppNavTab.MARKET)
+                                    !(showMessages && currentTab == AppNavTab.MARKET) && !arCameraOpen
                                 ) {
                                     NewChatButton(
                                         onClick = { startNewChat() },
@@ -590,7 +592,7 @@ fun HoDoWoApp(
 
                             // Bottom Navigation Bar matching HTML mockup. The sell form has its own
                             // sticky publish bar, so the tab bar is hidden while it is open.
-                            if (!showPostProduct && editingListing == null && !useRail) {
+                            if (!showPostProduct && editingListing == null && !useRail && !arCameraOpen) {
                                 BottomNavBar(
                                     currentTab = currentTab,
                                     onTabSelected = {
