@@ -95,3 +95,30 @@ fun multiplyMatrices(a: FloatArray, b: FloatArray): FloatArray {
 private const val MATRIX_SIZE = 16
 
 private fun row(m: FloatArray, r: Int, p: Vec3) = m[r] * p.x + m[4 + r] * p.y + m[8 + r] * p.z + m[12 + r]
+
+/** Looking down more steeply than this (cos of ~35° from straight down), the surface is taken as flat. */
+private const val LOOKING_DOWN = -0.82f
+
+/**
+ * The likely normal of a surface seen along [ray] when ARCore has no plane for it:
+ * straight up when looking down at it (a hob, a desk), else horizontal and facing the
+ * camera (an oven, a microwave, a washing machine front: appliance fronts are upright).
+ */
+fun facingNormal(ray: Vec3): Vec3 {
+    val length = sqrt(ray dot ray)
+    if (length == 0f || ray.y / length < LOOKING_DOWN) return Vec3(0f, 1f, 0f)
+    val flat = sqrt(ray.x * ray.x + ray.z * ray.z)
+    if (flat == 0f) return Vec3(0f, 1f, 0f)
+    return Vec3(-ray.x / flat, 0f, -ray.z / flat)
+}
+
+/** The rotation (quaternion x, y, z, w) that turns +Y into [normal] (unit length). */
+fun rotationFromUp(normal: Vec3): FloatArray {
+    val w = 1f + normal.y
+    if (w < 1e-6f) return floatArrayOf(1f, 0f, 0f, 0f)
+    // cross((0, 1, 0), normal) = (normal.z, 0, -normal.x)
+    val x = normal.z
+    val z = -normal.x
+    val norm = sqrt(x * x + z * z + w * w)
+    return floatArrayOf(x / norm, 0f, z / norm, w / norm)
+}

@@ -31,8 +31,10 @@ import com.hodowo.viewmodel.FrameGeometry
 import com.hodowo.viewmodel.Vec3
 import com.hodowo.viewmodel.cameraRay
 import com.hodowo.viewmodel.depthPoint
+import com.hodowo.viewmodel.facingNormal
 import com.hodowo.viewmodel.featureDistanceAlongRay
 import com.hodowo.viewmodel.fillMissingDistances
+import com.hodowo.viewmodel.rotationFromUp
 import com.hodowo.viewmodel.minus
 import com.hodowo.viewmodel.plus
 import com.hodowo.viewmodel.rayPlaneDistance
@@ -72,7 +74,8 @@ internal class CapturedFrame(
 )
 
 /** A point on a tracked plane, ready to anchor. */
-internal class SurfacePoint(val plane: Plane, val pose: Pose)
+/** A point on a surface, posed with +Y along its normal; [plane] when ARCore tracks one there. */
+internal class SurfacePoint(val plane: Plane?, val pose: Pose)
 
 /** The CPU image of [frame] with its geometry, or null when ARCore has none right now. */
 internal fun captureFrame(frame: Frame, rotation: Int): CapturedFrame? {
@@ -286,8 +289,57 @@ private fun Session.measuredAnchor(
 
 private fun Session.planeAnchor(frame: CapturedFrame, x: Float, y: Float, insideOnly: Boolean): Anchor? =
     surfacePointFor(frame, x, y, insideOnly)?.let { point ->
-        runCatching { point.plane.createAnchor(point.pose) }.getOrNull()
+        runCatching { point.plane?.createAnchor(point.pose) }.getOrNull()
     }
+
+/**
+ * Guide auto-alignment: where the points the AI found in [frame] are, as surface points
+ * for the guide pins. A tracked plane when the ray meets one; otherwise the point is
+ * measured like the scan dots (depth, then feature points, then the other point's
+ * distance) and its surface is taken as upright and facing the camera, or flat when
+ * looking down at it ([facingNormal]): appliance fronts rarely get an ARCore plane.
+ */
+internal fun Session.surfacePointsFor(frame: CapturedFrame, points: List<Pair<Float, Float>>): List<SurfacePoint> {
+    val origin = frame.cameraPose.translation.toVec3()
+    val rays = points.map { (x, y) ->
+        val local = cameraRay(x, y, frame.geometry)
+        val direction = frame.cameraPose.rotateVector(floatArrayOf(local.x, local.y, local.z)).toVec3()
+        direction * (1f / length(direction))
+    }
+    val onPlane = points.map { (x, y) -> surfacePointFor(frame, x, y, insideOnly = true) }
+    val measured = points.mapIndexed { i, (x, y) ->
+        if (onPlane[i] != null) null else measuredPoint(frame, x, y, origin, rays[i])
+    }
+    val distances = fillMissingDistances(
+        points.indices.map { i ->
+            onPlane[i]?.let { length(it.pose.translation.toVec3() - origin) }
+                ?: measured[i]?.let { length(it - origin) }
+        },
+        NO_PLANE_DEPTH_M
+    )
+    return points.mapIndexed { i, (x, y) ->
+        onPlane[i] ?: surfacePointFor(frame, x, y, insideOnly = false)?.takeIf { measured[i] == null }
+            ?: run {
+                val point = measured[i] ?: (origin + rays[i] * distances[i])
+                if (measured[i] == null) log(x, y, "guide ray at %.2f m".format(Locale.US, distances[i]))
+                SurfacePoint(null, Pose(floatArrayOf(point.x, point.y, point.z), rotationFromUp(facingNormal(rays[i]))))
+            }
+    }
+}
+
+/** A world point on the surface from depth, then feature points; null without either. */
+private fun measuredPoint(frame: CapturedFrame, x: Float, y: Float, origin: Vec3, ray: Vec3): Vec3? {
+    frame.depth?.let { depth ->
+        depthPoint(x, y, frame.geometry, depth)?.let { local ->
+            log(x, y, "guide depth")
+            return frame.cameraPose.transformPoint(floatArrayOf(local.x, local.y, local.z)).toVec3()
+        }
+    }
+    return featureDistanceAlongRay(origin, ray, frame.features)?.let { distance ->
+        log(x, y, "guide features at %.2f m".format(Locale.US, distance))
+        origin + ray * distance
+    }
+}
 
 /** Upright (world +Y up), so the label above the dot points up. */
 private fun Session.uprightAnchor(point: Vec3): Anchor? =
