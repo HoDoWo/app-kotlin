@@ -1,30 +1,30 @@
 # Earned Value – HoDoWo
 
-Status on **2026-11-25** (generated 2026-11-25 15:38 UTC).
+Status on **2026-11-26** (generated 2026-11-26 15:20 UTC).
 
 | KPI | Name | Formula | Sprint 3 | Cumulative | Hours (cumulative) |
 |---|---|---|---:|---:|---:|
-| **PV** | Planned Value | % planned × BAC | 0 € | 6,551 € | 291.8 h |
-| **EV** | Earned Value | % completed × BAC | 0 € | 7,364 € | 328.0 h |
+| **PV** | Planned Value | % planned × BAC | 0 € | 6,678 € | 297.4 h |
+| **EV** | Earned Value | % completed × BAC | 269 € | 7,634 € | 340.0 h |
 | **AC** | Actual Cost | hours spent × rate + services | 0 € | 6,707 € | 329.7 h |
 | **BAC** | Budget at Completion | Sprint 0 estimate (Sprint: its planned share) | 2,694 € | 9,879 € | 440.0 h |
-| **EAC** | Estimate at Completion | BAC / CPI | – | 8,997 € | 400.7 h |
-| **ETC** | Estimate to Complete | EAC − AC | – | 2,290 € | 71.0 h |
-| **VAC** | Variance at Completion | BAC − EAC | – | 882 € | 39.3 h |
-| **CPI** | Cost Performance Index | EV / AC | – | 1.10 | – |
-| **SPI** | Schedule Performance Index | EV / PV | – | 1.12 | – |
+| **EAC** | Estimate at Completion | BAC / CPI | – | 8,680 € | 386.6 h |
+| **ETC** | Estimate to Complete | EAC − AC | – | 1,973 € | 56.9 h |
+| **VAC** | Variance at Completion | BAC − EAC | – | 1,199 € | 53.4 h |
+| **CPI** | Cost Performance Index | EV / AC | – | 1.14 | – |
+| **SPI** | Schedule Performance Index | EV / PV | – | 1.14 | – |
 
 ## Reading
 
-- CPI 1.10: under budget (the completed work cost less than planned)
-- SPI 1.12: ahead of or on schedule
-- VAC 882 €: saving money
+- CPI 1.14: under budget (the completed work cost less than planned)
+- SPI 1.14: ahead of or on schedule
+- VAC 1,199 €: saving money
 
 ## Inputs
 
 - BAC: 9,879 € (total cost estimated in Sprint 0), 440 h planned for the whole project.
-- % planned: 291.8 h of the Sprint 0 baseline by 2026-11-25 → 66.3%.
-- % completed: 328.0 h estimated on the items in Done → 74.5%.
+- % planned: 297.4 h of the Sprint 0 baseline by 2026-11-26 → 67.6%.
+- % completed: 340.0 h estimated on the items in Done → 77.3%.
 - AC: 329.7 h spent × 20 €/h + 113 € of services.
 - Hypothetical costs: the team uses free tiers and pays nothing. Each service counts with the price planned in Sprint 0 from the date it is used.
 - Not counted (outside Sprint 1, Sprint 2, Sprint 3): 15 items, 47 h estimated, 29 h spent.
@@ -46,7 +46,7 @@ Status on **2026-11-25** (generated 2026-11-25 15:38 UTC).
 
 ## Sprint 3 (2026-11-25 → 2026-12-22)
 
-- Items: 48, estimated 143.0 h, completed 0.0 h, spent 0.0 h.
+- Items: 48, estimated 143.0 h, completed 12.0 h, spent 0.0 h.
 - Open items:
   - #1 Landing page: app announcement, feature tour and download CTA – Todo (5 h estimated, 0 h spent)
   - #2 Landing page design system: responsive, dark mode and WCAG AA – Todo (5 h estimated, 0 h spent)
@@ -93,8 +93,5 @@ Status on **2026-11-25** (generated 2026-11-25 15:38 UTC).
   - #236 Locale-aware formatting for prices, dates, numbers and plurals – Todo (2 h estimated, 0 h spent)
   - #237 Propagate the selected language to the AI and backend – Todo (3 h estimated, 0 h spent)
   - #238 Pseudolocale and RTL validation for text expansion – Todo (2.5 h estimated, 0 h spent)
-  - #239 ARCore SDK, capability check and non-AR fallback – Todo (3 h estimated, 0 h spent)
-  - #240 AR session lifecycle, camera permission and plane anchoring – Todo (4 h estimated, 0 h spent)
-  - #241 AR guide overlay, step navigation and supported-device test matrix – Todo (5 h estimated, 0 h spent)
 
 ![PV, EV and AC over time](ev.svg)
