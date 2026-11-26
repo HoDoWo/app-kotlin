@@ -45,6 +45,12 @@ object AiServiceProvider {
         if (backendUrl.isBlank()) null else RemoteGuideLocateService(backendUrl, FirebaseTokenProvider()::token)
     }
 
+    /** AR tab scan (`POST /api/ar/scan`); null without a backend URL, and then the tab offers no scan. */
+    val arScanService: ArScanService? by lazy {
+        val backendUrl = BuildConfig.BACKEND_URL
+        if (backendUrl.isBlank()) null else RemoteArScanService(backendUrl, FirebaseTokenProvider()::token)
+    }
+
     val cartStore by lazy {
         val backendUrl = BuildConfig.BACKEND_URL
         CartStore(

@@ -70,6 +70,14 @@ private const val LABEL_WIDTH_PER_CHAR = 0.016f
 private const val LABEL_MIN_WIDTH = 0.035f
 private const val LABEL_FONT_PX = 72f
 
+/** AR tab scan: a small dot on each control and its name, smaller than guide pins (keys are small). */
+private const val SCAN_DOT_RADIUS = 0.005f
+private const val SCAN_LABEL_LIFT = 0.025f
+private const val SCAN_LABEL_HEIGHT = 0.02f
+private const val SCAN_LABEL_WIDTH_PER_CHAR = 0.0105f
+private const val SCAN_LABEL_MIN_WIDTH = 0.03f
+private const val SCAN_LABEL_FONT_PX = 56f
+
 /** Near-black behind white digits: readable on a white appliance in daylight. */
 private const val LABEL_BACKGROUND = 0xE6000000.toInt()
 
@@ -82,6 +90,9 @@ internal class ArCameraEvents(
     val onAnchorTracking: (Boolean) -> Unit,
     val onSessionFailed: (ArSessionProblem) -> Unit
 )
+
+/** A control of the AR tab scan, anchored on the real device. */
+internal class ScanMarker(val anchor: Anchor, val label: String)
 
 /**
  * The anchor, the pin mapping and what the last frame saw. ARCore frames and
@@ -105,6 +116,21 @@ internal class ArPlacement {
 
     var anchor by mutableStateOf<Anchor?>(null)
         private set
+
+    /** Labels of the AR tab scan, one anchor each. */
+    var scanMarkers by mutableStateOf<List<ScanMarker>>(emptyList())
+        private set
+
+    /** Replaces the scan labels (the old anchors are detached). */
+    fun showScan(markers: List<ScanMarker>) {
+        clearScan()
+        scanMarkers = markers
+    }
+
+    fun clearScan() {
+        scanMarkers.forEach { runCatching { it.anchor.detach() } }
+        scanMarkers = emptyList()
+    }
 
     /** Where the guide pins go, once the user has aimed at the alignment points. */
     var mapper by mutableStateOf<PinMapper?>(null)
@@ -191,6 +217,9 @@ internal fun ArCameraView(
         engine = engine,
         cameraNode = cameraNode,
         planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL,
+        // Depth (where the phone supports it) places scan labels on fronts with no plane:
+        // glossy steel, plain white panels. SceneView turns it off on phones without depth.
+        depthMode = Config.DepthMode.AUTOMATIC,
         instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP,
         planeRenderer = placing,
         onSessionFailure = { failure -> currentEvents.onSessionFailed(failure.toProblem()) },
@@ -234,6 +263,24 @@ internal fun ArCameraView(
             // Reticle: shows where Place will put the point.
             HitResultNode(hitTest = { placement.centerHit }) {
                 CylinderNode(radius = RETICLE_RADIUS, height = RETICLE_HEIGHT, materialInstance = reticleMaterial)
+            }
+        }
+
+        placement.scanMarkers.forEach { marker ->
+            key(marker) {
+                AnchorNode(anchor = marker.anchor) {
+                    SphereNode(radius = SCAN_DOT_RADIUS, materialInstance = arrowMaterial)
+                    TextNode(
+                        text = marker.label,
+                        fontSize = SCAN_LABEL_FONT_PX,
+                        textColor = android.graphics.Color.WHITE,
+                        backgroundColor = LABEL_BACKGROUND,
+                        widthMeters = maxOf(SCAN_LABEL_MIN_WIDTH, SCAN_LABEL_WIDTH_PER_CHAR * marker.label.length),
+                        heightMeters = SCAN_LABEL_HEIGHT,
+                        position = Position(y = SCAN_LABEL_LIFT),
+                        cameraPositionProvider = cameraPosition
+                    )
+                }
             }
         }
 

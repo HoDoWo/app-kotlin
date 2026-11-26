@@ -89,3 +89,51 @@ enum class AutoAlignResult {
     /** No answer (network, server): the user aims at both. */
     ERROR
 }
+
+/** ARCore depth readings closer or farther than these (millimeters) are noise. */
+private const val MIN_DEPTH_MM = 100
+private const val MAX_DEPTH_MM = 8000
+private const val MM_PER_M = 1000f
+private const val UNSIGNED_SHORT = 0xFFFF
+
+/** Half size of the window around a point whose depth readings are pooled (5 × 5). */
+private const val DEPTH_WINDOW = 2
+
+/**
+ * ARCore's depth image of a frame (`acquireDepthImage16Bits`): millimeters along the
+ * camera's optical axis, row by row, in the sensor orientation of the CPU image.
+ * Glossy or plain fronts that give ARCore no plane still get depth.
+ */
+class DepthMap(val width: Int, val height: Int, private val millimeters: ShortArray) {
+
+    /**
+     * Meters at ([u], [v]) of the sensor image (0..1): the median of the valid readings
+     * in a 5 × 5 window, so one bad pixel does not move the label; null without data.
+     */
+    fun metersAt(u: Float, v: Float): Float? {
+        if (width <= 0 || height <= 0 || u !in 0f..1f || v !in 0f..1f) return null
+        val column = (u * (width - 1)).toInt()
+        val row = (v * (height - 1)).toInt()
+        val readings = mutableListOf<Int>()
+        for (r in (row - DEPTH_WINDOW)..(row + DEPTH_WINDOW)) {
+            for (c in (column - DEPTH_WINDOW)..(column + DEPTH_WINDOW)) {
+                if (r !in 0 until height || c !in 0 until width) continue
+                val mm = millimeters[r * width + c].toInt() and UNSIGNED_SHORT
+                if (mm in MIN_DEPTH_MM..MAX_DEPTH_MM) readings += mm
+            }
+        }
+        if (readings.isEmpty()) return null
+        readings.sort()
+        return readings[readings.size / 2] / MM_PER_M
+    }
+}
+
+/**
+ * The point the AI found, in the camera's own frame (meters), from the depth map:
+ * depth is along the optical axis, so the ray with z = -1 is scaled by it.
+ */
+fun depthPoint(x: Float, y: Float, frame: FrameGeometry, depth: DepthMap): Vec3? {
+    val (u, v) = uprightToSensor(x, y, frame.rotation)
+    val meters = depth.metersAt(u, v) ?: return null
+    return cameraRay(x, y, frame) * meters
+}

@@ -407,4 +407,99 @@ class ArGuideViewModelTest {
         assertFalse(state.searching)
         assertTrue(state.autoAlignAvailable)
     }
+
+    // AR tab scan (#18)
+
+    private fun scanning(surface: Boolean = true) = ArGuideViewModel().apply {
+        onPermissionResult(granted = true)
+        start(scanAvailable = true)
+        onCameraTracking(true)
+        onSurfaceUnderReticle(surface)
+    }
+
+    @Test
+    fun theFirstScanStartsByItselfOnceASurfaceIsInView() {
+        assertFalse(scanning(surface = false).state.value.shouldAutoScan)
+        val viewModel = scanning()
+        assertTrue(viewModel.state.value.scanMode)
+        assertTrue(viewModel.state.value.shouldAutoScan)
+        assertTrue(viewModel.state.value.message.contains("appliance or a keyboard"))
+
+        viewModel.onScanStarted()
+        assertFalse(viewModel.state.value.shouldAutoScan)
+        assertFalse(viewModel.state.value.canScan)
+        assertTrue(viewModel.state.value.message.startsWith("Looking at what's in front of you"))
+    }
+
+    @Test
+    fun noScanWithAGuideOrWithoutTheBackend() {
+        val guide = ArGuideViewModel().apply { start(guide, 0, scanAvailable = true) }
+        assertFalse(guide.state.value.scanMode)
+        val offline = ArGuideViewModel().apply {
+            onPermissionResult(granted = true)
+            start()
+            onCameraTracking(true)
+        }
+        assertFalse(offline.state.value.canScan)
+    }
+
+    @Test
+    fun aNamedDeviceShowsItsLabels() {
+        val viewModel = scanning()
+        viewModel.onScanStarted()
+        viewModel.onScanFinished(
+            "Keyboard",
+            listOf(ScanLabel("Enter", "Confirms", placed = true), ScanLabel("Esc", "Cancels", placed = true))
+        )
+
+        val state = viewModel.state.value
+        assertEquals(ScanStatus.DONE, state.scanStatus)
+        assertEquals("Keyboard: 2 main controls labelled.", state.message)
+        assertTrue(state.canScan)
+        assertFalse(state.shouldAutoScan)
+    }
+
+    @Test
+    fun labelsOffTheSurfaceAreCounted() {
+        val viewModel = scanning()
+        viewModel.onScanStarted()
+        viewModel.onScanFinished("Oven", listOf(ScanLabel("Light", "", true), ScanLabel("Timer", "", false)))
+        assertTrue(viewModel.state.value.message.contains("1 of 2 controls labelled"))
+    }
+
+    @Test
+    fun aDeviceWithoutVisibleControlsAsksToGetCloser() {
+        val viewModel = scanning()
+        viewModel.onScanStarted()
+        viewModel.onScanFinished("Fridge", emptyList())
+        assertTrue(viewModel.state.value.message.contains("get closer"))
+    }
+
+    @Test
+    fun nothingFoundOrNoNetworkOffersScanAgain() {
+        val viewModel = scanning()
+        viewModel.onScanStarted()
+        viewModel.onScanFinished(null, listOf(ScanLabel("x", "", true)))
+        assertEquals(ScanStatus.NOTHING, viewModel.state.value.scanStatus)
+        assertTrue(viewModel.state.value.scanLabels.isEmpty())
+        assertTrue(viewModel.state.value.message.startsWith("No appliance or keyboard found"))
+
+        viewModel.onScanStarted()
+        viewModel.onScanError()
+        assertEquals(ScanStatus.ERROR, viewModel.state.value.scanStatus)
+        assertTrue(viewModel.state.value.canScan)
+    }
+
+    @Test
+    fun aLateScanAfterResetIsIgnoredAndTheNextScanStartsByItself() {
+        val viewModel = scanning()
+        viewModel.onScanStarted()
+        viewModel.resetSession()
+        viewModel.onScanFinished("Keyboard", emptyList())
+        viewModel.onScanError()
+
+        val state = viewModel.state.value
+        assertEquals(ScanStatus.IDLE, state.scanStatus)
+        assertTrue(state.scanAvailable)
+    }
 }

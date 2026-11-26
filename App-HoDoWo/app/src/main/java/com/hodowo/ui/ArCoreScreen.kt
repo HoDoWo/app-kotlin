@@ -158,8 +158,8 @@ private fun arContent(support: ArSupport): ArContent = when (support) {
     ArSupport.READY, ArSupport.CHECKING -> ArContent(
         icon = Icons.Filled.ViewInAr,
         title = "Your phone supports AR",
-        body = "AR places an arrow on your appliance through the camera, right on the part to use. " +
-            "Tap Start AR and point the phone at the appliance."
+        body = "Tap Start AR and point the phone at an appliance or a keyboard: " +
+            "AR names it and puts a label on its main controls."
     )
     ArSupport.NEEDS_INSTALL -> ArContent(
         icon = Icons.Filled.ViewInAr,

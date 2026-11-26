@@ -85,6 +85,49 @@ class ArAutoAlignTest {
         assertEquals(32f, a dot b, eps)
     }
 
+    private fun depthMap(width: Int, height: Int, millimeters: (Int, Int) -> Int) = DepthMap(
+        width, height, ShortArray(width * height) { i -> millimeters(i % width, i / width).toShort() }
+    )
+
+    @Test
+    fun depthIsTheMedianAroundThePointInMeters() {
+        // A front 800 mm away with one bad pixel (5 m) right on the point.
+        val map = depthMap(160, 120) { col, row -> if (col == 80 && row == 60) 5000 else 800 }
+        assertEquals(0.8f, map.metersAt(80f / 159f, 60f / 119f)!!, eps)
+    }
+
+    @Test
+    fun noiseAndMissingDepthGiveNothing() {
+        assertNull(depthMap(160, 120) { _, _ -> 0 }.metersAt(0.5f, 0.5f)) // no data
+        assertNull(depthMap(160, 120) { _, _ -> 50 }.metersAt(0.5f, 0.5f)) // closer than 10 cm
+        assertNull(depthMap(160, 120) { _, _ -> 800 }.metersAt(1.5f, 0.5f)) // outside the image
+        assertNull(DepthMap(0, 0, ShortArray(0)).metersAt(0.5f, 0.5f))
+    }
+
+    @Test
+    fun farDepthsAboveThirtyTwoMetersAreReadUnsigned() {
+        // 40000 mm does not fit a signed short: it must not turn into a negative (valid-looking) value.
+        assertNull(depthMap(10, 10) { _, _ -> 40000 }.metersAt(0.5f, 0.5f))
+    }
+
+    @Test
+    fun aDepthPointIsTheRayScaledByTheDepth() {
+        val map = depthMap(160, 120) { _, _ -> 600 }
+        val centre = depthPoint(0.5f, 0.5f, geometry(90), map)!!
+        assertEquals(0f, centre.x, eps)
+        assertEquals(0f, centre.y, eps)
+        assertEquals(-0.6f, centre.z, eps)
+        // Right edge of the sensor image, 60 cm away: 0.64 × 0.6 to the right.
+        val right = depthPoint(1f, 0.5f, geometry(0), map)!!
+        assertEquals(0.384f, right.x, eps)
+        assertEquals(-0.6f, right.z, eps)
+    }
+
+    @Test
+    fun noDepthNoPoint() {
+        assertNull(depthPoint(0.5f, 0.5f, geometry(90), depthMap(160, 120) { _, _ -> 0 }))
+    }
+
     private fun Pair<Float, Float>.round() =
         (Math.round(first * 1000) / 1000f) to (Math.round(second * 1000) / 1000f)
 }

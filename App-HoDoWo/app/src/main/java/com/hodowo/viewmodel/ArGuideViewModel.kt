@@ -68,6 +68,12 @@ enum class ArGuidePhase {
     TRACKING_LOST
 }
 
+/** One control of the AR tab scan, as the panel lists it; [placed]: its label is on the device. */
+data class ScanLabel(val label: String, val description: String, val placed: Boolean)
+
+/** Where the AR tab scan is: name the device and its main controls (#18). */
+enum class ScanStatus { IDLE, SEARCHING, DONE, NOTHING, ERROR }
+
 data class ArGuideUiState(
     val permission: ArCameraPermission = ArCameraPermission.UNKNOWN,
     val sessionProblem: ArSessionProblem? = null,
@@ -93,8 +99,24 @@ data class ArGuideUiState(
     /** The AI is looking for the two controls. */
     val searching: Boolean = false,
     /** How the last AI search ended; cleared when the user places a point. */
-    val autoResult: AutoAlignResult? = null
+    val autoResult: AutoAlignResult? = null,
+    /** The backend can name what the camera sees (AR tab scan). */
+    val scanAvailable: Boolean = false,
+    val scanStatus: ScanStatus = ScanStatus.IDLE,
+    val scanDevice: String? = null,
+    val scanLabels: List<ScanLabel> = emptyList()
 ) {
+    /** AR tab without a guide: the AI names the device and labels its main controls. */
+    val scanMode: Boolean get() = scanAvailable && !guided
+
+    val canScan: Boolean
+        get() = scanMode && scanStatus != ScanStatus.SEARCHING && cameraTracking &&
+            trackingIssue == ArTrackingIssue.NONE && permission == ArCameraPermission.GRANTED &&
+            sessionProblem == null
+
+    /** The first scan starts by itself as soon as ARCore has a surface in view. */
+    val shouldAutoScan: Boolean get() = canScan && scanStatus == ScanStatus.IDLE && surfaceUnderReticle
+
     val guided: Boolean get() = steps.isNotEmpty()
 
     /** How the pins go on the appliance; [AlignPlan.Free] without a guide or without pins. */
@@ -153,7 +175,7 @@ data class ArGuideUiState(
 
     /** One sentence for the status bar; also announced by TalkBack when it changes. */
     val message: String
-        get() = if (searching && showsCamera) searchingMessage() else when (phase) {
+        get() = if (searching && showsCamera) searchingMessage() else scanMessage() ?: when (phase) {
             ArGuidePhase.ASKING_PERMISSION -> "AR needs the camera to show the guide on your appliance."
             ArGuidePhase.PERMISSION_DENIED -> if (permission == ArCameraPermission.PERMANENTLY_DENIED) {
                 "Camera access is off. Turn it on in Settings to use AR."
@@ -166,6 +188,24 @@ data class ArGuideUiState(
             ArGuidePhase.READY_TO_PLACE -> aimMessage()
             ArGuidePhase.PLACED -> placedMessage()
         }
+
+    /** The scan's own line in the AR tab; null when the phase message applies. */
+    private fun scanMessage(): String? {
+        val scanPhases = setOf(ArGuidePhase.SCANNING, ArGuidePhase.READY_TO_PLACE, ArGuidePhase.PLACED)
+        if (!scanMode || phase !in scanPhases) return null
+        val placed = scanLabels.count { it.placed }
+        return when (scanStatus) {
+            ScanStatus.IDLE -> "Point the camera at an appliance or a keyboard: it will be named and labelled."
+            ScanStatus.SEARCHING -> "Looking at what's in front of you… Keep it in view."
+            ScanStatus.NOTHING -> "No appliance or keyboard found. Point at one and tap Scan again."
+            ScanStatus.ERROR -> "The scan didn't work (check the connection). Tap Scan again."
+            ScanStatus.DONE -> when {
+                scanLabels.isEmpty() -> "$scanDevice. No controls visible: get closer and tap Scan again."
+                placed == scanLabels.size -> "$scanDevice: ${scanLabels.size} main controls labelled."
+                else -> "$scanDevice: $placed of ${scanLabels.size} controls labelled; the others are off the surface."
+            }
+        }
+    }
 
     private fun searchingMessage(): String {
         val plan = plan as? AlignPlan.TwoPoints ?: return "Looking for the controls on the appliance…"
@@ -263,16 +303,44 @@ class ArGuideViewModel : ViewModel() {
      * Opens the screen fresh, with [steps] of a guide (#241) or none (#240).
      * Keeps only the permission: an anchor of a previous visit no longer exists.
      */
-    fun start(steps: List<ManualStep> = emptyList(), initialStepIndex: Int = 0, autoAlignAvailable: Boolean = false) {
+    fun start(
+        steps: List<ManualStep> = emptyList(),
+        initialStepIndex: Int = 0,
+        autoAlignAvailable: Boolean = false,
+        scanAvailable: Boolean = false
+    ) {
         _state.update {
             ArGuideUiState(
                 permission = it.permission,
                 sessionKey = it.sessionKey + 1,
                 steps = steps,
                 stepIndex = initialStepIndex.coerceIn(0, (steps.size - 1).coerceAtLeast(0)),
-                autoAlignAvailable = autoAlignAvailable
+                autoAlignAvailable = autoAlignAvailable,
+                scanAvailable = scanAvailable
             )
         }
+    }
+
+    /** A camera frame went to the AI to be named (AR tab). */
+    fun onScanStarted() {
+        _state.update { it.copy(scanStatus = ScanStatus.SEARCHING) }
+    }
+
+    /** The AI answered; [device] is null when it saw no device. Ignored after a reset. */
+    fun onScanFinished(device: String?, labels: List<ScanLabel>) {
+        _state.update {
+            if (it.scanStatus != ScanStatus.SEARCHING) return@update it
+            it.copy(
+                scanStatus = if (device == null) ScanStatus.NOTHING else ScanStatus.DONE,
+                scanDevice = device,
+                scanLabels = if (device == null) emptyList() else labels
+            )
+        }
+    }
+
+    /** No answer (network, server): keep the previous labels, offer Scan again. */
+    fun onScanError() {
+        _state.update { if (it.scanStatus == ScanStatus.SEARCHING) it.copy(scanStatus = ScanStatus.ERROR) else it }
     }
 
     /** "Find automatically" was tapped: the frame goes to the AI. */
@@ -349,7 +417,8 @@ class ArGuideViewModel : ViewModel() {
                 steps = it.steps,
                 stepIndex = it.stepIndex,
                 photoAspect = it.photoAspect,
-                autoAlignAvailable = it.autoAlignAvailable
+                autoAlignAvailable = it.autoAlignAvailable,
+                scanAvailable = it.scanAvailable
             )
         }
     }
