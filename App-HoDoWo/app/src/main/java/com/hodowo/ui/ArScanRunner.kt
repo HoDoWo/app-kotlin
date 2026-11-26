@@ -1,5 +1,6 @@
 package com.hodowo.ui
 
+import android.util.Log
 import com.hodowo.data.ArScanService
 import com.hodowo.viewmodel.ScanLabel
 import kotlinx.coroutines.Dispatchers
@@ -18,10 +19,13 @@ internal suspend fun runArScan(captured: CapturedFrame?, placement: ArPlacement,
     val jpeg = withContext(Dispatchers.Default) { captured.toUprightJpeg() }
     val result = service.scan(jpeg)
     val session = placement.session
+    Log.i(
+        "ArScan",
+        "device=${result.deviceName} controls=${result.controls.size} session=${session != null}"
+    )
     val markers = mutableListOf<ScanMarker>()
     val labels = result.controls.map { control ->
-        val anchor = session?.surfacePointFor(captured, control.x, control.y)
-            ?.let { point -> runCatching { point.plane.createAnchor(point.pose) }.getOrNull() }
+        val anchor = session?.anchorFor(captured, control.x, control.y)
         anchor?.let { markers += ScanMarker(it, control.label) }
         ScanLabel(control.label, control.description, placed = anchor != null)
     }

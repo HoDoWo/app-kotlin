@@ -13,9 +13,11 @@ import android.hardware.camera2.CameraManager
 import android.media.Image
 import android.os.Build
 import android.view.Surface
+import android.util.Log
 import android.view.WindowManager
 import coil.imageLoader
 import coil.request.ImageRequest
+import com.google.ar.core.Anchor
 import com.google.ar.core.Frame
 import com.google.ar.core.Plane
 import com.google.ar.core.Pose
@@ -33,6 +35,7 @@ import com.hodowo.viewmodel.rayPlaneDistance
 import com.hodowo.viewmodel.times
 import com.hodowo.viewmodel.uprightRotation
 import java.io.ByteArrayOutputStream
+import java.util.Locale
 import kotlin.math.max
 import kotlin.math.sqrt
 
@@ -43,6 +46,17 @@ private const val DEGREES_PER_ROTATION_STEP = 90
 
 /** A plane point outside the tracked polygon still counts when this close to it (meters). */
 private const val PLANE_EDGE_MARGIN_M = 0.25f
+
+/**
+ * Last resort: the nearest tracked plane, extended past its polygon, when it is
+ * this close along the ray (a keyboard on a desk whose polygon is still small).
+ */
+private const val MAX_EXTENDED_PLANE_M = 2f
+
+/** No plane at all: the label goes this far along the ray, so it still shows near the control. */
+private const val NO_PLANE_DEPTH_M = 0.5f
+
+private const val TAG = "ArScan"
 
 /**
  * One camera frame kept for AR auto-alignment: the image (NV21, as the sensor
@@ -152,13 +166,44 @@ internal fun Session.surfacePointFor(frame: CapturedFrame, x: Float, y: Float): 
     val local = cameraRay(x, y, frame.geometry)
     val origin = frame.cameraPose.translation.toVec3()
     val direction = frame.cameraPose.rotateVector(floatArrayOf(local.x, local.y, local.z)).toVec3()
-    val hits = getAllTrackables(Plane::class.java)
+    val planes = getAllTrackables(Plane::class.java)
         .filter { it.trackingState == TrackingState.TRACKING && it.subsumedBy == null }
-        .mapNotNull { plane -> planeHit(plane, origin, direction) }
+    val hits = planes.mapNotNull { plane -> planeHit(plane, origin, direction) }
+    val rayLength = length(direction)
     val best = hits.filter { it.inside }.minByOrNull { it.distance }
         ?: hits.filter { it.nearEdge }.minByOrNull { it.distance }
+        ?: hits.filter { it.distance * rayLength <= MAX_EXTENDED_PLANE_M }.minByOrNull { it.distance }
+    Log.d(
+        TAG,
+        "point (%.2f, %.2f) rot=%d planes=%d hits=%d inside=%d near=%d -> %s".format(
+            Locale.US, x, y, frame.geometry.rotation, planes.size, hits.size,
+            hits.count { it.inside }, hits.count { it.nearEdge },
+            best?.let { "%.2f m".format(Locale.US, it.distance * rayLength) } ?: "none"
+        )
+    )
     return best?.let { SurfacePoint(it.plane, it.pose) }
 }
+
+/**
+ * An anchor for the point the AI found: on a tracked plane when the ray meets one,
+ * otherwise [NO_PLANE_DEPTH_M] along the ray, so the label still shows near the control.
+ */
+internal fun Session.anchorFor(frame: CapturedFrame, x: Float, y: Float): Anchor? {
+    surfacePointFor(frame, x, y)?.let { point ->
+        runCatching { point.plane.createAnchor(point.pose) }.getOrNull()?.let { return it }
+    }
+    val local = cameraRay(x, y, frame.geometry)
+    val origin = frame.cameraPose.translation.toVec3()
+    val direction = frame.cameraPose.rotateVector(floatArrayOf(local.x, local.y, local.z)).toVec3()
+    val point = origin + direction * (NO_PLANE_DEPTH_M / length(direction))
+    // Upright (world +Y up), so the label above the dot points up.
+    val pose = Pose(floatArrayOf(point.x, point.y, point.z), floatArrayOf(0f, 0f, 0f, 1f))
+    return runCatching { createAnchor(pose) }
+        .onFailure { Log.w(TAG, "no anchor for (%.2f, %.2f)".format(Locale.US, x, y), it) }
+        .getOrNull()
+}
+
+private fun length(vector: Vec3) = sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z)
 
 private class PlaneHit(val plane: Plane, val pose: Pose, val distance: Float, val inside: Boolean, val nearEdge: Boolean)
 
