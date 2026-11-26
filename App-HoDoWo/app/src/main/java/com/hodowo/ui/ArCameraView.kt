@@ -17,9 +17,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntSize
 import com.google.ar.core.Anchor
 import com.google.ar.core.Config
+import com.google.ar.core.DepthPoint
 import com.google.ar.core.Frame
 import com.google.ar.core.HitResult
 import com.google.ar.core.Plane
+import com.google.ar.core.Point
 import com.google.ar.core.Pose
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingFailureReason
@@ -151,9 +153,11 @@ internal class ArPlacement {
         return true
     }
 
-    /** Anchors the first point on a plane point found by the AI. */
+    /** Anchors the first point on a surface point found by the AI (on its plane when it has one). */
     fun anchorAt(point: SurfacePoint): Boolean {
-        val created = runCatching { point.plane.createAnchor(point.pose) }.getOrNull() ?: return false
+        val created = runCatching {
+            point.plane?.createAnchor(point.pose) ?: session?.createAnchor(point.pose)
+        }.getOrNull() ?: return false
         clear()
         anchor = created
         return true
@@ -225,8 +229,8 @@ private fun screenPoints(frame: Frame, markers: List<ScanMarker>, viewport: IntS
 private const val MATRIX_FLOATS = 16
 
 /**
- * The ARCore camera view. [planeOnly]: guide pins need a real plane (its normal
- * fixes the surface), so instant placement is used only for the free arrow.
+ * The ARCore camera view. [planeOnly]: guide pins need a measured surface (a plane, or a
+ * depth or feature point with its normal), so instant placement is used only for the free arrow.
  */
 @Composable
 internal fun ArCameraView(
@@ -435,22 +439,30 @@ private fun SceneScope.Arrow(material: MaterialInstance, origin: Vec3, side: Flo
 private fun Vec3.toPosition() = Position(x, y, z)
 
 /**
- * A tracked plane under the point if there is one; otherwise, unless [planeOnly], an
- * instant-placement point about an arm's length away, so the free arrow can be placed
- * before a plane is found (glossy, plain appliance fronts are slow to detect).
+ * A tracked plane under the point if there is one; else a surface ARCore measured there
+ * with its normal (a depth point, or a feature point with an estimated normal: appliance
+ * fronts, which rarely get a plane); otherwise, unless [planeOnly], an instant-placement
+ * point about an arm's length away, so the free arrow can be placed before a surface is
+ * found. Guide pins ([planeOnly]) need a surface with a normal to lie on.
  */
 private fun surfaceHit(frame: Frame, x: Float, y: Float, planeOnly: Boolean): HitResult? {
-    val planeHit = placementHit(
-        frame,
-        frame.hitTest(x, y).filter { it.trackable is Plane },
-        instantPlacement = false
-    )
-    if (planeHit != null || planeOnly) return planeHit
+    val hits = frame.hitTest(x, y)
+    val planeHit = placementHit(frame, hits.filter { it.trackable is Plane }, instantPlacement = false)
+    if (planeHit != null) return planeHit
+    val measured = hits.firstOrNull { it.isSurfaceWithNormal() }
+    if (measured != null || planeOnly) return measured
     return placementHit(
         frame,
         frame.hitTestInstantPlacement(x, y, INSTANT_PLACEMENT_DISTANCE_M),
         instantPlacement = true
     )
+}
+
+private fun HitResult.isSurfaceWithNormal(): Boolean {
+    val trackable = trackable
+    if (trackable.trackingState != TrackingState.TRACKING) return false
+    return trackable is DepthPoint ||
+        (trackable is Point && trackable.orientationMode == Point.OrientationMode.ESTIMATED_SURFACE_NORMAL)
 }
 
 private fun ARSessionFailure.toProblem(): ArSessionProblem = when (this) {

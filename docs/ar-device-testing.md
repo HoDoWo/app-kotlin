@@ -116,6 +116,16 @@ AR tab scan
 - [ ] Oven or microwave front: walk half a metre to the side; the dots stay on the knobs/buttons.
 - [ ] Tapping a number on the camera selects it (pill with its name), like tapping its row.
 
+Guide on an upright front (oven, microwave)
+
+ARCore rarely finds a plane on appliance fronts. Guide pins can now lie on a surface measured by
+depth or feature points: **Place point** turns on as soon as the reticle is on the front, and **Find
+automatically** places the pins from depth/feature points, taking the front as upright and facing the
+camera (flat when looking down at it). Logcat `ArScan`: `guide depth`, `guide features`, `guide ray`.
+
+- [ ] Open a guide → **View in AR** on an oven front: move the phone a little, **Place point** turns on.
+- [ ] **Find automatically** on the same front places the pins on the knobs.
+
 Navigation
 - [ ] **Previous / Next** reach every step; disabled at the first / last step.
 
