@@ -1,5 +1,7 @@
 package com.hodowo.ui
 
+import androidx.compose.ui.res.stringResource
+import com.hodowo.R
 import android.content.Context
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -178,21 +180,21 @@ private fun AuthHeader() {
                 HoDoWoLogo(size = 72.dp, modifier = Modifier.padding(10.dp))
             }
             Text(
-                "Howdowo",
+                stringResource(R.string.brand_name),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
             )
             Text(
-                "Snap your appliance, ask, and fix it step by step.",
+                stringResource(R.string.auth_tagline),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.White.copy(alpha = 0.88f),
                 textAlign = TextAlign.Center,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
-                FeaturePill(Icons.Default.PhotoCamera, "Photo")
-                FeaturePill(Icons.AutoMirrored.Filled.MenuBook, "Guides")
-                FeaturePill(Icons.Default.Build, "Parts")
+                FeaturePill(Icons.Default.PhotoCamera, stringResource(R.string.auth_feature_photo))
+                FeaturePill(Icons.AutoMirrored.Filled.MenuBook, stringResource(R.string.auth_feature_guides))
+                FeaturePill(Icons.Default.Build, stringResource(R.string.auth_feature_parts))
             }
         }
     }
@@ -249,7 +251,7 @@ private fun AuthFormCard(
             ModeSwitch(isRegister = isRegister, enabled = !state.isLoading, onModeChange = onModeChange)
 
             Text(
-                if (isRegister) "Create your account" else "Welcome back",
+                if (isRegister) stringResource(R.string.auth_register_title) else stringResource(R.string.auth_login_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -257,9 +259,9 @@ private fun AuthFormCard(
             )
             Text(
                 if (isRegister) {
-                    "Save your appliances, guides and orders on every phone."
+                    stringResource(R.string.auth_register_body)
                 } else {
-                    "Log in to find your chats, appliances and orders."
+                    stringResource(R.string.auth_login_body)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -269,13 +271,13 @@ private fun AuthFormCard(
                 value = state.email,
                 onValueChange = onEmailChange,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Email") },
+                label = { Text(stringResource(R.string.auth_email)) },
                 leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null) },
                 singleLine = true,
                 enabled = !state.isLoading,
                 isError = emailError != null,
                 supportingText = if (emailError != null) {
-                    { Text(emailError) }
+                    { Text(authMessage(emailError)) }
                 } else {
                     null
                 },
@@ -289,13 +291,13 @@ private fun AuthFormCard(
                 value = state.password,
                 onValueChange = onPasswordChange,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.auth_password)) },
                 leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
                 singleLine = true,
                 enabled = !state.isLoading,
                 isError = passwordError != null,
                 supportingText = if (passwordError != null) {
-                    { Text(passwordError) }
+                    { Text(authMessage(passwordError)) }
                 } else {
                     null
                 },
@@ -304,7 +306,7 @@ private fun AuthFormCard(
                     IconButton(onClick = { showPassword = !showPassword }) {
                         Icon(
                             if (showPassword) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                            contentDescription = if (showPassword) "Hide password" else "Show password",
+                            contentDescription = if (showPassword) stringResource(R.string.auth_hide_password) else stringResource(R.string.auth_show_password),
                         )
                     }
                 },
@@ -325,13 +327,13 @@ private fun AuthFormCard(
                     value = state.confirmPassword,
                     onValueChange = onConfirmPasswordChange,
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Confirm password") },
+                    label = { Text(stringResource(R.string.auth_confirm_password)) },
                     leadingIcon = { Icon(Icons.Outlined.Lock, contentDescription = null) },
                     singleLine = true,
                     enabled = !state.isLoading,
                     isError = confirmError != null,
                     supportingText = if (confirmError != null) {
-                        { Text(confirmError) }
+                        { Text(authMessage(confirmError)) }
                     } else {
                         null
                     },
@@ -353,7 +355,7 @@ private fun AuthFormCard(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text(
-                        it,
+                        authMessage(it),
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
@@ -377,7 +379,7 @@ private fun AuthFormCard(
                     )
                 } else {
                     Text(
-                        if (isRegister) "Create account" else "Log in",
+                        if (isRegister) stringResource(R.string.auth_create_account) else stringResource(R.string.auth_log_in),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -400,15 +402,14 @@ private fun AuthFormCard(
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.size(8.dp))
-                Text("Continue with Google", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.auth_google), style = MaterialTheme.typography.titleSmall)
             }
 
             if (!googleConfigured) {
                 // The button stays tappable: the ViewModel shows the exact reason
                 // (no web client id / provider disabled) instead of doing nothing.
                 Text(
-                    "Google sign-in needs a Web client ID in local.properties or " +
-                        "in google-services.json. See the README.",
+                    stringResource(R.string.auth_google_not_configured_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -421,7 +422,7 @@ private fun AuthFormCard(
                 enabled = !state.isLoading,
                 modifier = Modifier.align(Alignment.CenterHorizontally),
             ) {
-                Text(if (isRegister) "Already have an account? Log in" else "No account yet? Register")
+                Text(if (isRegister) stringResource(R.string.auth_switch_to_login) else stringResource(R.string.auth_switch_to_register))
             }
         }
     }
@@ -437,10 +438,10 @@ private fun ModeSwitch(isRegister: Boolean, enabled: Boolean, onModeChange: (Aut
             .background(SurfaceContainerLow)
             .padding(4.dp),
     ) {
-        ModeTab("Log in", selected = !isRegister, enabled = enabled, modifier = Modifier.weight(1f)) {
+        ModeTab(stringResource(R.string.auth_log_in), selected = !isRegister, enabled = enabled, modifier = Modifier.weight(1f)) {
             onModeChange(AuthMode.LOGIN)
         }
-        ModeTab("Register", selected = isRegister, enabled = enabled, modifier = Modifier.weight(1f)) {
+        ModeTab(stringResource(R.string.auth_register), selected = isRegister, enabled = enabled, modifier = Modifier.weight(1f)) {
             onModeChange(AuthMode.REGISTER)
         }
     }
@@ -483,7 +484,7 @@ private fun OrDivider() {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         HorizontalDivider(modifier = Modifier.weight(1f), color = OutlineVariant)
-        Text("or", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.auth_or), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         HorizontalDivider(modifier = Modifier.weight(1f), color = OutlineVariant)
     }
 }
