@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.layout
@@ -39,14 +41,40 @@ private val BADGE_SIZE = 28.dp
 private val INNER_BADGE_SIZE = 22.dp
 private val POINTER_WIDTH = 12.dp
 private val POINTER_HEIGHT = 7.dp
+private val STEM_HEIGHT = 36.dp
+private val STEM_WIDTH = 2.dp
+private val STEM_OUTLINE = 4.dp
 private val LABEL_MAX_WIDTH = 220.dp
 
+/** A label drawn flat on the camera view above a 3D dot: [badge] always, [text] when [highlighted]. */
+internal class OverlayLabel(
+    val key: Any,
+    val point: ScreenPoint,
+    val badge: String,
+    val text: String,
+    val highlighted: Boolean,
+    val onClick: () -> Unit
+)
+
 /**
- * The scan labels, flat on the screen just above each control's 3D dot: a numbered
- * badge, and for the selected control a pill with its name. Drawn by Compose, not in
- * the 3D scene, so they stay sharp, readable and the same size from any distance.
- * Tapping one selects it, like tapping its row in the panel.
+ * Labels flat on the screen just above their 3D dots: a numbered badge, and for the
+ * highlighted one a pill with its text. Drawn by Compose, not in the 3D scene, so they
+ * stay sharp, readable and the same size from any distance. Used by the AR tab scan
+ * (controls) and by the guide (steps).
  */
+@Composable
+internal fun ArLabelsOverlay(labels: List<OverlayLabel>) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // The highlighted label last, so it is drawn on top of its neighbours.
+        labels.sortedBy { it.highlighted }.forEach { label ->
+            key(label.key) {
+                LabelChip(label, modifier = Modifier.above(label.point))
+            }
+        }
+    }
+}
+
+/** The scan labels: tapping one selects it, like tapping its row in the panel. */
 @Composable
 internal fun ScanLabelsOverlay(
     markers: List<ScanMarker>,
@@ -54,21 +82,18 @@ internal fun ScanLabelsOverlay(
     selected: Int?,
     onSelect: (Int) -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        // The selected label last, so it is drawn on top of its neighbours.
-        val ordered = markers.sortedBy { it.index == selected }
-        ordered.forEach { marker ->
-            val point = points.getOrNull(markers.indexOf(marker)) ?: return@forEach
-            key(marker) {
-                ScanLabelChip(
-                    marker = marker,
-                    selected = marker.index == selected,
-                    modifier = Modifier.above(point),
-                    onClick = { onSelect(marker.index) }
-                )
-            }
-        }
+    val labels = markers.mapIndexedNotNull { i, marker ->
+        val point = points.getOrNull(i) ?: return@mapIndexedNotNull null
+        OverlayLabel(
+            key = marker,
+            point = point,
+            badge = "${marker.index + 1}",
+            text = marker.label,
+            highlighted = marker.index == selected,
+            onClick = { onSelect(marker.index) }
+        )
     }
+    ArLabelsOverlay(labels)
 }
 
 /** Places the content with its bottom centre on [point], kept inside the screen sideways. */
@@ -83,13 +108,12 @@ private fun Modifier.above(point: ScreenPoint): Modifier = layout { measurable, 
 }
 
 @Composable
-private fun ScanLabelChip(marker: ScanMarker, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val number = "${marker.index + 1}"
+private fun LabelChip(label: OverlayLabel, modifier: Modifier) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
-            .clickable(role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = "$number · ${marker.label}" }
+            .clickable(role = Role.Button, onClick = label.onClick)
+            .semantics { contentDescription = "${label.badge} · ${label.text}" }
     ) {
         Surface(
             shape = CircleShape,
@@ -97,19 +121,24 @@ private fun ScanLabelChip(marker: ScanMarker, selected: Boolean, modifier: Modif
             border = BorderStroke(2.dp, Color.White),
             shadowElevation = 6.dp
         ) {
-            if (selected) {
+            if (label.highlighted) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(start = 3.dp, end = 14.dp, top = 3.dp, bottom = 3.dp)
                 ) {
-                    Surface(shape = CircleShape, color = Color.White, modifier = Modifier.size(INNER_BADGE_SIZE)) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(number, color = Primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Surface(shape = CircleShape, color = Color.White) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier
+                                .defaultMinSize(INNER_BADGE_SIZE, INNER_BADGE_SIZE)
+                                .padding(horizontal = 6.dp)
+                        ) {
+                            Text(label.badge, color = Primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = marker.label,
+                        text = label.text,
                         color = Color.White,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
@@ -119,16 +148,39 @@ private fun ScanLabelChip(marker: ScanMarker, selected: Boolean, modifier: Modif
                     )
                 }
             } else {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.size(BADGE_SIZE)) {
-                    Text(number, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .defaultMinSize(BADGE_SIZE, BADGE_SIZE)
+                        .padding(horizontal = 8.dp)
+                ) {
+                    Text(label.badge, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
-        // A small pointer down to the dot.
-        Canvas(modifier = Modifier.size(POINTER_WIDTH, POINTER_HEIGHT)) {
+        // A pointer down to the dot. The highlighted pill is wide: it stands higher on a
+        // thin stem, so it does not cover the control and its neighbours.
+        val height = if (label.highlighted) POINTER_HEIGHT + STEM_HEIGHT else POINTER_HEIGHT
+        Canvas(modifier = Modifier.size(POINTER_WIDTH, height)) {
+            val tip = POINTER_HEIGHT.toPx()
+            val stemTop = size.height - tip
+            if (stemTop > 0f) {
+                drawLine(
+                    color = Color.White,
+                    start = Offset(size.width / 2f, 0f),
+                    end = Offset(size.width / 2f, stemTop),
+                    strokeWidth = STEM_OUTLINE.toPx()
+                )
+                drawLine(
+                    color = Primary,
+                    start = Offset(size.width / 2f, 0f),
+                    end = Offset(size.width / 2f, stemTop),
+                    strokeWidth = STEM_WIDTH.toPx()
+                )
+            }
             val path = Path().apply {
-                moveTo(0f, 0f)
-                lineTo(size.width, 0f)
+                moveTo(0f, stemTop)
+                lineTo(size.width, stemTop)
                 lineTo(size.width / 2f, size.height)
                 close()
             }
