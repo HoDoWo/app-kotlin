@@ -5,12 +5,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import com.google.android.filament.Engine
 import com.google.android.filament.MaterialInstance
 import com.google.android.filament.Texture
 import io.github.sceneview.SceneScope
 import io.github.sceneview.material.setTexture
 import io.github.sceneview.math.Position
+import io.github.sceneview.math.Scale
 import io.github.sceneview.texture.ImageTexture
 import java.util.WeakHashMap
 
@@ -25,6 +27,9 @@ import java.util.WeakHashMap
  *   aborts with "Invalid texture still bound to MaterialInstance" (fixed in 4.52,
  *   sceneview#4285): on removal the instance is pointed at a 1×1 texture that is never
  *   freed, so it stays valid until the engine goes.
+ * A third one: to face the camera the label rewrites its own position every frame from the
+ * world back into its anchor's space, and the rounding builds up until it floats away
+ * ("bubbles"). After each turn the position and scale are put back.
  * Newer SceneView needs Kotlin 2.3.
  */
 @Composable
@@ -40,6 +45,7 @@ internal fun SceneScope.ArTextNode(
 ) {
     key(text, fontSize, textColor, backgroundColor, widthMeters, heightMeters) {
         val held = remember { arrayOfNulls<MaterialInstance>(1) }
+        val place = rememberUpdatedState(position)
         TextNode(
             text = text,
             fontSize = fontSize,
@@ -49,7 +55,15 @@ internal fun SceneScope.ArTextNode(
             heightMeters = heightMeters,
             position = position,
             cameraPositionProvider = cameraPosition,
-            apply = { held[0] = materialInstance }
+            apply = {
+                held[0] = materialInstance
+                val faceCamera = onFrame
+                onFrame = { time ->
+                    faceCamera?.invoke(time)
+                    this.position = place.value
+                    this.scale = UNIT_SCALE
+                }
+            }
         )
         val engine = this.engine
         DisposableEffect(held) {
@@ -57,6 +71,8 @@ internal fun SceneScope.ArTextNode(
         }
     }
 }
+
+private val UNIT_SCALE = Scale(1f)
 
 private val keptTextures = WeakHashMap<Engine, Texture>()
 
