@@ -104,7 +104,9 @@ data class ArGuideUiState(
     val scanAvailable: Boolean = false,
     val scanStatus: ScanStatus = ScanStatus.IDLE,
     val scanDevice: String? = null,
-    val scanLabels: List<ScanLabel> = emptyList()
+    val scanLabels: List<ScanLabel> = emptyList(),
+    /** The control whose name is shown on the device (the others show their number). */
+    val selectedScan: Int? = null
 ) {
     /** AR tab without a guide: the AI names the device and labels its main controls. */
     val scanMode: Boolean get() = scanAvailable && !guided
@@ -148,10 +150,10 @@ data class ArGuideUiState(
             permission == ArCameraPermission.GRANTED && sessionProblem == null
 
     /** "Place point" while aligning guide pins, "Place arrow" otherwise. */
-    val placeLabel: String get() = if (plan == AlignPlan.Free) "Place arrow" else "Place point"
+    val placeLabel: ArText get() = if (plan == AlignPlan.Free) ArText.PLACE_ARROW else ArText.PLACE_POINT
 
     /** "Re-align" for guide pins, "Move arrow" for the free arrow. */
-    val recenterLabel: String get() = if (plan == AlignPlan.Free) "Move arrow" else "Re-align"
+    val recenterLabel: ArText get() = if (plan == AlignPlan.Free) ArText.MOVE_ARROW else ArText.REALIGN
 
     val phase: ArGuidePhase
         get() = when {
@@ -173,91 +175,100 @@ data class ArGuideUiState(
     /** "Place arrow here" works only with a tracked surface under the reticle. */
     val canPlace: Boolean get() = phase == ArGuidePhase.READY_TO_PLACE && !searching
 
-    /** One sentence for the status bar; also announced by TalkBack when it changes. */
-    val message: String
-        get() = if (searching && showsCamera) searchingMessage() else scanMessage() ?: when (phase) {
-            ArGuidePhase.ASKING_PERMISSION -> "AR needs the camera to show the guide on your appliance."
-            ArGuidePhase.PERMISSION_DENIED -> if (permission == ArCameraPermission.PERMANENTLY_DENIED) {
-                "Camera access is off. Turn it on in Settings to use AR."
-            } else {
-                "AR needs the camera to show the guide on your appliance."
-            }
-            ArGuidePhase.SESSION_ERROR -> sessionProblemMessage(sessionProblem)
-            ArGuidePhase.TRACKING_LOST -> trackingIssueMessage(trackingIssue)
-            ArGuidePhase.SCANNING -> "Point the camera at the appliance and move the phone slowly."
-            ArGuidePhase.READY_TO_PLACE -> aimMessage()
-            ArGuidePhase.PLACED -> placedMessage()
+    /**
+     * The status line, as one or two sentences (keys the UI translates); TalkBack
+     * announces it when it changes.
+     */
+    val message: List<ArLine>
+        get() = when {
+            searching && showsCamera -> listOf(searchingMessage())
+            else -> scanMessage()?.let(::listOf) ?: phaseMessage()
         }
 
+    private fun phaseMessage(): List<ArLine> = when (phase) {
+        ArGuidePhase.ASKING_PERMISSION -> listOf(ArLine(ArText.CAMERA_NEEDED))
+        ArGuidePhase.PERMISSION_DENIED -> listOf(
+            ArLine(if (permission == ArCameraPermission.PERMANENTLY_DENIED) ArText.CAMERA_OFF else ArText.CAMERA_NEEDED)
+        )
+        ArGuidePhase.SESSION_ERROR -> listOf(ArLine(sessionProblemText(sessionProblem)))
+        ArGuidePhase.TRACKING_LOST -> listOf(ArLine(trackingIssueText(trackingIssue)))
+        ArGuidePhase.SCANNING -> listOf(ArLine(ArText.POINT_AT_APPLIANCE))
+        ArGuidePhase.READY_TO_PLACE -> aimMessage()
+        ArGuidePhase.PLACED -> listOf(placedMessage())
+    }
+
     /** The scan's own line in the AR tab; null when the phase message applies. */
-    private fun scanMessage(): String? {
+    private fun scanMessage(): ArLine? {
         val scanPhases = setOf(ArGuidePhase.SCANNING, ArGuidePhase.READY_TO_PLACE, ArGuidePhase.PLACED)
         if (!scanMode || phase !in scanPhases) return null
         val placed = scanLabels.count { it.placed }
+        val device = scanDevice.orEmpty()
         return when (scanStatus) {
-            ScanStatus.IDLE -> "Point the camera at an appliance or a keyboard: it will be named and labelled."
-            ScanStatus.SEARCHING -> "Looking at what's in front of you… Keep it in view."
-            ScanStatus.NOTHING -> "No appliance or keyboard found. Point at one and tap Scan again."
-            ScanStatus.ERROR -> "The scan didn't work (check the connection). Tap Scan again."
+            ScanStatus.IDLE -> ArLine(ArText.SCAN_IDLE)
+            ScanStatus.SEARCHING -> ArLine(ArText.SCAN_SEARCHING)
+            ScanStatus.NOTHING -> ArLine(ArText.SCAN_NOTHING)
+            ScanStatus.ERROR -> ArLine(ArText.SCAN_ERROR)
             ScanStatus.DONE -> when {
-                scanLabels.isEmpty() -> "$scanDevice. No controls visible: get closer and tap Scan again."
-                placed == scanLabels.size -> "$scanDevice: ${scanLabels.size} main controls labelled."
-                else -> "$scanDevice: $placed of ${scanLabels.size} controls labelled; the others are off the surface."
+                scanLabels.isEmpty() -> ArLine(ArText.SCAN_NO_CONTROLS, listOf(device))
+                placed == scanLabels.size -> ArLine(ArText.SCAN_ALL, listOf(device, scanLabels.size))
+                else -> ArLine(ArText.SCAN_SOME, listOf(device, placed, scanLabels.size))
             }
         }
     }
 
-    private fun searchingMessage(): String {
-        val plan = plan as? AlignPlan.TwoPoints ?: return "Looking for the controls on the appliance…"
-        val first = steps.getOrNull(plan.first)?.number
-        val second = steps.getOrNull(plan.second)?.number
-        return "Looking for steps $first and $second on the appliance… Keep it in view."
+    private fun searchingMessage(): ArLine {
+        val plan = plan as? AlignPlan.TwoPoints ?: return ArLine(ArText.LOOKING_FOR_CONTROLS)
+        val first = steps.getOrNull(plan.first)?.number ?: 0
+        val second = steps.getOrNull(plan.second)?.number ?: 0
+        return ArLine(ArText.LOOKING_FOR_STEPS, listOf(first, second))
     }
 
-    private fun autoResultPrefix(): String = when (autoResult) {
-        AutoAlignResult.NONE -> "The AI couldn't find the controls. "
-        AutoAlignResult.ERROR -> "Automatic search didn't work (check the connection). "
-        AutoAlignResult.FIRST_ONLY -> "Step ${steps.getOrNull((plan as? AlignPlan.TwoPoints)?.first ?: -1)?.number} found. "
-        AutoAlignResult.BOTH, null -> ""
+    private fun autoResultPrefix(): ArLine? = when (autoResult) {
+        AutoAlignResult.NONE -> ArLine(ArText.AUTO_NONE)
+        AutoAlignResult.ERROR -> ArLine(ArText.AUTO_ERROR)
+        AutoAlignResult.FIRST_ONLY -> ArLine(
+            ArText.AUTO_FIRST,
+            listOf(steps.getOrNull((plan as? AlignPlan.TwoPoints)?.first ?: -1)?.number ?: 0)
+        )
+        AutoAlignResult.BOTH, null -> null
     }
 
-    private fun aimMessage(): String {
-        val step = aimStep ?: return "Surface found. Aim at the control and tap Place arrow."
-        val target = "the control for step ${step.number} (${step.title})"
-        return autoResultPrefix() + when {
-            alignFailed -> "Those two points don't match the photo. Aim exactly at $target and try again."
-            needsSecondPoint -> "Now aim the dot at $target and tap Place point (2 of 2)."
-            plan is AlignPlan.TwoPoints -> "Aim the dot at $target and tap Place point (1 of 2)."
-            else -> "Aim the dot at $target and tap Place point."
+    private fun aimMessage(): List<ArLine> {
+        val step = aimStep ?: return listOf(ArLine(ArText.SURFACE_FOUND))
+        val target = listOf<Any>(step.number, step.title)
+        val main = when {
+            alignFailed -> ArLine(ArText.ALIGN_MISMATCH, target)
+            needsSecondPoint -> ArLine(ArText.AIM_SECOND, target)
+            plan is AlignPlan.TwoPoints -> ArLine(ArText.AIM_FIRST, target)
+            else -> ArLine(ArText.AIM_SINGLE, target)
         }
+        return listOfNotNull(autoResultPrefix(), main)
     }
 
-    private fun placedMessage(): String {
-        val step = currentStep ?: return "Arrow placed. It stays on the appliance while you move."
+    private fun placedMessage(): ArLine {
+        val step = currentStep ?: return ArLine(ArText.ARROW_PLACED)
         return when {
-            plan == AlignPlan.Free -> "Arrow placed. Use Previous and Next to follow the steps."
-            step.pin != null -> "Step ${step.number} of ${steps.size} is marked on the appliance."
-            else -> "Step ${step.number} has no point on the appliance: follow the text below."
+            plan == AlignPlan.Free -> ArLine(ArText.ARROW_PLACED_GUIDE)
+            step.pin != null -> ArLine(ArText.STEP_MARKED, listOf(step.number, steps.size))
+            else -> ArLine(ArText.STEP_NO_POINT, listOf(step.number))
         }
     }
 }
 
-private fun sessionProblemMessage(problem: ArSessionProblem?): String = when (problem) {
-    ArSessionProblem.INSTALL_DECLINED ->
-        "AR needs Google Play Services for AR. Install it to continue, or use the 2D guide."
-    ArSessionProblem.NOT_COMPATIBLE -> "AR can't run on this phone. The 2D guide works everywhere."
-    ArSessionProblem.CAMERA_UNAVAILABLE -> "The camera is busy or unavailable. Close other camera apps and try again."
-    ArSessionProblem.OTHER, null -> "AR stopped unexpectedly. Try again, or use the 2D guide."
+private fun sessionProblemText(problem: ArSessionProblem?): ArText = when (problem) {
+    ArSessionProblem.INSTALL_DECLINED -> ArText.INSTALL_NEEDED
+    ArSessionProblem.NOT_COMPATIBLE -> ArText.NOT_COMPATIBLE
+    ArSessionProblem.CAMERA_UNAVAILABLE -> ArText.CAMERA_BUSY
+    ArSessionProblem.OTHER, null -> ArText.AR_STOPPED
 }
 
-private fun trackingIssueMessage(issue: ArTrackingIssue): String = when (issue) {
-    ArTrackingIssue.INSUFFICIENT_LIGHT -> "Too dark to track. Turn on a light."
-    ArTrackingIssue.EXCESSIVE_MOTION -> "Moving too fast. Move the phone slowly."
-    ArTrackingIssue.INSUFFICIENT_FEATURES ->
-        "Can't see enough detail. Include the edges or controls of the appliance in view."
-    ArTrackingIssue.CAMERA_UNAVAILABLE -> "The camera is busy. Close other camera apps."
-    ArTrackingIssue.BAD_STATE -> "Tracking stopped. Tap Reset to start again."
-    ArTrackingIssue.NONE -> "The arrow lost its place. Point at the appliance again, or tap Move arrow."
+private fun trackingIssueText(issue: ArTrackingIssue): ArText = when (issue) {
+    ArTrackingIssue.INSUFFICIENT_LIGHT -> ArText.TOO_DARK
+    ArTrackingIssue.EXCESSIVE_MOTION -> ArText.TOO_FAST
+    ArTrackingIssue.INSUFFICIENT_FEATURES -> ArText.LOW_DETAIL
+    ArTrackingIssue.CAMERA_UNAVAILABLE -> ArText.CAMERA_BUSY_TRACKING
+    ArTrackingIssue.BAD_STATE -> ArText.TRACKING_STOPPED
+    ArTrackingIssue.NONE -> ArText.ANCHOR_LOST
 }
 
 /**
@@ -330,11 +341,25 @@ class ArGuideViewModel : ViewModel() {
     fun onScanFinished(device: String?, labels: List<ScanLabel>) {
         _state.update {
             if (it.scanStatus != ScanStatus.SEARCHING) return@update it
+            val shown = if (device == null) emptyList() else labels
             it.copy(
                 scanStatus = if (device == null) ScanStatus.NOTHING else ScanStatus.DONE,
                 scanDevice = device,
-                scanLabels = if (device == null) emptyList() else labels
+                scanLabels = shown,
+                // The first control on the device starts selected, so one name is always visible.
+                selectedScan = shown.indexOfFirst { label -> label.placed }.takeIf { index -> index >= 0 }
             )
+        }
+    }
+
+    /** Shows the name of control [index] on the device; tapping the selected one again hides it. */
+    fun selectScan(index: Int) {
+        _state.update {
+            when {
+                index !in it.scanLabels.indices -> it
+                it.selectedScan == index -> it.copy(selectedScan = null)
+                else -> it.copy(selectedScan = index)
+            }
         }
     }
 

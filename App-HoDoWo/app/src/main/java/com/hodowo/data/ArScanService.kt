@@ -11,7 +11,6 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
-import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /** One main control the AI saw, with its centre in the frame (0..1 from the left and top edges). */
@@ -22,20 +21,22 @@ data class ArScanResult(val deviceName: String?, val controls: List<ScannedContr
 
 /** Names the device in a camera frame and its main controls (`POST /api/ar/scan`, AR tab). */
 fun interface ArScanService {
-    /** Throws [IOException] on network or server errors. */
-    suspend fun scan(frameJpeg: ByteArray): ArScanResult
+    /**
+     * [language]: BCP-47 code of the app language at the time of the scan, so labels
+     * follow an in-app language change. Throws [IOException] on network or server errors.
+     */
+    suspend fun scan(frameJpeg: ByteArray, language: String): ArScanResult
 }
 
 /** [ArScanService] backed by the HoDoWo backend. */
 class RemoteArScanService(
     private val backendUrl: String,
     private val tokenProvider: suspend () -> String?,
-    private val language: String = Locale.getDefault().language,
     private val httpClient: OkHttpClient = defaultClient(),
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ArScanService {
 
-    override suspend fun scan(frameJpeg: ByteArray): ArScanResult {
+    override suspend fun scan(frameJpeg: ByteArray, language: String): ArScanResult {
         val body = MultipartBody.Builder()
             .setType(MultipartBody.FORM)
             .addFormDataPart("image", "frame.jpg", frameJpeg.toRequestBody(JPEG))

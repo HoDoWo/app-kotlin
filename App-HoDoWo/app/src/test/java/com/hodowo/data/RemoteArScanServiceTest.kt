@@ -22,7 +22,7 @@ class RemoteArScanServiceTest {
     fun setUp() {
         server = MockWebServer()
         server.start()
-        service = RemoteArScanService(server.url("/").toString(), tokenProvider = { "token-abc" }, language = "it")
+        service = RemoteArScanService(server.url("/").toString(), tokenProvider = { "token-abc" })
     }
 
     @After
@@ -39,7 +39,7 @@ class RemoteArScanServiceTest {
             )
         )
 
-        val result = service.scan(byteArrayOf(1, 2, 3))
+        val result = service.scan(byteArrayOf(1, 2, 3), language = "it")
 
         assertEquals(ArScanResult("Lavatrice · Bosch", listOf(ScannedControl("Start", "Avvia", 0.7f, 0.3f))), result)
         val recorded = server.takeRequest()
@@ -48,6 +48,7 @@ class RemoteArScanServiceTest {
         val body = recorded.body.readUtf8()
         assertTrue(body.contains("name=\"image\"; filename=\"frame.jpg\""))
         assertTrue(body.contains("name=\"language\""))
+        assertTrue(body.contains("\r\n\r\nit\r\n"))
     }
 
     @Test
@@ -75,7 +76,7 @@ class RemoteArScanServiceTest {
         server.enqueue(MockResponse().setBody("not json"))
         repeat(2) {
             try {
-                service.scan(byteArrayOf(1))
+                service.scan(byteArrayOf(1), language = "en")
                 fail("expected IOException")
             } catch (expected: IOException) {
                 // The AR tab offers "Scan again".

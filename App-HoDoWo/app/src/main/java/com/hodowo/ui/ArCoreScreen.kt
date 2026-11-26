@@ -37,6 +37,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -44,6 +45,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
+import com.hodowo.R
 import com.hodowo.data.ArSupport
 import com.hodowo.data.ArSupportProvider
 import com.hodowo.ui.theme.Primary
@@ -96,8 +99,8 @@ fun ArCoreScreen(
                 CircularProgressIndicator(color = Primary)
                 Spacer(modifier = Modifier.height(16.dp))
                 StatusText(
-                    title = "Checking AR support…",
-                    body = "This takes a moment the first time."
+                    title = stringResource(R.string.ar_checking_title),
+                    body = stringResource(R.string.ar_checking_body)
                 )
                 return@Column
             }
@@ -105,7 +108,7 @@ fun ArCoreScreen(
             val content = arContent(support)
             StatusIcon(content.icon)
             Spacer(modifier = Modifier.height(20.dp))
-            StatusText(title = content.title, body = content.body)
+            StatusText(title = stringResource(content.title), body = stringResource(content.body))
             Spacer(modifier = Modifier.height(24.dp))
 
             if (support.offersAr) {
@@ -115,7 +118,7 @@ fun ArCoreScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Start AR") }
+                ) { Text(stringResource(R.string.ar_start)) }
                 Spacer(modifier = Modifier.height(8.dp))
             }
             if (support == ArSupport.UNKNOWN) {
@@ -124,7 +127,7 @@ fun ArCoreScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Try again") }
+                ) { Text(stringResource(R.string.ar_try_again)) }
                 Spacer(modifier = Modifier.height(8.dp))
             }
             // The 2D guide is the fallback on every phone, and one tap away.
@@ -133,52 +136,36 @@ fun ArCoreScreen(
                     onClick = onOpenGuides,
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Open my guides") }
+                ) { Text(stringResource(R.string.ar_open_my_guides)) }
             } else {
                 Button(
                     onClick = onOpenGuides,
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth()
-                ) { Text("Open my guides") }
+                ) { Text(stringResource(R.string.ar_open_my_guides)) }
             }
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedButton(
                 onClick = onDiagnose,
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Diagnose an appliance") }
+            ) { Text(stringResource(R.string.ar_diagnose)) }
         }
     }
 }
 
-private data class ArContent(val icon: ImageVector, val title: String, val body: String)
+private data class ArContent(val icon: ImageVector, @param:StringRes val title: Int, @param:StringRes val body: Int)
 
 private fun arContent(support: ArSupport): ArContent = when (support) {
-    ArSupport.READY, ArSupport.CHECKING -> ArContent(
-        icon = Icons.Filled.ViewInAr,
-        title = "Your phone supports AR",
-        body = "Tap Start AR and point the phone at an appliance or a keyboard: " +
-            "AR names it and puts a label on its main controls."
-    )
-    ArSupport.NEEDS_INSTALL -> ArContent(
-        icon = Icons.Filled.ViewInAr,
-        title = "Your phone supports AR",
-        body = "Google Play Services for AR will be installed or updated when you tap Start AR. " +
-            "Then point the phone at the appliance."
-    )
-    ArSupport.UNSUPPORTED -> ArContent(
-        icon = Icons.Outlined.PhonelinkErase,
-        title = "AR isn't available on this phone",
-        body = "AR needs a phone certified for Google ARCore. Every guide still works here in 2D, " +
-            "with the steps pinned on your photo."
-    )
-    ArSupport.UNKNOWN -> ArContent(
-        icon = Icons.Outlined.CloudOff,
-        title = "Couldn't check AR support",
-        body = "Check your connection and try again. Meanwhile every guide works in 2D, " +
-            "with the steps pinned on your photo."
-    )
+    ArSupport.READY, ArSupport.CHECKING ->
+        ArContent(Icons.Filled.ViewInAr, R.string.ar_supported_title, R.string.ar_supported_body)
+    ArSupport.NEEDS_INSTALL ->
+        ArContent(Icons.Filled.ViewInAr, R.string.ar_supported_title, R.string.ar_needs_install_body)
+    ArSupport.UNSUPPORTED ->
+        ArContent(Icons.Outlined.PhonelinkErase, R.string.ar_unsupported_title, R.string.ar_unsupported_body)
+    ArSupport.UNKNOWN ->
+        ArContent(Icons.Outlined.CloudOff, R.string.ar_unknown_title, R.string.ar_unknown_body)
 }
 
 @Composable

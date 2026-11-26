@@ -14,19 +14,24 @@ internal class ArScanOutcome(val device: String?, val labels: List<ScanLabel>)
  * control it names, on the plane its ray meets (the phone may have moved while
  * the AI answered). Throws [java.io.IOException] when there is no answer.
  */
-internal suspend fun runArScan(captured: CapturedFrame?, placement: ArPlacement, service: ArScanService): ArScanOutcome {
+internal suspend fun runArScan(
+    captured: CapturedFrame?,
+    placement: ArPlacement,
+    service: ArScanService,
+    language: String
+): ArScanOutcome {
     if (captured == null) return ArScanOutcome(null, emptyList())
     val jpeg = withContext(Dispatchers.Default) { captured.toUprightJpeg() }
-    val result = service.scan(jpeg)
+    val result = service.scan(jpeg, language)
     val session = placement.session
     Log.i(
         "ArScan",
         "device=${result.deviceName} controls=${result.controls.size} session=${session != null}"
     )
     val markers = mutableListOf<ScanMarker>()
-    val labels = result.controls.map { control ->
+    val labels = result.controls.mapIndexed { index, control ->
         val anchor = session?.anchorFor(captured, control.x, control.y)
-        anchor?.let { markers += ScanMarker(it, control.label) }
+        anchor?.let { markers += ScanMarker(it, index, control.label) }
         ScanLabel(control.label, control.description, placed = anchor != null)
     }
     placement.showScan(markers)

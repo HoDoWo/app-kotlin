@@ -49,7 +49,7 @@ class ArGuideViewModelTest {
         viewModel.onPermissionResult(granted = false, permanentlyDenied = true)
 
         assertEquals(ArCameraPermission.PERMANENTLY_DENIED, viewModel.state.value.permission)
-        assertTrue(viewModel.state.value.message.contains("Settings"))
+        assertEquals(listOf(ArLine(ArText.CAMERA_OFF)), viewModel.state.value.message)
     }
 
     @Test
@@ -81,7 +81,7 @@ class ArGuideViewModelTest {
         val state = viewModel.state.value
         assertEquals(ArGuidePhase.PLACED, state.phase)
         assertFalse(state.canPlace)
-        assertTrue(state.message.startsWith("Arrow placed"))
+        assertEquals(listOf(ArLine(ArText.ARROW_PLACED)), state.message)
     }
 
     @Test
@@ -91,7 +91,7 @@ class ArGuideViewModelTest {
 
         viewModel.onTrackingIssue(ArTrackingIssue.INSUFFICIENT_LIGHT)
         assertEquals(ArGuidePhase.TRACKING_LOST, viewModel.state.value.phase)
-        assertTrue(viewModel.state.value.message.contains("dark"))
+        assertEquals(listOf(ArLine(ArText.TOO_DARK)), viewModel.state.value.message)
 
         viewModel.onTrackingIssue(ArTrackingIssue.NONE)
         assertEquals(ArGuidePhase.PLACED, viewModel.state.value.phase)
@@ -130,7 +130,7 @@ class ArGuideViewModelTest {
         assertEquals(ArGuidePhase.SESSION_ERROR, state.phase)
         assertFalse(state.showsCamera)
         assertFalse(state.placed)
-        assertTrue(state.message.contains("Google Play Services for AR"))
+        assertEquals(listOf(ArLine(ArText.INSTALL_NEEDED)), state.message)
     }
 
     @Test
@@ -161,7 +161,7 @@ class ArGuideViewModelTest {
         } + ArTrackingIssue.values().map {
             ArGuideUiState(permission = ArCameraPermission.GRANTED, trackingIssue = it, placed = true)
         }
-        states.forEach { assertTrue(it.message.isNotBlank()) }
+        states.forEach { assertTrue(it.message.isNotEmpty()) }
     }
 
     // Guide in AR (#241)
@@ -204,23 +204,21 @@ class ArGuideViewModelTest {
     @Test
     fun twoPointAlignmentAsksForEachControlInTurn() {
         val viewModel = guided()
-        assertEquals("Place point", viewModel.state.value.placeLabel)
-        assertTrue(viewModel.state.value.message.contains("step 1 (Open the door)"))
-        assertTrue(viewModel.state.value.message.contains("1 of 2"))
+        assertEquals(ArText.PLACE_POINT, viewModel.state.value.placeLabel)
+        assertEquals(listOf(ArLine(ArText.AIM_FIRST, listOf(1, "Open the door"))), viewModel.state.value.message)
 
         viewModel.onArrowPlaced()
         val second = viewModel.state.value
         assertTrue(second.needsSecondPoint)
         assertEquals(ArGuidePhase.READY_TO_PLACE, second.phase)
-        assertTrue(second.message.contains("step 3 (Press Start)"))
-        assertTrue(second.message.contains("2 of 2"))
+        assertEquals(listOf(ArLine(ArText.AIM_SECOND, listOf(3, "Press Start"))), second.message)
 
         viewModel.onArrowPlaced()
         val aligned = viewModel.state.value
         assertTrue(aligned.aligned)
         assertEquals(ArGuidePhase.PLACED, aligned.phase)
-        assertTrue(aligned.message.contains("marked on the appliance"))
-        assertEquals("Re-align", aligned.recenterLabel)
+        assertEquals(listOf(ArLine(ArText.STEP_MARKED, listOf(1, 3))), aligned.message)
+        assertEquals(ArText.REALIGN, aligned.recenterLabel)
     }
 
     @Test
@@ -231,7 +229,7 @@ class ArGuideViewModelTest {
 
         val state = viewModel.state.value
         assertTrue(state.needsSecondPoint)
-        assertTrue(state.message.contains("don't match the photo"))
+        assertEquals(listOf(ArLine(ArText.ALIGN_MISMATCH, listOf(3, "Press Start"))), state.message)
 
         viewModel.onArrowPlaced()
         assertFalse(viewModel.state.value.alignFailed)
@@ -263,7 +261,7 @@ class ArGuideViewModelTest {
         val viewModel = guided(initial = 1)
         viewModel.onArrowPlaced()
         viewModel.onArrowPlaced()
-        assertTrue(viewModel.state.value.message.contains("no point on the appliance"))
+        assertEquals(listOf(ArLine(ArText.STEP_NO_POINT, listOf(2))), viewModel.state.value.message)
     }
 
     @Test
@@ -290,7 +288,7 @@ class ArGuideViewModelTest {
         val steps = listOf(ManualStep(1, "Turn the dial", "", StepPin(0.5f, 0.5f)), ManualStep(2, "Wait", "", null))
         val viewModel = guided(steps)
         assertEquals(AlignPlan.OnePoint(0), viewModel.state.value.plan)
-        assertFalse(viewModel.state.value.message.contains("1 of 2"))
+        assertEquals(listOf(ArLine(ArText.AIM_SINGLE, listOf(1, "Turn the dial"))), viewModel.state.value.message)
 
         viewModel.onArrowPlaced()
         assertEquals(ArGuidePhase.PLACED, viewModel.state.value.phase)
@@ -301,10 +299,10 @@ class ArGuideViewModelTest {
         val steps = listOf(ManualStep(1, "Unplug", "", null))
         val viewModel = guided(steps)
         assertEquals(AlignPlan.Free, viewModel.state.value.plan)
-        assertEquals("Place arrow", viewModel.state.value.placeLabel)
+        assertEquals(ArText.PLACE_ARROW, viewModel.state.value.placeLabel)
 
         viewModel.onArrowPlaced()
-        assertTrue(viewModel.state.value.message.contains("Previous and Next"))
+        assertEquals(listOf(ArLine(ArText.ARROW_PLACED_GUIDE)), viewModel.state.value.message)
     }
 
     @Test
@@ -346,7 +344,7 @@ class ArGuideViewModelTest {
         assertTrue(state.searching)
         assertFalse(state.canAutoAlign)
         assertFalse(state.canPlace)
-        assertTrue(state.message.contains("Looking for steps 1 and 3"))
+        assertEquals(listOf(ArLine(ArText.LOOKING_FOR_STEPS, listOf(1, 3))), state.message)
     }
 
     @Test
@@ -370,8 +368,10 @@ class ArGuideViewModelTest {
 
         val state = viewModel.state.value
         assertTrue(state.needsSecondPoint)
-        assertTrue(state.message.startsWith("Step 1 found."))
-        assertTrue(state.message.contains("step 3"))
+        assertEquals(
+            listOf(ArLine(ArText.AUTO_FIRST, listOf(1)), ArLine(ArText.AIM_SECOND, listOf(3, "Press Start"))),
+            state.message
+        )
 
         viewModel.onArrowPlaced()
         assertEquals(ArGuidePhase.PLACED, viewModel.state.value.phase)
@@ -384,15 +384,15 @@ class ArGuideViewModelTest {
         viewModel.onAutoAlignStarted()
         viewModel.onAutoAlignFinished(AutoAlignResult.NONE)
         assertFalse(viewModel.state.value.placed)
-        assertTrue(viewModel.state.value.message.startsWith("The AI couldn't find the controls."))
+        assertEquals(ArLine(ArText.AUTO_NONE), viewModel.state.value.message.first())
         assertTrue(viewModel.state.value.canAutoAlign)
 
         viewModel.onAutoAlignStarted()
         viewModel.onAutoAlignFinished(AutoAlignResult.ERROR)
-        assertTrue(viewModel.state.value.message.startsWith("Automatic search didn't work"))
+        assertEquals(ArLine(ArText.AUTO_ERROR), viewModel.state.value.message.first())
 
         viewModel.onArrowPlaced()
-        assertFalse(viewModel.state.value.message.contains("didn't work"))
+        assertFalse(viewModel.state.value.message.any { it.text == ArText.AUTO_ERROR })
     }
 
     @Test
@@ -423,12 +423,12 @@ class ArGuideViewModelTest {
         val viewModel = scanning()
         assertTrue(viewModel.state.value.scanMode)
         assertTrue(viewModel.state.value.shouldAutoScan)
-        assertTrue(viewModel.state.value.message.contains("appliance or a keyboard"))
+        assertEquals(listOf(ArLine(ArText.SCAN_IDLE)), viewModel.state.value.message)
 
         viewModel.onScanStarted()
         assertFalse(viewModel.state.value.shouldAutoScan)
         assertFalse(viewModel.state.value.canScan)
-        assertTrue(viewModel.state.value.message.startsWith("Looking at what's in front of you"))
+        assertEquals(listOf(ArLine(ArText.SCAN_SEARCHING)), viewModel.state.value.message)
     }
 
     @Test
@@ -454,7 +454,7 @@ class ArGuideViewModelTest {
 
         val state = viewModel.state.value
         assertEquals(ScanStatus.DONE, state.scanStatus)
-        assertEquals("Keyboard: 2 main controls labelled.", state.message)
+        assertEquals(listOf(ArLine(ArText.SCAN_ALL, listOf("Keyboard", 2))), state.message)
         assertTrue(state.canScan)
         assertFalse(state.shouldAutoScan)
     }
@@ -464,7 +464,7 @@ class ArGuideViewModelTest {
         val viewModel = scanning()
         viewModel.onScanStarted()
         viewModel.onScanFinished("Oven", listOf(ScanLabel("Light", "", true), ScanLabel("Timer", "", false)))
-        assertTrue(viewModel.state.value.message.contains("1 of 2 controls labelled"))
+        assertEquals(listOf(ArLine(ArText.SCAN_SOME, listOf("Oven", 1, 2))), viewModel.state.value.message)
     }
 
     @Test
@@ -472,7 +472,7 @@ class ArGuideViewModelTest {
         val viewModel = scanning()
         viewModel.onScanStarted()
         viewModel.onScanFinished("Fridge", emptyList())
-        assertTrue(viewModel.state.value.message.contains("get closer"))
+        assertEquals(listOf(ArLine(ArText.SCAN_NO_CONTROLS, listOf("Fridge"))), viewModel.state.value.message)
     }
 
     @Test
@@ -482,7 +482,7 @@ class ArGuideViewModelTest {
         viewModel.onScanFinished(null, listOf(ScanLabel("x", "", true)))
         assertEquals(ScanStatus.NOTHING, viewModel.state.value.scanStatus)
         assertTrue(viewModel.state.value.scanLabels.isEmpty())
-        assertTrue(viewModel.state.value.message.startsWith("No appliance or keyboard found"))
+        assertEquals(listOf(ArLine(ArText.SCAN_NOTHING)), viewModel.state.value.message)
 
         viewModel.onScanStarted()
         viewModel.onScanError()
@@ -501,5 +501,31 @@ class ArGuideViewModelTest {
         val state = viewModel.state.value
         assertEquals(ScanStatus.IDLE, state.scanStatus)
         assertTrue(state.scanAvailable)
+    }
+
+    @Test
+    fun theFirstControlOnTheDeviceStartsSelectedAndCanBeChanged() {
+        val viewModel = scanning()
+        viewModel.onScanStarted()
+        viewModel.onScanFinished(
+            "Oven",
+            listOf(ScanLabel("Timer", "", placed = false), ScanLabel("Light", "", true), ScanLabel("Fan", "", true))
+        )
+        assertEquals(1, viewModel.state.value.selectedScan)
+
+        viewModel.selectScan(2)
+        assertEquals(2, viewModel.state.value.selectedScan)
+        viewModel.selectScan(2)
+        assertNull(viewModel.state.value.selectedScan)
+        viewModel.selectScan(9)
+        assertNull(viewModel.state.value.selectedScan)
+    }
+
+    @Test
+    fun nothingIsSelectedWhenNoControlIsOnTheDevice() {
+        val viewModel = scanning()
+        viewModel.onScanStarted()
+        viewModel.onScanFinished("Oven", listOf(ScanLabel("Timer", "", placed = false)))
+        assertNull(viewModel.state.value.selectedScan)
     }
 }
