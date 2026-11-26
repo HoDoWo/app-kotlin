@@ -67,3 +67,30 @@ class UserPreferencesTest {
         assertEquals("ca", decodePreferences(mapOf(PreferenceKeys.LANGUAGE_TAG to "ca")).languageTag)
     }
 }
+
+class ThemeResolutionTest {
+
+    @Test
+    fun followingTheSystemUsesItsSetting() {
+        assertEquals(true, ThemeMode.SYSTEM.isDark(systemDark = true))
+        assertEquals(false, ThemeMode.SYSTEM.isDark(systemDark = false))
+    }
+
+    @Test
+    fun aManualChoiceIgnoresTheSystem() {
+        assertEquals(false, ThemeMode.LIGHT.isDark(systemDark = true))
+        assertEquals(true, ThemeMode.DARK.isDark(systemDark = false))
+    }
+
+    @Test
+    fun theAppScaleMultipliesTheSystemOne() {
+        assertEquals(1.3f, appFontScale(systemScale = 1f, chosenScale = 1.3f), 1e-6f)
+        assertEquals(1.5f, appFontScale(systemScale = 1.5f, chosenScale = 1f), 1e-6f)
+        assertEquals(1.8f, appFontScale(systemScale = 1.2f, chosenScale = 1.5f), 1e-6f)
+    }
+
+    @Test
+    fun theAppScaleIsCapped() {
+        assertEquals(MAX_APP_FONT_SCALE, appFontScale(systemScale = 2f, chosenScale = 2f), 1e-6f)
+    }
+}

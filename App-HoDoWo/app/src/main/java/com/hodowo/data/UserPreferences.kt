@@ -91,3 +91,17 @@ fun encodePreferences(preferences: UserPreferences): Map<String, Any> = mapOf(
 
 private inline fun <reified T : Enum<T>> enumOrDefault(value: Any?, default: T): T =
     (value as? String)?.let { name -> enumValues<T>().firstOrNull { it.name == name } } ?: default
+
+/** Whether the app is dark: the user's choice, or the system's when they follow it. */
+fun ThemeMode.isDark(systemDark: Boolean): Boolean = when (this) {
+    ThemeMode.SYSTEM -> systemDark
+    ThemeMode.LIGHT -> false
+    ThemeMode.DARK -> true
+}
+
+/** Above this the layouts cannot hold the text any more (system 2× by app 2× would be 4×). */
+const val MAX_APP_FONT_SCALE = 3f
+
+/** The text scale the app uses: the system's (accessibility settings) times the user's in-app choice. */
+fun appFontScale(systemScale: Float, chosenScale: Float): Float =
+    (systemScale * chosenScale).coerceAtMost(MAX_APP_FONT_SCALE)
