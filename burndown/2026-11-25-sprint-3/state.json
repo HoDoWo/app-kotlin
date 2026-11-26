@@ -228,20 +228,20 @@
   "title": "Pseudolocale and RTL validation for text expansion"
  },
  "PVTI_lADOFCkyKM4Bl88jzhJ4lCg": {
-  "c": 3.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 239,
   "title": "ARCore SDK, capability check and non-AR fallback"
  },
  "PVTI_lADOFCkyKM4Bl88jzhJ4lTE": {
-  "c": 4.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 240,
   "title": "AR session lifecycle, camera permission and plane anchoring"
  },
  "PVTI_lADOFCkyKM4Bl88jzhJ4lio": {
-  "c": 5.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 241,
   "title": "AR guide overlay, step navigation and supported-device test matrix"
  },
