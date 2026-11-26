@@ -268,7 +268,7 @@ internal fun ArCameraView(
 
         placement.scanMarkers.forEach { marker ->
             // Keyed on the marker only: disposing an AnchorNode detaches its anchor, so a
-            // selection change only redraws the label in place (see ArTextNode).
+            // selection change only rebuilds the label (see ArTextNode).
             key(marker) {
                 AnchorNode(anchor = marker.anchor, apply = { isPositionEditable = false }) {
                     SphereNode(radius = SCAN_DOT_RADIUS, materialInstance = arrowMaterial)
