@@ -45,13 +45,15 @@ internal suspend fun runAutoAlign(
     }
 
     val session = placement.session ?: return AutoAlignResult.NONE
-    val first = points.firstOrNull { it.step == firstStep.number }
-        ?.let { session.surfacePointFor(captured, it.x, it.y) }
-        ?: return AutoAlignResult.NONE
-    if (!placement.anchorAt(first)) return AutoAlignResult.NONE
+    val firstFound = points.firstOrNull { it.step == firstStep.number } ?: return AutoAlignResult.NONE
+    val secondFound = points.firstOrNull { it.step == secondStep.number }
+    val surface = session.surfacePointsFor(
+        captured,
+        listOfNotNull(firstFound, secondFound).map { it.x to it.y }
+    )
+    if (!placement.anchorAt(surface[0])) return AutoAlignResult.NONE
 
-    val second = points.firstOrNull { it.step == secondStep.number }
-        ?.let { session.surfacePointFor(captured, it.x, it.y) }
+    val second = surface.getOrNull(1)
     val aligned = second != null &&
         placement.alignSecondAt(second.pose.translation, firstPin, secondPin, state.photoAspect)
     return if (aligned) AutoAlignResult.BOTH else AutoAlignResult.FIRST_ONLY
