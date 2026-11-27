@@ -45,3 +45,5 @@ timestamp,issue,title,type,delta_hours
 2026-11-25T17:12:21+00:00,239,"ARCore SDK, capability check and non-AR fallback",completed,-3.0
 2026-11-25T17:46:00+00:00,240,"AR session lifecycle, camera permission and plane anchoring",completed,-4.0
 2026-11-25T18:08:19+00:00,241,"AR guide overlay, step navigation and supported-device test matrix",completed,-5.0
+2026-11-27T10:59:23+00:00,211,Persist appearance and accessibility preferences with DataStore,completed,-2.0
+2026-11-27T10:59:21+00:00,212,"Apply theme, font scale and colour filter at the app root",completed,-2.0

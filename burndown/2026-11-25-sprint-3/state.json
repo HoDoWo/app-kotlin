@@ -60,14 +60,14 @@
   "title": "Settings hub: appearance, accessibility and language in one place"
  },
  "PVTI_lADOFCkyKM4Bl88jzhJ4gZ0": {
-  "c": 2.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 211,
   "title": "Persist appearance and accessibility preferences with DataStore"
  },
  "PVTI_lADOFCkyKM4Bl88jzhJ4gjA": {
-  "c": 2.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 212,
   "title": "Apply theme, font scale and colour filter at the app root"
  },
