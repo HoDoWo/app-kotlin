@@ -24,12 +24,15 @@
     <string name="settings_text_size_custom">%1$d%%</string>
     <string name="settings_text_size_preview">Turn the timer knob to 30 minutes.</string>
 
+    <string name="settings_high_contrast">High contrast</string>
+    <string name="settings_high_contrast_summary">Stronger colours for text and outlines</string>
+
     <string name="settings_app_language">App language</string>
     <string name="settings_language_system">System default</string>
 
     <string name="settings_reset">Reset to defaults</string>
     <string name="settings_reset_title">Reset settings?</string>
-    <string name="settings_reset_body">Theme, text size and language go back to the system defaults.</string>
+    <string name="settings_reset_body">Theme, text size, contrast and language go back to the defaults.</string>
     <string name="settings_reset_confirm">Reset</string>
     <string name="settings_cancel">Cancel</string>
     <string name="settings_on">On</string>

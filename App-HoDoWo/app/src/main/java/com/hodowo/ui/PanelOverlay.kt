@@ -1,5 +1,10 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.ControlButton
+import com.hodowo.ui.theme.ControlDial
+import com.hodowo.ui.theme.ControlSwitch
+import com.hodowo.ui.theme.ControlDisplay
+import com.hodowo.ui.theme.ControlOther
 import android.graphics.BitmapFactory
 import android.net.Uri
 
@@ -330,6 +335,9 @@ private fun PanelPhotoWithOverlay(
             modifier = Modifier.fillMaxSize()
         )
 
+        // Read here: the drawing below is not composable.
+        val controlColors = ControlType.entries.associateWith { controlColor(it) }
+
         // Transparent layer on top that draws the boxes and captures the taps.
         Canvas(
             modifier = Modifier
@@ -353,7 +361,7 @@ private fun PanelPhotoWithOverlay(
             controls.forEach { control ->
 
                 val rect = controlScreenRect(control.box, placement)
-                val color = controlColor(control.type)
+                val color = controlColors.getValue(control.type)
                 val isSelected = control.id == selectedId
 
                 val topLeft = Offset(rect.left, rect.top)
@@ -429,12 +437,12 @@ private fun ControlType.label(): String =
         character.uppercase()
     }
 
-/** Colour used to draw a control, one per kind. */
+/** Colour used to draw a control, one per kind (#214: from the theme, light and dark). */
+@Composable
 private fun controlColor(type: ControlType): Color = when (type) {
-
-    ControlType.BUTTON -> Color(0xFF2196F3)
-    ControlType.DIAL -> Color(0xFFFF9800)
-    ControlType.SWITCH -> Color(0xFF9C27B0)
-    ControlType.DISPLAY -> Color(0xFF4CAF50)
-    ControlType.OTHER -> Color(0xFF9E9E9E)
+    ControlType.BUTTON -> ControlButton
+    ControlType.DIAL -> ControlDial
+    ControlType.SWITCH -> ControlSwitch
+    ControlType.DISPLAY -> ControlDisplay
+    ControlType.OTHER -> ControlOther
 }

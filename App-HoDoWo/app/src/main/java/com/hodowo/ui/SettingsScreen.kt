@@ -119,6 +119,15 @@ fun SettingsScreen(viewModel: AppPreferencesViewModel, onBack: () -> Unit) {
                 )
             }
 
+            item {
+                SwitchRow(
+                    title = stringResource(R.string.settings_high_contrast),
+                    summary = stringResource(R.string.settings_high_contrast_summary),
+                    checked = current.highContrast,
+                    onChange = viewModel::setHighContrast
+                )
+            }
+
             item { SectionHeader(R.string.settings_section_language) }
             item {
                 ValueRow(

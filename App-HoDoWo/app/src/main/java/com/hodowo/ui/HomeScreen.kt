@@ -1,5 +1,7 @@
 ﻿package com.hodowo.ui
 
+import com.hodowo.ui.theme.TertiaryFixed
+import com.hodowo.ui.theme.OnPrimary
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -95,7 +97,6 @@ import com.hodowo.viewmodel.RecentManual
 import com.hodowo.viewmodel.relativeTimeLabel
 
 /** Light orange of the "Market" action (tertiary-fixed in the mockup). */
-private val TertiaryFixed = Color(0xFFFFDDB8)
 
 /**
  * Home screen from the Stitch mockup: greeting, search, quick actions,
@@ -331,7 +332,7 @@ private fun SwitchOption(label: String, selected: Boolean, onClick: () -> Unit) 
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp,
-            color = if (selected) Color.White else OnSurfaceVariant,
+            color = if (selected) OnPrimary else OnSurfaceVariant,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
         )
     }
@@ -891,7 +892,7 @@ private fun ManualDetailDialog(
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Surface(shape = CircleShape, color = Primary, modifier = Modifier.size(28.dp)) {
                             Box(contentAlignment = Alignment.Center) {
-                                Text(text = "${step.number}", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(text = "${step.number}", color = OnPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             }
                         }
                         Column(modifier = Modifier.weight(1f)) {

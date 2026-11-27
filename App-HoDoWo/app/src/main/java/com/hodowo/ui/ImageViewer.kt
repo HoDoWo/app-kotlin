@@ -1,5 +1,7 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OnOverlay
+import com.hodowo.ui.theme.MediaBackground
 import android.Manifest
 import android.content.ContentValues
 import android.content.Context
@@ -94,7 +96,7 @@ fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black)
+                .background(MediaBackground)
         ) {
             AsyncImage(
                 model = ImageRequest.Builder(context)
@@ -140,7 +142,7 @@ fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = OnOverlay)
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 ImageDownloadButton(url = url)
@@ -149,7 +151,7 @@ fun FullscreenImageViewer(url: String, onDismiss: () -> Unit) {
 
             Text(
                 text = "Pinch or double-tap to zoom",
-                color = Color.White.copy(alpha = 0.7f),
+                color = OnOverlay.copy(alpha = 0.7f),
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -205,7 +207,7 @@ internal fun ImageDownloadButton(url: String) {
 
     if (isSaving) {
         CircularProgressIndicator(
-            color = Color.White,
+            color = OnOverlay,
             strokeWidth = 2.dp,
             modifier = Modifier
                 .padding(12.dp)
@@ -213,7 +215,7 @@ internal fun ImageDownloadButton(url: String) {
         )
     } else {
         IconButton(onClick = { onDownloadClick() }) {
-            Icon(Icons.Default.Download, contentDescription = "Download", tint = Color.White)
+            Icon(Icons.Default.Download, contentDescription = "Download", tint = OnOverlay)
         }
     }
 }

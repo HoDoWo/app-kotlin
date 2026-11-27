@@ -1,5 +1,6 @@
 package com.hodowo.ui.components
 
+import com.hodowo.ui.theme.OnPrimary
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -228,7 +229,7 @@ fun NewChatButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     ExtendedFloatingActionButton(
         onClick = onClick,
         containerColor = Primary,
-        contentColor = Color.White,
+        contentColor = OnPrimary,
         shape = RoundedCornerShape(16.dp),
         icon = { Icon(Icons.Default.Add, contentDescription = null) },
         text = { Text("New chat", fontWeight = FontWeight.SemiBold) },

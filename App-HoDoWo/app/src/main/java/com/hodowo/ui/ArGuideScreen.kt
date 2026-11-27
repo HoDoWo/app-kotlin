@@ -1,5 +1,6 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.MediaBackground
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -152,7 +153,7 @@ fun ArGuideScreen(
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MediaBackground)
     ) {
         if (state.showsCamera) {
             key(state.sessionKey) {

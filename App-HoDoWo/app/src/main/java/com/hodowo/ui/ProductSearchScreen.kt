@@ -1,5 +1,6 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.Primary
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import com.hodowo.ui.theme.PrimaryFixed
@@ -118,8 +119,9 @@ import com.hodowo.viewmodel.ProductViewModel
 import java.util.Locale
 
 // The deep indigo of the HoDoWo mockups.
-private val SearchPrimary = Color(0xFF26008C)
-private val SearchPrimaryContainer = Color(0xFF3B02C7)
+// The search accents follow the theme (#214).
+private val SearchPrimary: Color @Composable get() = Primary
+private val SearchPrimaryContainer: Color @Composable get() = Primary
 
 /**
  * Product search (#139): search box, type chips (all / new / second-hand / spare parts),
