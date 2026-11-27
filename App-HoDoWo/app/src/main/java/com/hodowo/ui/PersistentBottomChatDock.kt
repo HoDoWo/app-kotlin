@@ -1,8 +1,11 @@
 package com.hodowo.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -14,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Icon
@@ -22,10 +26,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hodowo.ui.theme.Primary
@@ -33,7 +41,7 @@ import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLowest
 
 /**
- * Persistent Bottom Chat & Voice Repair Dock.
+ * Persistent Bottom Chat & Voice Repair Dock with Speech-to-Text hold-to-talk.
  */
 @Composable
 fun PersistentBottomChatDock(
@@ -42,7 +50,10 @@ fun PersistentBottomChatDock(
     onSend: () -> Unit,
     onOpenCamera: () -> Unit,
     onPickGallery: () -> Unit,
-    isSending: Boolean
+    isSending: Boolean,
+    isListening: Boolean = false,
+    onMicPress: () -> Unit = {},
+    onMicRelease: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -67,7 +78,7 @@ fun PersistentBottomChatDock(
                         .fillMaxWidth()
                         .padding(horizontal = 6.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     // Camera Action
                     IconButton(
@@ -95,13 +106,14 @@ fun PersistentBottomChatDock(
                         )
                     }
 
-                    // Text Input Field
+                    // Text Input Field / Listening Placeholder
                     Box(modifier = Modifier.weight(1f)) {
                         if (text.isEmpty()) {
                             Text(
-                                text = "Ask or describe the appliance issue...",
+                                text = if (isListening) "Listening... speak now" else "Ask or describe the appliance issue...",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                color = if (isListening) Primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                fontWeight = if (isListening) FontWeight.SemiBold else FontWeight.Normal
                             )
                         }
                         BasicTextField(
@@ -114,6 +126,46 @@ fun PersistentBottomChatDock(
                             maxLines = 4,
                             modifier = Modifier.fillMaxWidth()
                         )
+                    }
+
+                    // Hold-to-Talk Microphone Button
+                    val activeMicColor = Color(0xFFE53935)
+                    val animatedMicBg by animateColorAsState(
+                        targetValue = if (isListening) activeMicColor else Color.Transparent,
+                        label = "micBg"
+                    )
+                    val animatedMicScale by animateFloatAsState(
+                        targetValue = if (isListening) 1.15f else 1.0f,
+                        label = "micScale"
+                    )
+
+                    Surface(
+                        shape = CircleShape,
+                        color = animatedMicBg,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .scale(animatedMicScale)
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = {
+                                        onMicPress()
+                                        try {
+                                            awaitRelease()
+                                        } finally {
+                                            onMicRelease()
+                                        }
+                                    }
+                                )
+                            }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Hold to speak",
+                                tint = if (isListening) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
 
                     // Send Button
