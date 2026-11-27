@@ -1,5 +1,6 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.Rating
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -46,7 +47,6 @@ import com.hodowo.viewmodel.ReviewEditorState
 import com.hodowo.viewmodel.relativeTimeLabel
 import java.util.Locale
 
-private val StarColor = Color(0xFFEF9900)
 
 /**
  * "Customer Reviews" of the product page: the average with the stars, how many
@@ -136,7 +136,7 @@ private fun SummaryCard(summary: ReviewsSummary) {
                         ) {
                             Box(
                                 modifier = Modifier.fillMaxWidth(share).height(6.dp).clip(RoundedCornerShape(3.dp))
-                                    .background(StarColor)
+                                    .background(Rating)
                             )
                         }
                         Text(
@@ -198,7 +198,7 @@ private fun Stars(rating: Int, size: Int) {
             Icon(
                 Icons.Default.Star,
                 contentDescription = null,
-                tint = if (index < rating) StarColor else OutlineVariant,
+                tint = if (index < rating) Rating else OutlineVariant,
                 modifier = Modifier.size(size.dp)
             )
         }
@@ -218,7 +218,7 @@ private fun ReviewEditorDialog(editor: ReviewEditorState, viewModel: ProductRevi
                             Icon(
                                 imageVector = if (stars <= editor.rating) Icons.Default.Star else Icons.Outlined.StarOutline,
                                 contentDescription = if (stars == 1) "1 star" else "$stars stars",
-                                tint = if (stars <= editor.rating) StarColor else OutlineVariant,
+                                tint = if (stars <= editor.rating) Rating else OutlineVariant,
                                 modifier = Modifier.size(32.dp)
                             )
                         }

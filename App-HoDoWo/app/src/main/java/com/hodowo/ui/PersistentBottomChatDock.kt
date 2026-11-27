@@ -2,6 +2,7 @@ package com.hodowo.ui
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import com.hodowo.ui.theme.OnPrimary
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -181,7 +182,7 @@ fun PersistentBottomChatDock(
                             Icon(
                                 imageVector = Icons.Default.Send,
                                 contentDescription = "Send",
-                                tint = Color.White,
+                                tint = OnPrimary,
                                 modifier = Modifier.size(16.dp)
                             )
                         }

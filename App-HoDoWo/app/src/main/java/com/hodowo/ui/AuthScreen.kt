@@ -1,5 +1,10 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OverlayBrandLight
+import com.hodowo.ui.theme.OverlayBrand
+import com.hodowo.ui.theme.OnOverlay
+import com.hodowo.ui.theme.OnPrimary
+import com.hodowo.ui.theme.SurfaceContainerLowest
 import androidx.compose.ui.res.stringResource
 import com.hodowo.R
 import android.content.Context
@@ -170,25 +175,25 @@ private fun AuthHeader() {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 36.dp, bottomEnd = 36.dp))
-            .background(Brush.linearGradient(listOf(Primary, PrimaryContainer)))
+            .background(Brush.linearGradient(listOf(OverlayBrand, OverlayBrandLight)))
             .statusBarsPadding()
             .padding(start = 24.dp, end = 24.dp, top = 28.dp, bottom = (28 + HEADER_OVERLAP).dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Surface(shape = RoundedCornerShape(24.dp), color = Color.White.copy(alpha = 0.16f)) {
+            Surface(shape = RoundedCornerShape(24.dp), color = OnOverlay.copy(alpha = 0.16f)) {
                 HoDoWoLogo(size = 72.dp, modifier = Modifier.padding(10.dp))
             }
             Text(
                 stringResource(R.string.brand_name),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
+                color = OnOverlay,
             )
             Text(
                 stringResource(R.string.auth_tagline),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.88f),
+                color = OnOverlay.copy(alpha = 0.88f),
                 textAlign = TextAlign.Center,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
@@ -205,13 +210,13 @@ private fun FeaturePill(icon: ImageVector, label: String) {
     Row(
         modifier = Modifier
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.16f))
+            .background(OnOverlay.copy(alpha = 0.16f))
             .padding(horizontal = 12.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, color = Color.White)
+        Icon(icon, contentDescription = null, tint = OnOverlay, modifier = Modifier.size(16.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, color = OnOverlay)
     }
 }
 
@@ -461,7 +466,7 @@ private fun ModeTab(label: String, selected: Boolean, enabled: Boolean, modifier
             label,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
-            color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            color = if (selected) OnPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -473,7 +478,7 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
     focusedLeadingIconColor = Primary,
     focusedLabelColor = Primary,
     unfocusedContainerColor = PrimaryFixed.copy(alpha = 0.18f),
-    focusedContainerColor = Color.White,
+    focusedContainerColor = SurfaceContainerLowest,
 )
 
 @Composable

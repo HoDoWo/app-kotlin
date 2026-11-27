@@ -1,5 +1,6 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.Primary
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -109,8 +110,9 @@ import java.util.Date
 import java.util.Locale
 
 // The deep indigo of the HoDoWo mockups.
-private val OrdersPrimary = Color(0xFF26008C)
-private val OrdersPrimaryContainer = Color(0xFF3B02C7)
+// The order accents follow the theme (#214).
+private val OrdersPrimary: Color @Composable get() = Primary
+private val OrdersPrimaryContainer: Color @Composable get() = Primary
 
 // ====================== Order confirmation ======================
 

@@ -86,7 +86,11 @@ fun RegularAiTextBubble(
             } else {
                 val textToDisplay = if (message.isStreaming) (message.text ?: "") + " ▍" else (message.text ?: "")
                 // The AI writes Markdown: show bold, lists and headings instead of the raw markers.
-                val styled = remember(textToDisplay) { markdownText(textToDisplay) }
+                val linkColor = Primary
+                val codeBackground = SurfaceContainerHigh
+                val styled = remember(textToDisplay, linkColor, codeBackground) {
+                    buildMarkdown(textToDisplay, linkColor, codeBackground)
+                }
                 Text(
                     text = styled,
                     style = MaterialTheme.typography.bodyLarge,
@@ -124,19 +128,23 @@ fun RegularAiTextBubble(
     }
 }
 
-/** The styled text of an AI answer, from [ChatMarkdown]. */
-internal fun markdownText(text: String): AnnotatedString = buildAnnotatedString {
+/** The styled text of an AI answer, from [ChatMarkdown], in the colours of the theme. */
+@Composable
+internal fun markdownText(text: String): AnnotatedString = buildMarkdown(text, Primary, SurfaceContainerHigh)
+
+/** [markdownText] with explicit colours, for use outside composition (e.g. in remember). */
+internal fun buildMarkdown(text: String, linkColor: Color, codeBackground: Color): AnnotatedString = buildAnnotatedString {
     ChatMarkdown.parse(text).forEach { span ->
-        withStyle(spanStyle(span.styles)) { append(span.text) }
+        withStyle(spanStyle(span.styles, linkColor, codeBackground)) { append(span.text) }
     }
 }
 
-private fun spanStyle(styles: Set<MdStyle>): SpanStyle = SpanStyle(
+private fun spanStyle(styles: Set<MdStyle>, linkColor: Color, codeBackground: Color): SpanStyle = SpanStyle(
     fontWeight = if (MdStyle.BOLD in styles) FontWeight.Bold else null,
     fontStyle = if (MdStyle.ITALIC in styles) FontStyle.Italic else null,
     fontFamily = if (MdStyle.CODE in styles) FontFamily.Monospace else null,
-    background = if (MdStyle.CODE in styles) SurfaceContainerHigh else Color.Unspecified,
-    color = if (MdStyle.LINK in styles) Primary else Color.Unspecified,
+    background = if (MdStyle.CODE in styles) codeBackground else Color.Unspecified,
+    color = if (MdStyle.LINK in styles) linkColor else Color.Unspecified,
     textDecoration = if (MdStyle.LINK in styles) TextDecoration.Underline else null,
     fontSize = if (MdStyle.HEADING in styles) 17.sp else TextUnit.Unspecified
 )

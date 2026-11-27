@@ -1,5 +1,7 @@
 package com.hodowo.ui
 
+import com.hodowo.ui.theme.OnOverlay
+import com.hodowo.ui.theme.OverlayBrand
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
@@ -32,7 +34,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.hodowo.ui.theme.Primary
 import com.hodowo.viewmodel.ScreenPoint
 
 private val CHIP_GAP = 6.dp
@@ -117,8 +118,8 @@ private fun LabelChip(label: OverlayLabel, modifier: Modifier) {
     ) {
         Surface(
             shape = CircleShape,
-            color = Primary,
-            border = BorderStroke(2.dp, Color.White),
+            color = OverlayBrand,
+            border = BorderStroke(2.dp, OnOverlay),
             shadowElevation = 6.dp
         ) {
             if (label.highlighted) {
@@ -126,20 +127,20 @@ private fun LabelChip(label: OverlayLabel, modifier: Modifier) {
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(start = 3.dp, end = 14.dp, top = 3.dp, bottom = 3.dp)
                 ) {
-                    Surface(shape = CircleShape, color = Color.White) {
+                    Surface(shape = CircleShape, color = OnOverlay) {
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
                                 .defaultMinSize(INNER_BADGE_SIZE, INNER_BADGE_SIZE)
                                 .padding(horizontal = 6.dp)
                         ) {
-                            Text(label.badge, color = Primary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(label.badge, color = OverlayBrand, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = label.text,
-                        color = Color.White,
+                        color = OnOverlay,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         maxLines = 1,
@@ -154,7 +155,7 @@ private fun LabelChip(label: OverlayLabel, modifier: Modifier) {
                         .defaultMinSize(BADGE_SIZE, BADGE_SIZE)
                         .padding(horizontal = 8.dp)
                 ) {
-                    Text(label.badge, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    Text(label.badge, color = OnOverlay, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
@@ -166,13 +167,13 @@ private fun LabelChip(label: OverlayLabel, modifier: Modifier) {
             val stemTop = size.height - tip
             if (stemTop > 0f) {
                 drawLine(
-                    color = Color.White,
+                    color = OnOverlay,
                     start = Offset(size.width / 2f, 0f),
                     end = Offset(size.width / 2f, stemTop),
                     strokeWidth = STEM_OUTLINE.toPx()
                 )
                 drawLine(
-                    color = Primary,
+                    color = OverlayBrand,
                     start = Offset(size.width / 2f, 0f),
                     end = Offset(size.width / 2f, stemTop),
                     strokeWidth = STEM_WIDTH.toPx()
@@ -184,7 +185,7 @@ private fun LabelChip(label: OverlayLabel, modifier: Modifier) {
                 lineTo(size.width / 2f, size.height)
                 close()
             }
-            drawPath(path, Primary)
+            drawPath(path, OverlayBrand)
         }
     }
 }

@@ -1078,6 +1078,7 @@ private val CONDITION_FILTERS = linkedMapOf("All" to "all", "Brand New" to "new"
  * purple for new products of the official partners, amber for second-hand items of
  * the community (the colour of the community, not the brand purple of the app).
  */
+@Composable
 private fun conditionColor(label: String): Color = when (label) {
     "Second-Hand" -> TertiaryContainer
     else -> Primary
@@ -1103,7 +1104,7 @@ private fun MarketFiltersSheet(
                 draftType = it
             }
             FilterGroup(title = "Condition", options = CONDITION_FILTERS.keys.toList(), selected = draftCondition,
-                colorOf = ::conditionColor, iconOf = { if (it == "Second-Hand") Icons.Default.Recycling else null }) {
+                colorOf = { conditionColor(it) }, iconOf = { if (it == "Second-Hand") Icons.Default.Recycling else null }) {
                 draftCondition = it
             }
             Text(
@@ -1134,7 +1135,7 @@ private fun FilterGroup(
     title: String,
     options: List<String>,
     selected: String,
-    colorOf: (String) -> Color,
+    colorOf: @Composable (String) -> Color,
     iconOf: (String) -> ImageVector? = { null },
     onSelect: (String) -> Unit
 ) {
