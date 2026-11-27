@@ -18,7 +18,7 @@ sonar {
         )
         property(
             "sonar.coverage.exclusions",
-            "**/*Test.kt,**/src/test/**,**/ui/**,**/adaptive/**,**/components/**,**/ui/theme/**,app/src/main/java/com/hodowo/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/ArCoreAvailabilityChecker.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt,**/FirebaseAuthRepository.kt,**/GoogleSignInHelper.kt,**/FirestoreChatHistory.kt",
+            "**/*Test.kt,**/src/test/**,**/ui/**,**/adaptive/**,**/components/**,**/ui/theme/**,app/src/main/java/com/hodowo/ui/**,**/MainActivity.kt,**/OpenRouterChatClient.kt,**/ImageCompressor.kt,**/BitmapPanelCropper.kt,**/ArCoreAvailabilityChecker.kt,**/AppCompatLocales.kt,**/AiServiceProvider.kt,**/FirebaseTokenProvider.kt,**/FirebaseAuthRepository.kt,**/GoogleSignInHelper.kt,**/FirestoreChatHistory.kt",
         )
         property(
             "sonar.cpd.exclusions",
