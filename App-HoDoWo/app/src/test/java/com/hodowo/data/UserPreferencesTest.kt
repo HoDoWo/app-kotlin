@@ -111,3 +111,20 @@ class AppLanguageTagTest {
         assertEquals("", appLanguageTag("fr-FR"))
     }
 }
+
+class AppLanguageObjectTest {
+
+    @Test
+    fun applySetsAndResetsApplicationLocales() {
+        AppLanguage.apply("es")
+        assertEquals("es", AppLanguage.current())
+
+        // Re-applying the same language tests the branch where locales are already equal
+        AppLanguage.apply("es")
+        assertEquals("es", AppLanguage.current())
+
+        // Empty tag goes back to empty system locale list
+        AppLanguage.apply("")
+        assertEquals("", AppLanguage.current())
+    }
+}
