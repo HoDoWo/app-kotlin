@@ -16,25 +16,41 @@ fun appLanguageTag(locales: String): String {
 }
 
 /**
- * The per-app language (#235), through AppCompat: Android 13+ stores it in the system
- * (and shows it in the app's language settings); below 13 AppCompat stores it.
- * Changing it recreates the activity once with the new strings.
+ * Where the per-app language lives, as BCP 47 tags ("it", "" for the system language).
+ * An interface so the logic of [AppLanguage] is tested without Android.
  */
+interface AppLocales {
+    fun get(): String
+    fun set(tags: String)
+}
+
+/**
+ * AppCompat per-app locales: Android 13+ stores them in the system (and shows them in
+ * the app's language settings); below 13 AppCompat stores them (`autoStoreLocales`).
+ * Setting them recreates the activity once with the new strings.
+ */
+object AppCompatLocales : AppLocales {
+    override fun get(): String = AppCompatDelegate.getApplicationLocales().toLanguageTags()
+
+    override fun set(tags: String) {
+        AppCompatDelegate.setApplicationLocales(
+            if (tags.isEmpty()) LocaleListCompat.getEmptyLocaleList() else LocaleListCompat.forLanguageTags(tags)
+        )
+    }
+}
+
+/** The per-app language (#235). */
 object AppLanguage {
+
+    /** Where the language is kept; tests replace it. */
+    var locales: AppLocales = AppCompatLocales
 
     /** Shows the app in [tag] ("" follows the system language). */
     fun apply(tag: String) {
-        val locales = if (tag.isEmpty()) {
-            LocaleListCompat.getEmptyLocaleList()
-        } else {
-            LocaleListCompat.forLanguageTags(tag)
-        }
-        // Setting the same list again does nothing, so this never loops.
-        if (AppCompatDelegate.getApplicationLocales() != locales) {
-            AppCompatDelegate.setApplicationLocales(locales)
-        }
+        // Setting the same language again would recreate the activity for nothing.
+        if (locales.get() != tag) locales.set(tag)
     }
 
     /** The language the app shows now, also when chosen in the system settings. */
-    fun current(): String = appLanguageTag(AppCompatDelegate.getApplicationLocales().toLanguageTags())
+    fun current(): String = appLanguageTag(locales.get())
 }
