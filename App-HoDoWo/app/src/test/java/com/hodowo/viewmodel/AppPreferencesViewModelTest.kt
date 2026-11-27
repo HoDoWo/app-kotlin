@@ -1,10 +1,12 @@
 package com.hodowo.viewmodel
 
+import android.content.Context
 import com.hodowo.data.ColourVisionMode
 import com.hodowo.data.FakePreferencesDataStore
 import com.hodowo.data.ThemeMode
 import com.hodowo.data.UserPreferences
 import com.hodowo.data.UserPreferencesRepository
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
@@ -15,6 +17,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -65,6 +69,22 @@ class AppPreferencesViewModelTest {
     }
 
     @Test
+    fun additionalPreferenceSettersUpdateTheStore() = runTest(dispatcher) {
+        val viewModel = createViewModel()
+
+        viewModel.setDynamicColour(true)
+        viewModel.setColourTint(0xFF2196F3.toInt(), 0.5f)
+        viewModel.setReduceMotion(true)
+
+        val published = viewModel.preferences.filterNotNull()
+            .first { it.reduceMotion }
+        assertTrue(published.dynamicColour)
+        assertEquals(0xFF2196F3.toInt(), published.colourTint)
+        assertEquals(0.5f, published.tintStrength, 0.001f)
+        assertTrue(published.reduceMotion)
+    }
+
+    @Test
     fun resetPublishesTheDefaults() = runTest(dispatcher) {
         val viewModel = createViewModel()
         viewModel.setHighContrast(true)
@@ -98,6 +118,17 @@ class AppPreferencesViewModelTest {
     }
 
     @Test
+    fun syncLanguageWhenEqualDoesNotChangeStore() = runTest(dispatcher) {
+        val viewModel = createViewModel()
+        viewModel.setLanguageTag("ca")
+
+        // Syncing same language when already ca
+        viewModel.syncLanguage("ca")
+
+        assertEquals("ca", viewModel.preferences.filterNotNull().first().languageTag)
+    }
+
+    @Test
     fun theLanguageChosenInTheSystemIsStoredButNotAppliedAgain() = runTest(dispatcher) {
         val viewModel = createViewModel()
 
@@ -105,5 +136,12 @@ class AppPreferencesViewModelTest {
 
         assertEquals("ca", viewModel.preferences.filterNotNull().first { it.languageTag == "ca" }.languageTag)
         assertEquals(emptyList<String>(), applied.toList())
+    }
+
+    @Test
+    fun factoryCreatesViewModelFactoryInstance() {
+        val context: Context = mockk(relaxed = true)
+        val factory = AppPreferencesViewModel.factory(context)
+        assertNotNull(factory)
     }
 }
