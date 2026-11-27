@@ -1,15 +1,14 @@
 package com.hodowo.viewmodel
 
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import android.content.Context
 import com.hodowo.data.ColourVisionMode
+import com.hodowo.data.FakePreferencesDataStore
 import com.hodowo.data.ThemeMode
 import com.hodowo.data.UserPreferences
 import com.hodowo.data.UserPreferencesRepository
-import kotlinx.coroutines.CoroutineScope
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -18,55 +17,50 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
-import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppPreferencesViewModelTest {
 
-    @get:Rule
-    val folder = TemporaryFolder()
-
     private val dispatcher = UnconfinedTestDispatcher()
-    private val storeScope = CoroutineScope(dispatcher + Job())
 
     @Before
     fun setUp() {
-        // viewModelScope uses Dispatchers.Main, which does not exist in unit tests.
         Dispatchers.setMain(dispatcher)
     }
 
     @After
     fun tearDown() {
-        storeScope.cancel()
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(): AppPreferencesViewModel {
-        val store = PreferenceDataStoreFactory.create(scope = storeScope) {
-            File(folder.root, "prefs_${System.nanoTime()}.preferences_pb")
+    /** The languages the view model asked the app to show, in order. */
+    private val applied = mutableListOf<String>()
+
+    private fun createViewModel(): AppPreferencesViewModel {
+        val store = FakePreferencesDataStore()
+        return AppPreferencesViewModel(UserPreferencesRepository(store)) {
+            synchronized(applied) { applied += it }
         }
-        return AppPreferencesViewModel(UserPreferencesRepository(store))
     }
 
     @Test
     fun theStoredChoicesArePublishedOnceRead() = runTest(dispatcher) {
-        val viewModel = viewModel()
+        val viewModel = createViewModel()
         assertEquals(UserPreferences(), viewModel.preferences.filterNotNull().first())
     }
 
     @Test
     fun aChangeIsPublishedAtOnce() = runTest(dispatcher) {
-        val viewModel = viewModel()
+        val viewModel = createViewModel()
 
         viewModel.setThemeMode(ThemeMode.DARK)
         viewModel.setFontScale(1.15f)
         viewModel.setColourVisionMode(ColourVisionMode.GRAYSCALE)
 
-        // The store writes its file off the test thread: wait for the last change.
         val published = viewModel.preferences.filterNotNull()
             .first { it.colourVisionMode == ColourVisionMode.GRAYSCALE }
         assertEquals(ThemeMode.DARK, published.themeMode)
@@ -75,14 +69,79 @@ class AppPreferencesViewModelTest {
     }
 
     @Test
+    fun additionalPreferenceSettersUpdateTheStore() = runTest(dispatcher) {
+        val viewModel = createViewModel()
+
+        viewModel.setDynamicColour(true)
+        viewModel.setColourTint(0xFF2196F3.toInt(), 0.5f)
+        viewModel.setReduceMotion(true)
+
+        val published = viewModel.preferences.filterNotNull()
+            .first { it.reduceMotion }
+        assertTrue(published.dynamicColour)
+        assertEquals(0xFF2196F3.toInt(), published.colourTint)
+        assertEquals(0.5f, published.tintStrength, 0.001f)
+        assertTrue(published.reduceMotion)
+    }
+
+    @Test
     fun resetPublishesTheDefaults() = runTest(dispatcher) {
-        val viewModel = viewModel()
+        val viewModel = createViewModel()
         viewModel.setHighContrast(true)
         viewModel.setLanguageTag("es")
-        viewModel.preferences.filterNotNull().first { it.languageTag == "es" }
 
         viewModel.reset()
 
-        assertEquals(UserPreferences(), viewModel.preferences.filterNotNull().first { !it.highContrast })
+        val reset = viewModel.preferences.filterNotNull().first { !it.highContrast }
+        assertEquals(UserPreferences(), reset)
+    }
+
+    @Test
+    fun aChosenLanguageIsStoredAndApplied() = runTest(dispatcher) {
+        val viewModel = createViewModel()
+
+        viewModel.setLanguageTag("it")
+
+        assertEquals("it", viewModel.preferences.filterNotNull().first { it.languageTag == "it" }.languageTag)
+        assertEquals(listOf("it"), applied.toList())
+    }
+
+    @Test
+    fun resetGoesBackToTheSystemLanguage() = runTest(dispatcher) {
+        val viewModel = createViewModel()
+        viewModel.setLanguageTag("es")
+
+        viewModel.reset()
+
+        assertEquals("", viewModel.preferences.filterNotNull().first { it.languageTag.isEmpty() }.languageTag)
+        assertEquals(listOf("es", ""), applied.toList())
+    }
+
+    @Test
+    fun syncLanguageWhenEqualDoesNotChangeStore() = runTest(dispatcher) {
+        val viewModel = createViewModel()
+        viewModel.setLanguageTag("ca")
+
+        // Syncing same language when already ca
+        viewModel.syncLanguage("ca")
+
+        assertEquals("ca", viewModel.preferences.filterNotNull().first().languageTag)
+    }
+
+    @Test
+    fun theLanguageChosenInTheSystemIsStoredButNotAppliedAgain() = runTest(dispatcher) {
+        val viewModel = createViewModel()
+
+        viewModel.syncLanguage("ca")
+
+        assertEquals("ca", viewModel.preferences.filterNotNull().first { it.languageTag == "ca" }.languageTag)
+        assertEquals(emptyList<String>(), applied.toList())
+    }
+
+    @Test
+    fun factoryCreatesViewModelFactoryInstance() {
+        val context: Context = mockk(relaxed = true)
+        val factory = AppPreferencesViewModel.factory(context)
+        assertNotNull(factory)
     }
 }

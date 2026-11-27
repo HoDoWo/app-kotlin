@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
@@ -24,9 +25,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hodowo.R
 import com.hodowo.ui.adaptive.LocalAppLayout
 import com.hodowo.ui.theme.Primary
 
@@ -147,3 +150,16 @@ fun NotificationIconButton(onClick: (() -> Unit)? = null) {
 }
 
 private const val MAX_BADGE = 9
+
+
+/** The gear that opens Settings (#210), next to the notification bell. */
+@Composable
+fun SettingsIconButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
+        Icon(
+            imageVector = Icons.Default.Settings,
+            contentDescription = stringResource(R.string.settings_open),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}

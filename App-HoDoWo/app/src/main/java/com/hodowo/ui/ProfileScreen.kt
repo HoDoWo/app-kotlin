@@ -1,5 +1,8 @@
 ﻿package com.hodowo.ui
 
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.hodowo.R
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -32,6 +35,7 @@ import coil.compose.AsyncImage
 import com.hodowo.data.AuthManager
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.components.NotificationIconButton
+import com.hodowo.ui.components.SettingsIconButton
 import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.viewmodel.isSameAs
 import com.hodowo.viewmodel.ChatViewModel
@@ -60,6 +64,8 @@ fun ProfileScreen(
     /** Purchase history (#144). */
     onOpenOrders: () -> Unit = {},
     onPostProduct: () -> Unit = {},
+    /** Settings: appearance, accessibility and language (#210). */
+    onOpenSettings: () -> Unit = {},
     /** The login screen owns the session, so signing out here must show it again. */
     onSignedOut: () -> Unit = {}
 ) {
@@ -83,22 +89,34 @@ fun ProfileScreen(
 
     // Identity
     val isSignedIn = currentUser != null && authManager != null && !authManager.isAnonymous
-    val displayEmail = if (isSignedIn) currentUser?.email ?: "User" else "Guest User"
+    val userFallback = stringResource(R.string.profile_user_fallback)
+    val displayEmail = if (isSignedIn) currentUser?.email ?: userFallback else stringResource(R.string.profile_guest_user)
     val profile = chatState?.userProfile
     val photoUrl = profile?.photoUrl?.takeIf { it.isNotBlank() }
     val defaultName = profile?.displayName?.takeIf { it.isNotBlank() }
         ?: if (isSignedIn) {
             currentUser?.displayName?.takeIf { it.isNotBlank() }
                 ?: currentUser?.email?.substringBefore("@")?.replaceFirstChar { it.uppercase() }
-                ?: "User"
-        } else "Guest"
+                ?: userFallback
+        } else stringResource(R.string.profile_guest)
 
     val memberSince = when {
-        !isSignedIn -> "Guest Account"
-        profile?.memberSince != null ->
-            "Member since " + SimpleDateFormat("yyyy", currentLocale()).format(Date(profile.memberSince))
+        !isSignedIn -> stringResource(R.string.profile_guest_account)
+        profile?.memberSince != null -> stringResource(
+            R.string.profile_member_since,
+            SimpleDateFormat("yyyy", currentLocale()).format(Date(profile.memberSince))
+        )
         else -> ""
     }
+
+    // Read here: the click handlers below are not composable.
+    val profileUpdatedMessage = stringResource(R.string.profile_updated)
+    val applianceSavedMessage = stringResource(R.string.profile_appliance_saved)
+    val applianceSignInMessage = stringResource(R.string.profile_appliance_sign_in)
+    val bookmarkRemovedMessage = stringResource(R.string.profile_bookmark_removed)
+    val signedOutMessage = stringResource(R.string.profile_signed_out)
+    val askAiMessage = stringResource(R.string.profile_ask_ai_message)
+    val notAvailable = stringResource(R.string.common_not_available)
 
     // Dialog state
     var showEditProfileDialog by remember { mutableStateOf(false) }
@@ -123,7 +141,10 @@ fun ProfileScreen(
     }
 
     // Owned appliances: active session (if any) + persisted Firestore ones. No fake sample data.
-    val ownedAppliances = remember(chatState?.appliance, chatState?.userAppliances) {
+    // Built in composition (not remembered): its texts come from the resources.
+    val activeSessionLabel = stringResource(R.string.profile_active_session)
+    val registeredLabel = stringResource(R.string.profile_registered_in_profile)
+    val ownedAppliances = run {
         val list = mutableListOf<ApplianceItemData>()
         // The appliance of the chat, unless it is already one of the registered appliances below.
         chatState?.appliance?.takeUnless { app ->
@@ -133,8 +154,8 @@ fun ProfileScreen(
                 ApplianceItemData(
                     id = "active_session",
                     title = listOfNotNull(app.brand, app.name).joinToString(" "),
-                    manualCount = "Active session",
-                    subtitle = "Identified via photo • ${(app.confidence * 100).toInt()}% match",
+                    manualCount = activeSessionLabel,
+                    subtitle = stringResource(R.string.profile_identified_via_photo, (app.confidence * 100).toInt()),
                     icon = Icons.Default.LocalLaundryService,
                     isPrimary = true,
                     isUserRegistered = false,
@@ -154,8 +175,8 @@ fun ProfileScreen(
                 ApplianceItemData(
                     id = app.id,
                     title = app.name,
-                    manualCount = "${app.manualCount} manual${if (app.manualCount != 1) "s" else ""}",
-                    subtitle = app.subtitle ?: listOfNotNull(app.brand, "Registered in profile").joinToString(" • "),
+                    manualCount = pluralStringResource(R.plurals.profile_manual_count, app.manualCount, app.manualCount),
+                    subtitle = app.subtitle ?: listOfNotNull(app.brand, registeredLabel).joinToString(" • "),
                     icon = icon,
                     isPrimary = false,
                     isUserRegistered = true,
@@ -170,8 +191,9 @@ fun ProfileScreen(
     Scaffold(
         topBar = {
             AppTopBar(
-                subtitle = "PROFILE",
+                subtitle = stringResource(R.string.profile_top_bar),
                 actions = {
+                    SettingsIconButton(onClick = onOpenSettings)
                     NotificationIconButton()
                     ProfileAvatar(
                         name = defaultName,
@@ -217,7 +239,7 @@ fun ProfileScreen(
                                 modifier = Modifier.align(Alignment.BottomEnd).size(22.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Default.PhotoCamera, "Change photo", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(13.dp))
+                                    Icon(Icons.Default.PhotoCamera, stringResource(R.string.profile_change_photo), tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(13.dp))
                                 }
                             }
                         }
@@ -235,7 +257,7 @@ fun ProfileScreen(
                                     onClick = { editNameInput = defaultName; showEditProfileDialog = true },
                                     modifier = Modifier.size(32.dp)
                                 ) {
-                                    Icon(Icons.Default.Edit, "Edit Profile", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Default.Edit, stringResource(R.string.profile_edit), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                                 }
                             }
                             Spacer(Modifier.height(6.dp))
@@ -257,7 +279,7 @@ fun ProfileScreen(
                                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
                                     modifier = Modifier.height(26.dp)
                                 ) {
-                                    Text(if (isSignedIn) "Account" else "Sign In", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                    Text(if (isSignedIn) stringResource(R.string.profile_account) else stringResource(R.string.profile_sign_in), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -269,10 +291,10 @@ fun ProfileScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                             Column {
-                                Text("Saved Repair Manuals", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                                Text("Your bookmarked AI troubleshooting guides", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.profile_saved_manuals), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.profile_saved_manuals_body), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Text("${bookmarkedGuides.size} saved", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                            Text(pluralStringResource(R.plurals.profile_saved_count, bookmarkedGuides.size, bookmarkedGuides.size), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                         bookmarkedGuides.forEach { guide ->
                             BookmarkedGuideCard(guide = guide, onClick = { selectedGuideForDetails = guide })
@@ -284,8 +306,8 @@ fun ProfileScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Column {
-                            Text("Owned Appliances", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Text("Manage registered appliances & repair manuals", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.profile_owned_appliances), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.profile_owned_appliances_body), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Surface(
                             shape = RoundedCornerShape(8.dp),
@@ -301,7 +323,7 @@ fun ProfileScreen(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                Text("Add", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.profile_add), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -318,12 +340,12 @@ fun ProfileScreen(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Icon(Icons.Default.Kitchen, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text("No appliances yet", fontWeight = FontWeight.SemiBold)
-                                Text("Register your appliances to keep their manuals in one place.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.profile_no_appliances), fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.profile_no_appliances_body), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Button(onClick = {
                                     newApplianceName = ""; newApplianceBrand = ""; newApplianceRoom = ""
                                     showAddApplianceDialog = true
-                                }) { Text("Add appliance") }
+                                }) { Text(stringResource(R.string.profile_add_appliance)) }
                             }
                         }
                     }
@@ -348,8 +370,8 @@ fun ProfileScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text("Appliances Posted to Sell", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            Text("Manage your marketplace listings", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.profile_listings), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.profile_listings_body), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Surface(
                             shape = RoundedCornerShape(8.dp),
@@ -362,7 +384,7 @@ fun ProfileScreen(
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Icon(Icons.Default.Sell, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
-                                Text("+ Sell", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.profile_sell), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -381,9 +403,9 @@ fun ProfileScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("Sign in to sell", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                        Text(stringResource(R.string.profile_sign_in_to_sell), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                         Text(
-                                            "Your posted appliances will appear here.",
+                                            stringResource(R.string.profile_sign_in_to_sell_body),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -401,7 +423,7 @@ fun ProfileScreen(
                             ) {
                                 CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                                 Text(
-                                    "Loading your listings...",
+                                    stringResource(R.string.profile_loading_listings),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -421,9 +443,9 @@ fun ProfileScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text("No listings yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                        Text(stringResource(R.string.profile_no_listings), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                         Text(
-                                            "Tap to post your first appliance.",
+                                            stringResource(R.string.profile_no_listings_body),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
@@ -438,9 +460,9 @@ fun ProfileScreen(
                             val soldCount = listings.count { it.status == ListingStatus.SOLD }
 
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ListingStatPill(text = "$activeCount active", highlighted = true)
-                                ListingStatPill(text = "$soldCount sold", highlighted = false)
-                                ListingStatPill(text = "${listings.size} total", highlighted = false)
+                                ListingStatPill(text = pluralStringResource(R.plurals.profile_listings_active, activeCount, activeCount), highlighted = true)
+                                ListingStatPill(text = pluralStringResource(R.plurals.profile_listings_sold, soldCount, soldCount), highlighted = false)
+                                ListingStatPill(text = pluralStringResource(R.plurals.profile_listings_total, listings.size, listings.size), highlighted = false)
                             }
 
                             listings.take(2).forEach { listing ->
@@ -461,7 +483,7 @@ fun ProfileScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                         Icon(Icons.Default.Sell, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                         Text(
-                                            "Manage your ${listings.size} listing${if (listings.size == 1) "" else "s"}",
+                                            pluralStringResource(R.plurals.profile_manage_listings, listings.size, listings.size),
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.SemiBold
                                         )
@@ -487,9 +509,9 @@ fun ProfileScreen(
                         ) {
                             Icon(Icons.Default.ShoppingBag, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("My orders", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                Text(stringResource(R.string.profile_orders), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                 Text(
-                                    "Purchase history and order status",
+                                    stringResource(R.string.profile_orders_body),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -515,7 +537,7 @@ fun ProfileScreen(
                             ) {
                                 Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text("Account details", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                    Text(stringResource(R.string.profile_account_details), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                                     Text(
                                         currentUser?.email ?: "",
                                         style = MaterialTheme.typography.bodySmall,
@@ -532,7 +554,7 @@ fun ProfileScreen(
                             ) {
                                 Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                                 Text(
-                                    "Sign out",
+                                    stringResource(R.string.profile_sign_out),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.error
@@ -549,7 +571,7 @@ fun ProfileScreen(
     if (showEditProfileDialog) {
         AlertDialog(
             onDismissRequest = { showEditProfileDialog = false },
-            title = { Text("Edit Profile") },
+            title = { Text(stringResource(R.string.profile_edit)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -560,13 +582,13 @@ fun ProfileScreen(
                         TextButton(onClick = { pickPhoto() }) {
                             Icon(Icons.Default.PhotoCamera, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Change photo")
+                            Text(stringResource(R.string.profile_change_photo))
                         }
                     }
                     OutlinedTextField(
                         value = editNameInput,
                         onValueChange = { editNameInput = it },
-                        label = { Text("Display name") },
+                        label = { Text(stringResource(R.string.profile_display_name)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -577,12 +599,12 @@ fun ProfileScreen(
                     val name = editNameInput.trim()
                     if (name.isNotBlank() && name != defaultName) {
                         viewModel?.updateUserDisplayName(name)
-                        Toast.makeText(context, "Profile updated!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, profileUpdatedMessage, Toast.LENGTH_SHORT).show()
                     }
                     showEditProfileDialog = false
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.common_save)) }
             },
-            dismissButton = { TextButton(onClick = { showEditProfileDialog = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showEditProfileDialog = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 
@@ -590,12 +612,12 @@ fun ProfileScreen(
     if (showAddApplianceDialog) {
         AlertDialog(
             onDismissRequest = { showAddApplianceDialog = false },
-            title = { Text("Register New Appliance") },
+            title = { Text(stringResource(R.string.profile_register_appliance)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(newApplianceName, { newApplianceName = it }, label = { Text("Appliance name *") }, placeholder = { Text("e.g. LG Smart Fridge") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(newApplianceBrand, { newApplianceBrand = it }, label = { Text("Brand (optional)") }, placeholder = { Text("e.g. LG, Bosch, Samsung") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    OutlinedTextField(newApplianceRoom, { newApplianceRoom = it }, label = { Text("Room / location (optional)") }, placeholder = { Text("e.g. Kitchen") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(newApplianceName, { newApplianceName = it }, label = { Text(stringResource(R.string.profile_appliance_name)) }, placeholder = { Text(stringResource(R.string.profile_appliance_name_hint)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(newApplianceBrand, { newApplianceBrand = it }, label = { Text(stringResource(R.string.profile_appliance_brand)) }, placeholder = { Text(stringResource(R.string.profile_appliance_brand_hint)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(newApplianceRoom, { newApplianceRoom = it }, label = { Text(stringResource(R.string.profile_appliance_room)) }, placeholder = { Text(stringResource(R.string.profile_appliance_room_hint)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
                 }
             },
             confirmButton = {
@@ -605,14 +627,14 @@ fun ProfileScreen(
                         val saved = viewModel?.addAppliance(name = newApplianceName.trim(), brand = newApplianceBrand.trim(), room = newApplianceRoom.trim()) == true
                         Toast.makeText(
                             context,
-                            if (saved) "Appliance registered to your profile!" else "Sign in to keep your appliances",
+                            if (saved) applianceSavedMessage else applianceSignInMessage,
                             Toast.LENGTH_SHORT
                         ).show()
                         showAddApplianceDialog = false
                     }
-                ) { Text("Register") }
+                ) { Text(stringResource(R.string.profile_register)) }
             },
-            dismissButton = { TextButton(onClick = { showAddApplianceDialog = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showAddApplianceDialog = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 
@@ -622,13 +644,13 @@ fun ProfileScreen(
             guide = guide,
             onDismiss = { selectedGuideForDetails = null },
             onAskAi = {
-                viewModel?.sendTextMessage("I need help with \"${guide.issueTitle}\" on my ${guide.applianceName}.")
+                viewModel?.sendTextMessage(askAiMessage.format(guide.issueTitle, guide.applianceName))
                 selectedGuideForDetails = null
                 onNavigateAiChat()
             },
             onRemove = {
                 viewModel?.removeBookmark(guide)
-                Toast.makeText(context, "Bookmark removed", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, bookmarkRemovedMessage, Toast.LENGTH_SHORT).show()
                 selectedGuideForDetails = null
             }
         )
@@ -638,11 +660,11 @@ fun ProfileScreen(
     if (showAccountDialog) {
         AlertDialog(
             onDismissRequest = { showAccountDialog = false },
-            title = { Text("Account Details") },
+            title = { Text(stringResource(R.string.profile_account_details)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Email: ${currentUser?.email ?: "N/A"}")
-                    Text("User ID: ${currentUser?.uid?.take(12) ?: "N/A"}...")
+                    Text(stringResource(R.string.profile_account_email, currentUser?.email ?: notAvailable))
+                    Text(stringResource(R.string.profile_account_user_id, currentUser?.uid?.take(12) ?: notAvailable))
                 }
             },
             confirmButton = {
@@ -652,9 +674,9 @@ fun ProfileScreen(
                         showSignOutConfirm = true
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Sign out") }
+                ) { Text(stringResource(R.string.profile_sign_out)) }
             },
-            dismissButton = { TextButton(onClick = { showAccountDialog = false }) { Text("Close") } }
+            dismissButton = { TextButton(onClick = { showAccountDialog = false }) { Text(stringResource(R.string.common_close)) } }
         )
     }
 
@@ -663,9 +685,9 @@ fun ProfileScreen(
         AlertDialog(
             onDismissRequest = { showSignOutConfirm = false },
             icon = { Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null) },
-            title = { Text("Sign out?") },
+            title = { Text(stringResource(R.string.profile_sign_out_confirm_title)) },
             text = {
-                Text("Your appliances, chats and manuals stay in your account: sign in again to see them on any phone.")
+                Text(stringResource(R.string.profile_sign_out_confirm_body))
             },
             confirmButton = {
                 Button(
@@ -673,12 +695,12 @@ fun ProfileScreen(
                         authManager?.signOut()
                         onSignedOut()
                         showSignOutConfirm = false
-                        Toast.makeText(context, "Signed out", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, signedOutMessage, Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Sign out") }
+                ) { Text(stringResource(R.string.profile_sign_out)) }
             },
-            dismissButton = { TextButton(onClick = { showSignOutConfirm = false }) { Text("Cancel") } }
+            dismissButton = { TextButton(onClick = { showSignOutConfirm = false }) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 
@@ -701,20 +723,20 @@ internal fun ManualGuideDialog(
                 Text(guide.overview, style = MaterialTheme.typography.bodyMedium)
                 if (guide.steps.isNotEmpty()) {
                     Spacer(Modifier.height(4.dp))
-                    Text("Steps:", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.guide_steps_label), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodySmall)
                     guide.steps.forEach { step ->
-                        Text("${step.number}. ${step.title}: ${step.description}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.guide_step_line, step.number, step.title, step.description), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
         },
-        confirmButton = { Button(onClick = onAskAi) { Text("Ask AI") } },
+        confirmButton = { Button(onClick = onAskAi) { Text(stringResource(R.string.guide_ask_ai)) } },
         dismissButton = {
             Row {
                 if (onRemove != null) {
-                    TextButton(onClick = onRemove, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Remove") }
+                    TextButton(onClick = onRemove, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text(stringResource(R.string.common_remove)) }
                 }
-                TextButton(onClick = onDismiss) { Text("Close") }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_close)) }
             }
         }
     )
@@ -878,7 +900,7 @@ fun ApplianceCard(
             IconButton(onClick = onClick) {
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "View details",
+                    contentDescription = stringResource(R.string.profile_view_details),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -959,7 +981,7 @@ private fun ProfileListingCard(
                     Spacer(Modifier.width(8.dp))
                     Surface(shape = CircleShape, color = statusColor.copy(alpha = 0.12f)) {
                         Text(
-                            text = if (isSold) "Sold" else "Active",
+                            text = if (isSold) stringResource(R.string.listing_status_sold) else stringResource(R.string.listing_status_active),
                             style = MaterialTheme.typography.labelSmall,
                             color = statusColor,
                             fontWeight = FontWeight.SemiBold,

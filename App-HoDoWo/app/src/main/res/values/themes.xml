@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <style name="Theme.HoDoWo" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- AppCompat, for the per-app language below Android 13 (#235). DayNight starts the
+         window dark when the system is dark, so there is no white flash (#212). -->
+    <style name="Theme.HoDoWo" parent="Theme.AppCompat.DayNight.NoActionBar" />
 </resources>

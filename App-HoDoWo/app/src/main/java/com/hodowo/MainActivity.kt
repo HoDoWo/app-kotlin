@@ -1,7 +1,7 @@
 package com.hodowo
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.lifecycleScope
 import coil.Coil
 import coil.ImageLoader
+import com.hodowo.data.AppLanguage
 import com.hodowo.data.ArSupportProvider
 import com.hodowo.ui.HoDoWoApp
 import com.hodowo.data.isDark
@@ -25,7 +26,8 @@ import com.hodowo.ui.theme.HoDoWoTheme
 import com.hodowo.viewmodel.AppPreferencesViewModel
 import kotlinx.coroutines.launch
 
-class MainActivity : ComponentActivity() {
+// AppCompatActivity: it applies the per-app language below Android 13 too (#235).
+class MainActivity : AppCompatActivity() {
 
     // Theme, text size and the other appearance choices (#211, #212).
     private val preferencesViewModel: AppPreferencesViewModel by viewModels {
@@ -45,6 +47,8 @@ class MainActivity : ComponentActivity() {
         // Ask ARCore early (#239): its first answer can take a moment, and the
         // AR tab should already know whether this phone supports AR.
         lifecycleScope.launch { ArSupportProvider.get(applicationContext).refresh() }
+        // The language may have been changed in the system settings (Android 13+).
+        preferencesViewModel.syncLanguage(AppLanguage.current())
         setContent {
             val preferences by preferencesViewModel.preferences.collectAsState()
             // Nothing is drawn until the stored choices are read (a few ms): the first
