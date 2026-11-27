@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings hub (#210). -->
+<resources>
+    <string name="settings_title">Settings</string>
+    <string name="settings_open">Open settings</string>
+    <string name="settings_back">Back</string>
+
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_accessibility">Accessibility</string>
+    <string name="settings_section_language">Language</string>
+
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_system">System default</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_dynamic_colour">Dynamic colour</string>
+    <string name="settings_dynamic_colour_summary">Use the colours of your wallpaper</string>
+
+    <string name="settings_text_size">Text size</string>
+    <string name="settings_text_size_small">Small</string>
+    <string name="settings_text_size_default">Default</string>
+    <string name="settings_text_size_large">Large</string>
+    <string name="settings_text_size_extra_large">Extra large</string>
+    <string name="settings_text_size_custom">%1$d%%</string>
+    <string name="settings_text_size_preview">Turn the timer knob to 30 minutes.</string>
+
+    <string name="settings_app_language">App language</string>
+    <string name="settings_language_system">System default</string>
+
+    <string name="settings_reset">Reset to defaults</string>
+    <string name="settings_reset_title">Reset settings?</string>
+    <string name="settings_reset_body">Theme, text size and language go back to the system defaults.</string>
+    <string name="settings_reset_confirm">Reset</string>
+    <string name="settings_cancel">Cancel</string>
+    <string name="settings_on">On</string>
+    <string name="settings_off">Off</string>
+</resources>

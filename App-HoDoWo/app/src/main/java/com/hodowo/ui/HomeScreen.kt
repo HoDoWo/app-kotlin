@@ -76,6 +76,7 @@ import com.hodowo.ui.adaptive.AdaptiveContent
 import com.hodowo.ui.adaptive.LocalAppLayout
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.components.NotificationIconButton
+import com.hodowo.ui.components.SettingsIconButton
 import com.hodowo.ui.components.ProfileAvatar
 import com.hodowo.ui.theme.OnSurfaceVariant
 import com.hodowo.ui.theme.OutlineVariant
@@ -120,7 +121,9 @@ fun HomeScreen(
     onAskAboutManual: (ManualGuide) -> Unit,
     onOpenManualChat: (ManualGuide) -> Unit = onAskAboutManual,
     /** Photo of the signed-in user for the top bar; null shows the default avatar. */
-    profilePhotoUrl: String? = null
+    profilePhotoUrl: String? = null,
+    /** Settings: appearance, accessibility and language (#210). */
+    onOpenSettings: () -> Unit = {}
 ) {
     val state by viewModel.uiState.collectAsState()
     var openedManual by remember { mutableStateOf<RecentManual?>(null) }
@@ -152,6 +155,7 @@ fun HomeScreen(
         AppTopBar(
             subtitle = "HOME",
             actions = {
+                SettingsIconButton(onClick = onOpenSettings)
                 if (!useRail) {
                     NotificationIconButton()
                     ProfileAvatar(name = "", size = 34, onClick = onOpenProfile, photoUrl = profilePhotoUrl)
