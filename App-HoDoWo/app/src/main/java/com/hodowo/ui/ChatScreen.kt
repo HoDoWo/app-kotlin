@@ -1,5 +1,7 @@
 package com.hodowo.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -30,7 +32,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreHoriz
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -40,6 +41,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -53,10 +55,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import com.hodowo.ui.adaptive.AdaptiveContent
 import com.hodowo.ui.components.AppTopBar
 import com.hodowo.ui.components.NotificationIconButton
 import com.hodowo.ui.components.ProfileAvatar
+import com.hodowo.ui.components.SpeechToTextHelper
 import com.hodowo.ui.theme.Primary
 import com.hodowo.ui.theme.SurfaceContainerHigh
 import com.hodowo.ui.theme.SurfaceContainerLowest
@@ -78,6 +82,7 @@ fun ChatScreen(
     val context = LocalContext.current
 
     var inputText by remember { mutableStateOf("") }
+    var baseTextBeforeSpeech by remember { mutableStateOf("") }
     var dislikeTargetId by remember { mutableStateOf<Long?>(null) }
     var dislikeComment by remember { mutableStateOf("") }
     var editingMessage by remember { mutableStateOf<Message?>(null) }
@@ -85,6 +90,41 @@ fun ChatScreen(
 
     var fullscreenImageUrl by remember { mutableStateOf<String?>(null) }
     var showHistory by remember { mutableStateOf(false) }
+
+    // Audio recording permission launcher
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            Toast.makeText(context, "Hold the mic button to dictate text", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Microphone permission is required for speech-to-text", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // Speech-to-Text helper instance
+    val speechToTextHelper = remember {
+        SpeechToTextHelper(
+            context = context,
+            onPartialResult = { partial ->
+                inputText = if (baseTextBeforeSpeech.isBlank()) partial else "$baseTextBeforeSpeech $partial"
+            },
+            onFinalResult = { final ->
+                inputText = if (baseTextBeforeSpeech.isBlank()) final else "$baseTextBeforeSpeech $final"
+            },
+            onError = { err ->
+                Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    val isListening by speechToTextHelper.isListening.collectAsState()
+
+    DisposableEffect(Unit) {
+        onDispose {
+            speechToTextHelper.destroy()
+        }
+    }
 
     // System gallery picker to upload image from device
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -158,62 +198,62 @@ fun ChatScreen(
                     contentPadding = PaddingValues(top = 12.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                // Telemetry Timestamp Anchor
-                item {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Today, 2:14 PM",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
-                        )
+                    // Telemetry Timestamp Anchor
+                    item {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Today, 2:14 PM",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                            )
+                        }
                     }
-                }
 
-                // Message Items
-                val lastQuestionId = state.messages.lastOrNull { it.isUser }?.id
-                items(
-                    items = state.messages,
-                    key = { it.id }
-                ) { message ->
-                    if (message.isUser) {
-                        // Only the last question can be asked again, and not while an answer arrives.
-                        val canResend = message.id == lastQuestionId && !state.isSending && !state.isAnalyzing
-                        UserMessageItem(
-                            message = message,
-                            onRegenerate = if (canResend) {
-                                { viewModel.regenerateMessage(message.id) }
-                            } else {
-                                null
-                            },
-                            onEdit = if (canResend && !message.text.isNullOrBlank()) {
-                                {
-                                    editText = message.text.orEmpty()
-                                    editingMessage = message
+                    // Message Items
+                    val lastQuestionId = state.messages.lastOrNull { it.isUser }?.id
+                    items(
+                        items = state.messages,
+                        key = { it.id }
+                    ) { message ->
+                        if (message.isUser) {
+                            // Only the last question can be asked again, and not while an answer arrives.
+                            val canResend = message.id == lastQuestionId && !state.isSending && !state.isAnalyzing
+                            UserMessageItem(
+                                message = message,
+                                onRegenerate = if (canResend) {
+                                    { viewModel.regenerateMessage(message.id) }
+                                } else {
+                                    null
+                                },
+                                onEdit = if (canResend && !message.text.isNullOrBlank()) {
+                                    {
+                                        editText = message.text.orEmpty()
+                                        editingMessage = message
+                                    }
+                                } else {
+                                    null
                                 }
-                            } else {
-                                null
-                            }
-                        )
-                    } else {
-                        AiMessageItem(
-                            message = message,
-                            currentStepText = state.currentStep,
-                            isSending = state.isSending,
-                            onLike = { viewModel.setFeedback(message.id, Feedback.LIKE) },
-                            onDislike = {
-                                dislikeComment = ""
-                                dislikeTargetId = message.id
-                            },
-                            onToggleBookmark = { viewModel.toggleBookmark(message.id) },
-                            onImageClick = { url -> fullscreenImageUrl = url },
-                            onBuyPart = onBuyPart
-                        )
+                            )
+                        } else {
+                            AiMessageItem(
+                                message = message,
+                                currentStepText = state.currentStep,
+                                isSending = state.isSending,
+                                onLike = { viewModel.setFeedback(message.id, Feedback.LIKE) },
+                                onDislike = {
+                                    dislikeComment = ""
+                                    dislikeTargetId = message.id
+                                },
+                                onToggleBookmark = { viewModel.toggleBookmark(message.id) },
+                                onImageClick = { url -> fullscreenImageUrl = url },
+                                onBuyPart = onBuyPart
+                            )
+                        }
                     }
                 }
-            }
             }
 
             // --- ERROR BANNER (if any) ---
@@ -289,7 +329,24 @@ fun ChatScreen(
                 },
                 onOpenCamera = onOpenCamera,
                 onPickGallery = { galleryLauncher.launch("image/*") },
-                isSending = state.isSending
+                isSending = state.isSending,
+                isListening = isListening,
+                onMicPress = {
+                    val hasPermission = ContextCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.RECORD_AUDIO
+                    ) == PackageManager.PERMISSION_GRANTED
+
+                    if (hasPermission) {
+                        baseTextBeforeSpeech = inputText
+                        speechToTextHelper.startListening()
+                    } else {
+                        audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                    }
+                },
+                onMicRelease = {
+                    speechToTextHelper.stopListening()
+                }
             )
         }
 
