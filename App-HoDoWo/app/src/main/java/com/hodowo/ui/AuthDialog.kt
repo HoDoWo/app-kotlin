@@ -1,5 +1,7 @@
 package com.hodowo.ui
 
+import androidx.compose.ui.res.stringResource
+import com.hodowo.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,6 +60,10 @@ fun AuthDialog(
     var confirmPassword by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    // Read here: the click handlers below are not composable.
+    val missingFieldsMessage = stringResource(R.string.auth_dialog_missing_fields)
+    val passwordsDifferMessage = stringResource(R.string.auth_error_passwords_differ)
+    val authFailedMessage = stringResource(R.string.auth_dialog_failed)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -71,8 +77,8 @@ fun AuthDialog(
                     modifier = Modifier.padding(end = 8.dp)
                 )
                 Text(
-                    text = if (currentUser != null && !authManager.isAnonymous) "Account Profile"
-                    else if (isSignUp) "Create Account" else "Sign In to Howdowo",
+                    text = if (currentUser != null && !authManager.isAnonymous) stringResource(R.string.auth_dialog_account_title)
+                    else if (isSignUp) stringResource(R.string.auth_dialog_create_title) else stringResource(R.string.auth_dialog_sign_in_title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
@@ -92,12 +98,12 @@ fun AuthDialog(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
-                                text = "Signed in as",
+                                text = stringResource(R.string.auth_dialog_signed_in_as),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
                             )
                             Text(
-                                text = currentUser?.email ?: "User",
+                                text = currentUser?.email ?: stringResource(R.string.profile_user_fallback),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer
@@ -115,13 +121,13 @@ fun AuthDialog(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Sign Out")
+                        Text(stringResource(R.string.profile_sign_out))
                     }
                 } else {
                     // Sign in / Sign up form
                     if (authManager.isAnonymous) {
                         Text(
-                            text = "Currently in Guest Mode. Sign in to sync your repair manuals and bookmarks across devices.",
+                            text = stringResource(R.string.auth_dialog_guest_body),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -138,7 +144,7 @@ fun AuthDialog(
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it; errorMessage = null },
-                        label = { Text("Email") },
+                        label = { Text(stringResource(R.string.auth_email)) },
                         leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -147,7 +153,7 @@ fun AuthDialog(
                     OutlinedTextField(
                         value = password,
                         onValueChange = { password = it; errorMessage = null },
-                        label = { Text("Password") },
+                        label = { Text(stringResource(R.string.auth_password)) },
                         leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(
@@ -162,7 +168,7 @@ fun AuthDialog(
                         OutlinedTextField(
                             value = confirmPassword,
                             onValueChange = { confirmPassword = it; errorMessage = null },
-                            label = { Text("Confirm Password") },
+                            label = { Text(stringResource(R.string.auth_confirm_password)) },
                             leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(
@@ -179,11 +185,11 @@ fun AuthDialog(
                     Button(
                         onClick = {
                             if (email.isBlank() || password.isBlank()) {
-                                errorMessage = "Please enter email and password"
+                                errorMessage = missingFieldsMessage
                                 return@Button
                             }
                             if (isSignUp && password != confirmPassword) {
-                                errorMessage = "Passwords do not match"
+                                errorMessage = passwordsDifferMessage
                                 return@Button
                             }
 
@@ -200,7 +206,7 @@ fun AuthDialog(
                                     onDismiss()
                                 } catch (e: Exception) {
                                     isLoading = false
-                                    errorMessage = e.message ?: "Authentication failed"
+                                    errorMessage = e.message ?: authFailedMessage
                                 }
                             }
                         },
@@ -216,7 +222,7 @@ fun AuthDialog(
                                 strokeWidth = 2.dp
                             )
                         } else {
-                            Text(if (isSignUp) "Sign Up" else "Sign In")
+                            Text(if (isSignUp) stringResource(R.string.auth_dialog_sign_up) else stringResource(R.string.auth_dialog_sign_in))
                         }
                     }
 
@@ -232,7 +238,7 @@ fun AuthDialog(
                             }
                         ) {
                             Text(
-                                text = if (isSignUp) "Already have an account? Sign In" else "New here? Create Account",
+                                text = if (isSignUp) stringResource(R.string.auth_switch_to_login) else stringResource(R.string.auth_dialog_switch_to_register),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
@@ -242,7 +248,7 @@ fun AuthDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(stringResource(R.string.common_close))
             }
         }
     )
