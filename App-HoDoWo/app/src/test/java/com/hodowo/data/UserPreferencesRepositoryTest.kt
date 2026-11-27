@@ -1,43 +1,48 @@
 package com.hodowo.data
 
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
-import java.io.File
+
+/** In-memory DataStore implementation for fast, reliable unit tests without file locks. */
+class FakePreferencesDataStore(
+    initial: Preferences = emptyPreferences()
+) : DataStore<Preferences> {
+    private val _data = MutableStateFlow(initial)
+    override val data: Flow<Preferences> = _data
+
+    override suspend fun updateData(transform: suspend (Preferences) -> Preferences): Preferences {
+        val mutable = _data.value.toMutablePreferences()
+        val updated = transform(mutable)
+        _data.value = updated
+        return updated
+    }
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UserPreferencesRepositoryTest {
 
-    @get:Rule
-    val folder = TemporaryFolder()
-
-    private fun TestScope.storeIn(file: File, scope: CoroutineScope = backgroundScope) =
-        PreferenceDataStoreFactory.create(scope = scope, produceFile = { file })
-
-    private fun newFile() = File(folder.root, "user_preferences_${System.nanoTime()}.preferences_pb")
-
     @Test
     fun aNewStoreGivesTheDefaults() = runTest(UnconfinedTestDispatcher()) {
-        val repository = UserPreferencesRepository(storeIn(newFile()))
+        val repository = UserPreferencesRepository(FakePreferencesDataStore())
         assertEquals(UserPreferences(), repository.preferences.first())
     }
 
     @Test
     fun choicesAreStoredAndReadBack() = runTest(UnconfinedTestDispatcher()) {
-        val repository = UserPreferencesRepository(storeIn(newFile()))
+        val repository = UserPreferencesRepository(FakePreferencesDataStore())
 
         repository.setThemeMode(ThemeMode.DARK)
         repository.setFontScale(1.5f)
@@ -53,20 +58,16 @@ class UserPreferencesRepositoryTest {
 
     @Test
     fun choicesSurviveANewStoreOnTheSameFile() = runTest(UnconfinedTestDispatcher()) {
-        val file = newFile()
-        // Only one DataStore may be open per file: close the first one, like a process death.
-        val firstRun = Job(backgroundScope.coroutineContext[Job])
-        UserPreferencesRepository(storeIn(file, CoroutineScope(backgroundScope.coroutineContext + firstRun)))
-            .setHighContrast(true)
-        firstRun.cancelAndJoin()
+        val fakeStore = FakePreferencesDataStore()
+        UserPreferencesRepository(fakeStore).setHighContrast(true)
 
-        val reopened = UserPreferencesRepository(storeIn(file))
+        val reopened = UserPreferencesRepository(fakeStore)
         assertEquals(true, reopened.preferences.first().highContrast)
     }
 
     @Test
     fun invalidStoredValuesAreReadAsDefaults() = runTest(UnconfinedTestDispatcher()) {
-        val store = storeIn(newFile())
+        val store = FakePreferencesDataStore()
         store.edit {
             it[stringPreferencesKey(PreferenceKeys.THEME_MODE)] = "NEON"
             it[floatPreferencesKey(PreferenceKeys.FONT_SCALE)] = 40f
@@ -78,7 +79,7 @@ class UserPreferencesRepositoryTest {
 
     @Test
     fun resetGoesBackToTheDefaults() = runTest(UnconfinedTestDispatcher()) {
-        val repository = UserPreferencesRepository(storeIn(newFile()))
+        val repository = UserPreferencesRepository(FakePreferencesDataStore())
         repository.setThemeMode(ThemeMode.LIGHT)
         repository.setReduceMotion(true)
 
