@@ -54,8 +54,8 @@
   "title": "User-adjustable font size setting"
  },
  "PVTI_lADOFCkyKM4Bl88jzhJ4gQI": {
-  "c": 3.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 210,
   "title": "Settings hub: appearance, accessibility and language in one place"
  },
@@ -78,8 +78,8 @@
   "title": "High-contrast appearance option for light and dark themes"
  },
  "PVTI_lADOFCkyKM4Bl88jzhJ4g2c": {
-  "c": 3.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 214,
   "title": "Complete the dark palette and replace hard-coded colours across the app"
  },
@@ -174,8 +174,8 @@
   "title": "Never rely on colour alone for status, errors and labels"
  },
  "PVTI_lADOFCkyKM4Bl88jzhJ4jXg": {
-  "c": 3.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 230,
   "title": "Extract strings: Auth, Profile, Settings and onboarding"
  },
@@ -204,8 +204,8 @@
   "title": "Catalan translation (values-ca)"
  },
  "PVTI_lADOFCkyKM4Bl88jzhJ4kXM": {
-  "c": 3.0,
-  "done": false,
+  "c": 0.0,
+  "done": true,
   "issue": 235,
   "title": "In-app language selector with per-app locale and persistence"
  },

@@ -47,3 +47,7 @@ timestamp,issue,title,type,delta_hours
 2026-11-25T18:08:19+00:00,241,"AR guide overlay, step navigation and supported-device test matrix",completed,-5.0
 2026-11-27T10:59:23+00:00,211,Persist appearance and accessibility preferences with DataStore,completed,-2.0
 2026-11-27T10:59:21+00:00,212,"Apply theme, font scale and colour filter at the app root",completed,-2.0
+2026-11-27T13:19:59+00:00,210,"Settings hub: appearance, accessibility and language in one place",completed,-3.0
+2026-11-27T14:43:51+00:00,214,Complete the dark palette and replace hard-coded colours across the app,completed,-3.0
+2026-11-27T14:37:25+00:00,230,"Extract strings: Auth, Profile, Settings and onboarding",completed,-3.0
+2026-11-27T14:30:21+00:00,235,In-app language selector with per-app locale and persistence,completed,-3.0
